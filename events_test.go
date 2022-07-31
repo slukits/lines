@@ -1,0 +1,233 @@
+// Copyright (c) 2022 Stephan Lukits. All rights reserved.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
+
+package lines
+
+import (
+	"fmt"
+	"testing"
+	"time"
+
+	"github.com/gdamore/tcell/v2"
+	. "github.com/slukits/gounit"
+)
+
+type events struct{ Suite }
+
+func (s *events) SetUp(t *T) {
+	t.Parallel()
+}
+
+func (s *events) Initializes_initially_given_component(t *T) {
+	ee, tt := Test(t.GoT(), &cmpFX{})
+	ee.Listen()
+	t.Eq(expInit, tt.LastScreen)
+}
+
+type keysCmpFX struct{ Component }
+
+const keyRegistration = "key-registration"
+
+func (c *keysCmpFX) Keys(register KeyRegistration) {
+	register(tcell.KeyF5, tcell.ModNone, func(e *Env) {
+		fmt.Fprint(e, keyRegistration)
+	})
+}
+
+func (s *events) Registers_initially_given_key_listeners(t *T) {
+	ee, tt := Test(t.GoT(), &keysCmpFX{})
+	ee.Listen()
+	tt.FireKey(tcell.KeyF5)
+	t.Eq(keyRegistration, tt.LastScreen)
+}
+
+type keysUpdCmpFX struct {
+	Component
+	first, second bool
+}
+
+func (c *keysUpdCmpFX) Keys(register KeyRegistration) {
+	if !c.first {
+		register(tcell.KeyF5, tcell.ModNone, func(e *Env) {
+			c.first = true
+			e.EE.UpdateKeys(c)
+		})
+		return
+	}
+	register(tcell.KeyF5, tcell.ModNone, func(e *Env) {
+		c.second = true
+	})
+}
+
+func (s *events) Updates_key_listeners(t *T) {
+	fx := &keysUpdCmpFX{}
+	ee, tt := Test(t.GoT(), fx, 3)
+	ee.Listen()
+	tt.FireKey(tcell.KeyF5)
+	tt.FireKey(tcell.KeyF5)
+	t.True(fx.first && fx.second)
+}
+
+type runesCmpFX struct{ Component }
+
+const runeRegistration = "rune-registration"
+
+func (c *runesCmpFX) Runes(register RuneRegistration) {
+	register('r', func(e *Env) { fmt.Fprint(e, runeRegistration) })
+}
+
+func (s *events) Registers_initially_given_rune_listeners(t *T) {
+	ee, tt := Test(t.GoT(), &runesCmpFX{})
+	ee.Listen()
+	tt.FireRune('r')
+	t.Eq(runeRegistration, tt.LastScreen)
+}
+
+type runesUpdCmpFX struct {
+	Component
+	first, second bool
+}
+
+func (c *runesUpdCmpFX) Runes(register RuneRegistration) {
+	if !c.first {
+		register('r', func(e *Env) {
+			c.first = true
+			e.EE.UpdateRunes(c)
+		})
+		return
+	}
+	register('r', func(e *Env) {
+		c.second = true
+	})
+}
+
+func (s *events) Updates_rune_listeners(t *T) {
+	fx := &runesUpdCmpFX{}
+	_, tt := Test(t.GoT(), fx, 3)
+	tt.FireRune('r')
+	tt.FireRune('r')
+	t.True(fx.first && fx.second)
+}
+
+type quitCmpFX struct {
+	Component
+	quitReported bool
+}
+
+func (c *quitCmpFX) OnQuit() { c.quitReported = true }
+
+type twoQuittersFX struct {
+	Component
+	q1, q2 *quitCmpFX
+}
+
+func (x *twoQuittersFX) ForStacked(cb func(Componenter) (stop bool)) {
+	cb(x.q1)
+	cb(x.q2)
+}
+
+func (s *events) Reports_quit_key_events_to_all_quitter(t *T) {
+	for _, k := range defaultFeatures.keysOf(Quitable) {
+		fx := &twoQuittersFX{q1: &quitCmpFX{}, q2: &quitCmpFX{}}
+		ee, tt := Test(t.GoT(), fx, -1)
+		ee.Listen()
+		tt.FireKey(k.Key, k.Mod)
+		t.True(fx.q1.quitReported)
+		t.True(fx.q2.quitReported)
+		t.False(ee.IsListening())
+	}
+}
+
+type lytCmpFX struct {
+	Component
+	init, lyt time.Time
+}
+
+func (c *lytCmpFX) OnInit(*Env) { c.init = time.Now() }
+
+func (c *lytCmpFX) OnLayout(*Env) { c.lyt = time.Now() }
+
+func (s *events) Reports_layout_after_initialization(t *T) {
+	fx := &lytCmpFX{}
+	ee, _ := Test(t.GoT(), fx, 2)
+	ee.Listen()
+	t.True(fx.init.Before(fx.lyt))
+}
+
+type updLstCmpFX struct {
+	Component
+	reported bool
+}
+
+func (c *updLstCmpFX) OnInit(e *Env) {
+	e.EE.Update(c, nil, func(e *Env) {
+		c.reported = c == e.Evt.(*UpdateEvent).cmp
+	})
+}
+
+func (s *events) Reports_update_to_provided_listener(t *T) {
+	fx := &updLstCmpFX{}
+	ee, _ := Test(t.GoT(), fx, 2)
+	ee.Listen()
+	t.True(fx.reported)
+	t.False(ee.IsListening())
+}
+
+type updCmpFX struct {
+	Component
+	reported bool
+}
+
+func (c *updCmpFX) OnInit(e *Env) { e.EE.Update(c, nil, nil) }
+
+func (c *updCmpFX) OnUpdate(e *Env) { c.reported = true }
+
+func (s *events) Reports_update_without_listener_to_component(t *T) {
+	fx := &updCmpFX{}
+	ee, _ := Test(t.GoT(), fx, 2)
+	ee.Listen()
+	t.True(fx.reported)
+	t.False(ee.IsListening())
+}
+
+type stackedCmpFX struct {
+	Component
+	lostFocus bool
+	cc        []Componenter
+}
+
+func (c *stackedCmpFX) ForStacked(cb func(Componenter) (stop bool)) {
+	for _, cmp := range c.cc {
+		if !cb(cmp) {
+			return
+		}
+	}
+}
+
+func (c *stackedCmpFX) OnFocusLost(*Env) { c.lostFocus = true }
+
+type fcsCmpFX struct {
+	Component
+	gainedFocus bool
+}
+
+func (c *fcsCmpFX) OnFocus(*Env) { c.gainedFocus = true }
+
+func (s *events) Reports_moved_focus_gaining_and_loosing(t *T) {
+	fx := &stackedCmpFX{cc: []Componenter{&fcsCmpFX{}}}
+	ee, _ := Test(t.GoT(), fx, 2)
+	ee.MoveFocus(fx.cc[0])
+	t.True(fx.lostFocus)
+	t.True(fx.cc[0].(*fcsCmpFX).gainedFocus)
+	t.False(ee.IsListening())
+}
+
+func (s *events) Doesnt_move_focus_on_click_if_not_focusable(t *T) {
+
+}
+
+func TestEvents(t *testing.T) {
+	t.Parallel()
+	Run(&events{}, t)
+}
