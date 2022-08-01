@@ -15,7 +15,7 @@ The motivation is to provide an UI-library with a small API and few
 powerful features that lets its users quickly implement an terminal
 ui exactly as needed.
 
-```
+```go
     package main
 
     import (
@@ -54,7 +54,7 @@ provides.
 
 What doesn't work
 
-```
+```go
     func (c *Cmp) OnInit(e *lines.Env) {
         go func() {
             time.Sleep(1*time.Second)
@@ -65,7 +65,7 @@ What doesn't work
 
 what does work
 
-```
+```go
     func (c *Cmp) OnInit(e *lines.Env) {
         go func(ee *lines.Events) {
             time.Sleep(1*time.Second)
@@ -79,7 +79,7 @@ what does work
 Also using functionality or properties provided by embedded Component
 instance after a listener has returned doesn't work.
 
-```
+```go
     func (c *Cmp) OnInit(e *lines.Env) {
         go func() {
             time.Sleep(1*time.Second)
@@ -152,7 +152,7 @@ we want to test implemented event handler and fire events for them
 initially App will have the focus and that's not changing unless
 lines is told to do so
 
-```
+```go
     func (a *App) OnInit(e *Env) {
         // ...
         e.EE.MoveFocus(p1)
@@ -170,7 +170,7 @@ the statusbar gets the focus if the user clicks on it?  Maybe, maybe
 not.  Hence lines doesn't try to be smart about such things and
 implements the features concept instead
 
-```
+```go
     func (ws *Workspace) OnInit(e *Env) {
         ws.Features.AddRecursively(Focusable | Selectable)
     }
@@ -190,7 +190,7 @@ represents full control over what is going on.
 
 lines comes with testing facilities:
 
-```
+```go
     import (
         "testing"
 
