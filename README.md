@@ -15,6 +15,9 @@ The motivation is to provide an UI-library with a small API and few
 powerful features that lets its users quickly implement an terminal
 ui exactly as needed.
 
+```
+    package main
+
     import (
         fmt
 
@@ -29,6 +32,7 @@ ui exactly as needed.
     }
 
     func main() { lines.New(&Cmp{}).Listen() } // blocking
+```
 
 New provides an Events-instance reporting user input and
 programmatically posted events to listener implementations of
@@ -50,15 +54,18 @@ provides.
 
 What doesn't work
 
+```
     func (c *Cmp) OnInit(e *lines.Env) {
         go func() {
             time.Sleep(1*time.Second)
             fmt.Fprint(e, "awoken") // will panic
         }()
     }
+```
 
 what does work
 
+```
     func (c *Cmp) OnInit(e *lines.Env) {
         go func(ee *lines.Events) {
             time.Sleep(1*time.Second)
@@ -67,10 +74,12 @@ what does work
             })
         }(e.EE)
     }
+```
 
 Also using functionality or properties provided by embedded Component
 instance after a listener has returned doesn't work.
 
+```
     func (c *Cmp) OnInit(e *lines.Env) {
         go func() {
             time.Sleep(1*time.Second)
@@ -78,6 +87,7 @@ instance after a listener has returned doesn't work.
             c.Dim().SetWidth(42) // most likely to panic
         }()
     }
+```
 
 It is only save to pass (the initially created) events instance e.EE
 on to a go routine where at the end provided update mechanisms of
@@ -142,10 +152,12 @@ we want to test implemented event handler and fire events for them
 initially App will have the focus and that's not changing unless
 lines is told to do so
 
+```
     func (a *App) OnInit(e *Env) {
         // ...
         e.EE.MoveFocus(p1)
     }
+```
 
 Now p1 gets its events.  We have our App started and click into p2
 where we have an OnClick implementation.  (Which might tries to move
@@ -158,9 +170,11 @@ the statusbar gets the focus if the user clicks on it?  Maybe, maybe
 not.  Hence lines doesn't try to be smart about such things and
 implements the features concept instead
 
+```
     func (ws *Workspace) OnInit(e *Env) {
         ws.Features.AddRecursively(Focusable | Selectable)
     }
+```
 
 This one line has  the following consequences: If the user clicks on
 p1 or p2 the respective component gets the focus and events about
@@ -176,6 +190,7 @@ represents full control over what is going on.
 
 lines comes with testing facilities:
 
+```
     import (
         "testing"
 
@@ -201,6 +216,7 @@ lines comes with testing facilities:
             t.Errorf("expected: '%s'; got '%s'", fx.exp, tt.LastScreen)
         }
     }
+```
 
 lines can be asked for a slightly modified Events instance augmented
 with a lines.Testing instance which provides some convenience for
