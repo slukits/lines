@@ -69,15 +69,23 @@ func registerRunes(cmp Componenter, cntx *rprContext) {
 
 func reportKey(cntx *rprContext) (quit bool) {
 	evt := cntx.evt.(*tcell.EventKey)
+	sb := false
+	stopBubbling := func() bool {
+		sb = true
+		return true
+	}
 	cntx.scr.forFocused(func(c layoutComponenter) (stop bool) {
-		l, ok := c.userComponent().keyListenerOf(
-			evt.Key(), evt.Modifiers())
-		if !ok {
-			return
+		if sb := reportKeyListener(c, evt, cntx); sb {
+			return stopBubbling()
 		}
-		callback(c.userComponent(), cntx, l)
-		return
+		if sb := reportOnKey(c, evt, cntx); sb {
+			return stopBubbling()
+		}
+		return false
 	})
+	if sb {
+		return false
+	}
 	if !cntx.scr.root().ff.keyQuits(evt.Key()) {
 		return false
 	}
@@ -85,19 +93,86 @@ func reportKey(cntx *rprContext) (quit bool) {
 	return true
 }
 
+func reportKeyListener(
+	c layoutComponenter, evt *tcell.EventKey, cntx *rprContext,
+) (stopBubbling bool) {
+	l, ok := c.userComponent().keyListenerOf(evt.Key(), evt.Modifiers())
+	if !ok {
+		return false
+	}
+	env := callback(c.userComponent(), cntx, l)
+	return env&envStopBubbling == envStopBubbling
+}
+
+func keyCurry(
+	evt *tcell.EventKey, cb func(*Env, tcell.Key, tcell.ModMask),
+) func(*Env) {
+	return func(e *Env) {
+		cb(e, evt.Key(), evt.Modifiers())
+	}
+}
+
+func reportOnKey(
+	c layoutComponenter, evt *tcell.EventKey, cntx *rprContext,
+) (stopBubbling bool) {
+	kyr, ok := c.userComponent().(Keyer)
+	if !ok {
+		return false
+	}
+	env := callback(c.userComponent(), cntx, keyCurry(evt, kyr.OnKey))
+	return env&envStopBubbling == envStopBubbling
+}
+
 func reportRune(cntx *rprContext) (quit bool) {
 	evt := cntx.evt.(*tcell.EventKey)
+	sb := false
+	stopBubbling := func() bool {
+		sb = true
+		return true
+	}
 	cntx.scr.forFocused(func(c layoutComponenter) (stop bool) {
-		l, ok := c.userComponent().runeListenerOf(evt.Rune())
-		if !ok {
-			return
+		if sb := reportRuneListener(c, evt, cntx); sb {
+			return stopBubbling()
 		}
-		callback(c.userComponent(), cntx, l)
-		return
+		if sb := reportOnRune(c, evt, cntx); sb {
+			return stopBubbling()
+		}
+		return false
 	})
+	if sb {
+		return false
+	}
 	if !cntx.scr.root().ff.runeQuits(evt.Rune()) {
 		return false
 	}
 	reportQuit(cntx)
 	return true
+}
+
+func reportRuneListener(
+	c layoutComponenter, evt *tcell.EventKey, cntx *rprContext,
+) (stopBubbling bool) {
+	l, ok := c.userComponent().runeListenerOf(evt.Rune())
+	if !ok {
+		return false
+	}
+	env := callback(c.userComponent(), cntx, l)
+	return env&envStopBubbling == envStopBubbling
+}
+
+func runeCurry(
+	evt *tcell.EventKey, cb func(*Env, rune),
+) func(*Env) {
+	return func(e *Env) { cb(e, evt.Rune()) }
+}
+
+func reportOnRune(
+	c layoutComponenter, evt *tcell.EventKey, cntx *rprContext,
+) (stopBubbling bool) {
+	rnr, ok := c.userComponent().(Runer)
+	if !ok {
+		return false
+	}
+	env := callback(c.userComponent(), cntx, runeCurry(evt, rnr.OnRune))
+	return env&envStopBubbling == envStopBubbling
 }

@@ -83,12 +83,16 @@ func reportMouse(cntx *rprContext) {
 		rx := x - lc.Dim().X()
 		ry := y - lc.Dim().Y()
 
-		reportClick(cntx, lc, rx, ry)
-		reportContext(cntx, lc, rx, ry)
-
-		if msr, ok := lc.userComponent().(Mouser); ok {
-			callback(nil, cntx, mouseCurry(msr.OnMouse, rx, ry))
+		if sb := reportClick(cntx, lc, rx, ry); sb {
+			return true
 		}
+		if sb := reportContext(cntx, lc, rx, ry); sb {
+			return true
+		}
+		if sb := reportOnMouse(cntx, lc, rx, ry); sb {
+			return true
+		}
+
 		return false
 	})
 }
@@ -96,7 +100,9 @@ func reportMouse(cntx *rprContext) {
 // reportClick reports a "left"-click if an according mouse button
 // was received and the focused component implements corresponding
 // listener.
-func reportClick(cntx *rprContext, lc layoutComponenter, x, y int) {
+func reportClick(
+	cntx *rprContext, lc layoutComponenter, x, y int,
+) (stopBubbling bool) {
 
 	if cntx.evt.(*tcell.EventMouse).Buttons()&tcell.ButtonPrimary ==
 		tcell.ButtonNone {
@@ -108,14 +114,16 @@ func reportClick(cntx *rprContext, lc layoutComponenter, x, y int) {
 		return
 	}
 
-	callback(nil, cntx, mouseCurry(clk.OnClick, x, y))
-
+	env := callback(nil, cntx, mouseCurry(clk.OnClick, x, y))
+	return env&envStopBubbling == envStopBubbling
 }
 
 // reportContext reports a "right"-click if an according mouse button
 // was received and the focused component implements corresponding
 // listener.
-func reportContext(cntx *rprContext, lc layoutComponenter, x, y int) {
+func reportContext(
+	cntx *rprContext, lc layoutComponenter, x, y int,
+) (stopBubbling bool) {
 
 	if cntx.evt.(*tcell.EventMouse).Buttons()&tcell.ButtonSecondary ==
 		tcell.ButtonNone {
@@ -127,5 +135,18 @@ func reportContext(cntx *rprContext, lc layoutComponenter, x, y int) {
 		return
 	}
 
-	callback(nil, cntx, mouseCurry(clk.OnContext, x, y))
+	env := callback(nil, cntx, mouseCurry(clk.OnContext, x, y))
+	return env&envStopBubbling == envStopBubbling
+}
+
+func reportOnMouse(
+	cntx *rprContext, lc layoutComponenter, x, y int,
+) (stopBubbling bool) {
+
+	msr, ok := lc.userComponent().(Mouser)
+	if !ok {
+		return false
+	}
+	env := callback(nil, cntx, mouseCurry(msr.OnMouse, x, y))
+	return env&envStopBubbling == envStopBubbling
 }

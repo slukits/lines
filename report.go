@@ -219,7 +219,7 @@ func sizeClosure(scr tcell.Screen) func() (int, int) {
 
 func callback(
 	cmp Componenter, cntx *rprContext, cb func(*Env),
-) (flags uint64) {
+) (flags envMask) {
 
 	if cmp == nil {
 		cmp = cntx.scr.focus.userComponent()
@@ -233,7 +233,7 @@ func callback(
 	env.reset()
 
 	reportReported(cntx.ee)
-	return 0
+	return env.flags
 }
 
 func reportQuit(cntx *rprContext) {

@@ -83,8 +83,8 @@ instance after a listener has returned doesn't work.
     func (c *Cmp) OnInit(e *lines.Env) {
         go func() {
             time.Sleep(1*time.Second)
-            c.FF.Set(Scrollable) // most likely to panic
-            c.Dim().SetWidth(42) // most likely to panic
+            c.FF.Add(Scrollable) // panic or race condition
+            c.Dim().SetWidth(42) // panic or race condition
         }()
     }
 ```

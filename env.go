@@ -6,6 +6,12 @@ package lines
 
 import "github.com/gdamore/tcell/v2"
 
+type envMask uint64
+
+const (
+	envStopBubbling envMask = 1 << iota
+)
+
 // Env is an environment provided to event listeners when their event is
 // reported.  An Env instance implements the io.Writer interface and is
 // associated with a portion of the screen it writes to.  Writing to an
@@ -48,6 +54,8 @@ type Env struct {
 	// Evt is the tcell-event triggering the creation of a receiving
 	// environment to report it back to a registered listener.
 	Evt tcell.Event
+
+	flags envMask
 }
 
 // Write writes to the layouted area of the component having given
@@ -62,6 +70,10 @@ func (e *Env) Write(bb []byte) (int, error) {
 func (e *Env) Focused() Componenter {
 	return e.EE.scr.focus.userComponent()
 }
+
+// StopBubbling prevents any further reporting of an mouse or key event
+// after the listener calling StopBubbling returns.
+func (e *Env) StopBubbling() { e.flags |= envStopBubbling }
 
 // ScreenSize provides the currently available screen size.  This might
 // be useful during the OnInit event to do some layout

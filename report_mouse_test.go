@@ -11,30 +11,30 @@ import (
 	. "github.com/slukits/gounit"
 )
 
-type linesMouseEventType uint
+type mouseEventType uint
 
 const (
-	onClick linesMouseEventType = iota
+	onClick mouseEventType = iota
 	onContext
 	onMouse
 )
 
-type linesMouseEvent struct {
+type mouseEvent struct {
 	tcell   *tcell.EventMouse
-	evtType linesMouseEventType
+	evtType mouseEventType
 	x, y    int
 }
 
-type mouseEvents []linesMouseEvent
+type mouseEvents []mouseEvent
 
 func (me *mouseEvents) append(
-	evt *tcell.EventMouse, evtTyp linesMouseEventType, x, y int,
+	evt *tcell.EventMouse, evtTyp mouseEventType, x, y int,
 ) {
-	*me = append(*me, linesMouseEvent{
+	*me = append(*me, mouseEvent{
 		tcell: evt, evtType: evtTyp, x: x, y: y})
 }
 
-func (me mouseEvents) has(evtType linesMouseEventType) bool {
+func (me mouseEvents) has(evtType mouseEventType) bool {
 	for _, r := range me {
 		if r.evtType != evtType {
 			continue
@@ -44,7 +44,7 @@ func (me mouseEvents) has(evtType linesMouseEventType) bool {
 	return false
 }
 
-func (me mouseEvents) len(evtType linesMouseEventType) int {
+func (me mouseEvents) len(evtType mouseEventType) int {
 	n := 0
 	for _, r := range me {
 		if r.evtType != evtType {
@@ -55,7 +55,7 @@ func (me mouseEvents) len(evtType linesMouseEventType) int {
 	return n
 }
 
-func (me mouseEvents) get(evtType linesMouseEventType) *linesMouseEvent {
+func (me mouseEvents) get(evtType mouseEventType) *mouseEvent {
 	for _, r := range me {
 		if r.evtType != evtType {
 			continue
@@ -65,7 +65,7 @@ func (me mouseEvents) get(evtType linesMouseEventType) *linesMouseEvent {
 	return nil
 }
 
-func (me mouseEvents) getXY(evtType linesMouseEventType) (x, y int) {
+func (me mouseEvents) getXY(evtType mouseEventType) (x, y int) {
 	r := me.get(evtType)
 	if r == nil {
 		return -1, -1

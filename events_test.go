@@ -5,11 +5,9 @@
 package lines
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
-	"github.com/gdamore/tcell/v2"
 	. "github.com/slukits/gounit"
 )
 
@@ -23,91 +21,6 @@ func (s *events) Initializes_initially_given_component(t *T) {
 	ee, tt := Test(t.GoT(), &cmpFX{})
 	ee.Listen()
 	t.Eq(expInit, tt.LastScreen)
-}
-
-type keysCmpFX struct{ Component }
-
-const keyRegistration = "key-registration"
-
-func (c *keysCmpFX) Keys(register KeyRegistration) {
-	register(tcell.KeyF5, tcell.ModNone, func(e *Env) {
-		fmt.Fprint(e, keyRegistration)
-	})
-}
-
-func (s *events) Registers_initially_given_key_listeners(t *T) {
-	ee, tt := Test(t.GoT(), &keysCmpFX{})
-	ee.Listen()
-	tt.FireKey(tcell.KeyF5)
-	t.Eq(keyRegistration, tt.LastScreen)
-}
-
-type keysUpdCmpFX struct {
-	Component
-	first, second bool
-}
-
-func (c *keysUpdCmpFX) Keys(register KeyRegistration) {
-	if !c.first {
-		register(tcell.KeyF5, tcell.ModNone, func(e *Env) {
-			c.first = true
-			e.EE.UpdateKeys(c)
-		})
-		return
-	}
-	register(tcell.KeyF5, tcell.ModNone, func(e *Env) {
-		c.second = true
-	})
-}
-
-func (s *events) Updates_key_listeners(t *T) {
-	fx := &keysUpdCmpFX{}
-	ee, tt := Test(t.GoT(), fx, 3)
-	ee.Listen()
-	tt.FireKey(tcell.KeyF5)
-	tt.FireKey(tcell.KeyF5)
-	t.True(fx.first && fx.second)
-}
-
-type runesCmpFX struct{ Component }
-
-const runeRegistration = "rune-registration"
-
-func (c *runesCmpFX) Runes(register RuneRegistration) {
-	register('r', func(e *Env) { fmt.Fprint(e, runeRegistration) })
-}
-
-func (s *events) Registers_initially_given_rune_listeners(t *T) {
-	ee, tt := Test(t.GoT(), &runesCmpFX{})
-	ee.Listen()
-	tt.FireRune('r')
-	t.Eq(runeRegistration, tt.LastScreen)
-}
-
-type runesUpdCmpFX struct {
-	Component
-	first, second bool
-}
-
-func (c *runesUpdCmpFX) Runes(register RuneRegistration) {
-	if !c.first {
-		register('r', func(e *Env) {
-			c.first = true
-			e.EE.UpdateRunes(c)
-		})
-		return
-	}
-	register('r', func(e *Env) {
-		c.second = true
-	})
-}
-
-func (s *events) Updates_rune_listeners(t *T) {
-	fx := &runesUpdCmpFX{}
-	_, tt := Test(t.GoT(), fx, 3)
-	tt.FireRune('r')
-	tt.FireRune('r')
-	t.True(fx.first && fx.second)
 }
 
 type quitCmpFX struct {
@@ -221,10 +134,6 @@ func (s *events) Reports_moved_focus_gaining_and_loosing(t *T) {
 	t.True(fx.lostFocus)
 	t.True(fx.cc[0].(*fcsCmpFX).gainedFocus)
 	t.False(ee.IsListening())
-}
-
-func (s *events) Doesnt_move_focus_on_click_if_not_focusable(t *T) {
-
 }
 
 func TestEvents(t *testing.T) {
