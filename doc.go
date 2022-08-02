@@ -89,7 +89,10 @@
 // The majority of lines' interfaces are for event handling.  Is such an
 // interface implemented in a component, corresponding events are
 // reported to that component.  E.g. OnKey, OnFocus, OnLayout are
-// methods of such interfaces.
+// methods of such interfaces.  Keyboard and mouse events are bubbling
+// up from the focused/clicked component through all enclosing
+// ancestors.  The environment instance of such a reported bubbling
+// event may be used to suppress bubbling: e.StopBubbling().
 //
 // Layout handling
 //
@@ -219,7 +222,7 @@
 //         fx := &CmpFixture{ exp: "init-reported" }
 //         ee, tt := lines.Test(t, fx)
 //         ee.Listen()
-//         if tt.LastScreen != fx.exp {
+//         if fx.exp != tt.LastScreen {
 //             t.Errorf("expected: '%s'; got '%s'", fx.exp, tt.LastScreen)
 //         }
 //     }

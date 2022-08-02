@@ -6,6 +6,7 @@ package lines
 
 import (
 	"testing"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 	. "github.com/slukits/gounit"
@@ -80,17 +81,22 @@ func (ke kbEvents) get(evtType kbEventType) *kbEvent {
 func (ke kbEvents) HasUpdatedKeyListener() bool {
 	return ke.get(updateKeyListeners) != nil
 }
-
 func (ke kbEvents) HasUpdatedRuneListener() bool {
 	return ke.get(updateRuneListeners) != nil
 }
-
-func (ke kbEvents) HasKey() bool { return ke.get(onKey) != nil }
-
+func (ke kbEvents) HasKey() bool  { return ke.get(onKey) != nil }
 func (ke kbEvents) HasRune() bool { return ke.get(onRune) != nil }
+func (ke kbEvents) HasKeyListener() bool {
+	return ke.get(keyListener) != nil
+}
+func (ke kbEvents) HasRuneListener() bool {
+	return ke.get(runeListener) != nil
+}
 
 type kbFX struct {
 	kbEvents
+	stopBubblingKeys, stopBubblingRunes   bool
+	stopBubblingOnKey, stopBubblingOnRune bool
 }
 
 // Keys should be called by lines at least once during initialization.
@@ -111,6 +117,9 @@ func (fx *kbFX) Keys(register KeyRegistration) {
 	register(tcell.KeyF1+tcell.Key(delta), tcell.ModNone,
 		func(e *Env) {
 			fx.append(e.Evt.(*tcell.EventKey), keyListener)
+			if fx.stopBubblingKeys {
+				e.StopBubbling()
+			}
 		},
 	)
 	// increase len(updateKeyListeners)
@@ -137,6 +146,9 @@ func (fx *kbFX) Runes(register RuneRegistration) {
 	// register next rune-listener
 	register('A'+rune(delta), func(e *Env) {
 		fx.append(e.Evt.(*tcell.EventKey), runeListener)
+		if fx.stopBubblingRunes {
+			e.StopBubbling()
+		}
 	})
 	// increase len(updateRuneListeners)
 	fx.append(nil, updateRuneListeners)
@@ -144,10 +156,16 @@ func (fx *kbFX) Runes(register RuneRegistration) {
 
 func (fx *kbFX) OnKey(e *Env, k tcell.Key, mm tcell.ModMask) {
 	fx.append(e.Evt.(*tcell.EventKey), onKey)
+	if fx.stopBubblingOnKey {
+		e.StopBubbling()
+	}
 }
 
 func (fx *kbFX) OnRune(e *Env, r rune) {
 	fx.append(e.Evt.(*tcell.EventKey), onRune)
+	if fx.stopBubblingOnRune {
+		e.StopBubbling()
+	}
 }
 
 type kbCmpFX struct {
@@ -238,7 +256,7 @@ type bbbKBCmpFX struct {
 }
 
 func (c *bbbKBCmpFX) OnInit(e *Env) {
-	c.CC = append(c.CC, &c.kbCmpFX)
+	c.CC = append(c.CC, &kbCmpFX{})
 	e.EE.MoveFocus(c.CC[0])
 }
 
@@ -248,6 +266,7 @@ func (c *bbbKBCmpFX) inner() *kbCmpFX {
 
 func (s *KB) Bubbles_keys(t *T) {
 	fx := &bbbKBCmpFX{}
+	// 2 x keyListener 2 x OnKey
 	ee, tt := Test(t.GoT(), fx, 4)
 	tt.FireKey(tcell.KeyF1, 0)
 	t.False(ee.IsListening())
@@ -259,6 +278,7 @@ func (s *KB) Bubbles_keys(t *T) {
 
 func (s *KB) Bubbles_runes(t *T) {
 	fx := &bbbKBCmpFX{}
+	// 2 x runeListener 2 x OnRune
 	ee, tt := Test(t.GoT(), fx, 4)
 	tt.FireRune('A')
 	t.False(ee.IsListening())
@@ -268,31 +288,32 @@ func (s *KB) Bubbles_runes(t *T) {
 	t.True(fx.len(runeListener) == 1)
 }
 
+func (s *KB) Event_bubbling_may_be_stopped(t *T) {
+	fx := &bbbKBCmpFX{}
+	// OnInit runeListener keyListener OnRune OnKey
+	ee, tt := Test(t.GoT(), fx, 5)
+	tt.Timeout = 20 * time.Minute
+	ee.Listen()
+	fx.inner().stopBubblingKeys = true
+	fx.inner().stopBubblingOnKey = true
+	fx.inner().stopBubblingRunes = true
+	fx.inner().stopBubblingOnRune = true
+	tt.FireKey(tcell.KeyF1, 0) // reports keyListener only
+	tt.FireRune('A')           // reports runeListener only
+	tt.FireKey(tcell.KeyBS, 0) // report OnKey only
+	tt.FireRune('a')           // report OnRune only
+	t.False(ee.IsListening())
+	t.True(fx.inner().HasKey())
+	t.True(fx.inner().HasRune())
+	t.True(fx.inner().HasKeyListener())
+	t.True(fx.inner().HasRuneListener())
+	t.False(fx.HasKey())
+	t.False(fx.HasRune())
+	t.False(fx.HasKeyListener())
+	t.False(fx.HasRuneListener())
+}
+
 func TestKB(t *testing.T) {
 	t.Parallel()
 	Run(&KB{}, t)
 }
-
-// func (s *events) Key_listeners_are_updated(t *T) {
-// 	fx := &keysUpdCmpFX{}
-// 	ee, tt := Test(t.GoT(), fx, 3)
-// 	ee.Listen()
-// 	tt.FireKey(tcell.KeyF5)
-// 	tt.FireKey(tcell.KeyF5)
-// 	t.True(fx.first && fx.second)
-// }
-//
-// func (s *events) Registers_initially_given_rune_listeners(t *T) {
-// 	ee, tt := Test(t.GoT(), &runesCmpFX{})
-// 	ee.Listen()
-// 	tt.FireRune('r')
-// 	t.Eq(runeRegistration, tt.LastScreen)
-// }
-//
-// func (s *events) Updates_rune_listeners(t *T) {
-// 	fx := &runesUpdCmpFX{}
-// 	_, tt := Test(t.GoT(), fx, 3)
-// 	tt.FireRune('r')
-// 	tt.FireRune('r')
-// 	t.True(fx.first && fx.second)
-// }
