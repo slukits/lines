@@ -107,6 +107,26 @@
 //
 // Content and format handling
 //
+// The Env(ironment) instance passed to a event listener is associated with
+// the screen portion of the component the event is reported to.  Writing
+// to the environment prints provided content to its screen portion.  Env's
+// methods Fmt, BG, FG, LL, Pos give fine grained control of what is
+// printed where and how.  Fmt stands for formatting like bold or centered.
+// FG, BG lets you set fore- and background color.  LL lets you address a
+// specific line, Pos a line and a column.  Each of these methods
+// return the Env instance, i.e. we can do this
+//
+//     fmt.Fprintln(e.Fmt(lines.Centered).LL(5), "a centered line")
+//
+// The above prints "a centered line" centered into the component's fifth
+// line.  While e.Fmt binds the formatting to the next printed text there
+// is a similar API on component level provided by the embedded Component
+// instance: Component.Fmt .BG, .FG sets formatting directives for each
+// printed content of a component.  There is also the property Component.GG
+// which makes optional gaps around a component accessible.  And the method
+// Component.Mod controls if a component's content is overwritten or
+// appended, or if it is shown tailed.
+//
 // The Env(ironment) instance passed to a event listener is associated
 // with the screen portion of the component the event is reported to.
 // Writing to the environment prints provided content to its screen
