@@ -124,9 +124,9 @@ FG, BG lets you set fore- and background color.  LL lets you address a
 specific line, Pos a line and a column.  Each of these methods
 return the Env instance, i.e. we can do this
 
-    ```go
-    fmt.Fprintln(e.Fmt(lines.Centered).LL(5), "a centered line")
-    ```
+```go
+fmt.Fprintln(e.Fmt(lines.Centered).LL(5), "a centered line")
+```
 
 The above prints "a centered line" centered into the component's fifth
 line.  While e.Fmt binds the formatting to the next printed text there
