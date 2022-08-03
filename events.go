@@ -47,6 +47,36 @@ type Events struct {
 	synced chan bool
 }
 
+// New returns a Events instance reporting events to given components.
+// It panics if the screen can't be created or initialized.  The Events
+// instance has the Quitable feature bound to 'q', ctrl-c and ctrl-d.
+// The binding to 'q' may be removed.  The bindings to ctrl-c and ctrl-d
+// may not be removed.  Use the Kiosk constructor for an Events instance
+// without any quit bindings.
+func New(cmp Componenter) *Events {
+	ee := Events{
+		scr:    newScreen(cmp),
+		mutex:  &sync.Mutex{},
+		synced: make(chan bool, 1),
+	}
+	ee.pollEvent = ee.scr.lib.PollEvent
+	ee.postEvent = ee.scr.lib.PostEvent
+	return &ee
+}
+
+// Kiosk returns an Events instance without registered Quitable feature,
+// i.e. the application can't be quit by the user.
+func Kiosk(cmp Componenter) *Events {
+	defaultFeatures = &features{
+		keys: map[tcell.ModMask]map[tcell.Key]FeatureMask{},
+		runes: map[rune]FeatureMask{
+			0: NoFeature, // indicates the immutable default features
+		},
+		buttons: map[tcell.ModMask]map[tcell.ButtonMask]FeatureMask{},
+	}
+	return New(cmp)
+}
+
 // IsListening returns true if receiving Events instance is looping
 // around the event queue.
 func (ee *Events) IsListening() bool {
@@ -170,7 +200,8 @@ type Componenter interface {
 	isInitialized() bool
 	hasLayoutWrapper() bool
 	setInitialized()
-	sync(rw runeWriter)
+	sync(runeWriter)
+	hardSync(runeWriter)
 	addKey(k tcell.Key, mm tcell.ModMask, l Listener)
 	addRune(rune, Listener)
 	keyListenerOf(tcell.Key, tcell.ModMask) (Listener, bool)
