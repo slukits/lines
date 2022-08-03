@@ -210,7 +210,7 @@ func (c *Component) sync(rw runeWriter) {
 		if i >= sh {
 			return true
 		}
-		l.sync(sx, sy, sw, rw, wrapped.sty)
+		l.sync(sx, sy+i, sw, rw, wrapped.sty)
 		return false
 	})
 }
