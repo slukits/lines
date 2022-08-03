@@ -51,9 +51,17 @@ type Component struct {
 	userCmp Componenter
 }
 
+type ComponentMode uint
+
+const (
+	Overwriting ComponentMode = 1 << iota
+	Appending
+)
+
 type component struct {
 	userCmp     Componenter
 	dim         *lyt.Dim
+	mod         ComponentMode
 	initialized bool
 	ll          *lines
 	sty         tcell.Style
@@ -62,8 +70,24 @@ type component struct {
 }
 
 func (c *component) write(bb []byte) (int, error) {
-	c.ll.replace(bytes.Split(bb, []byte("\n"))...)
+	switch {
+	case c.mod&Overwriting == Overwriting:
+		c.ll.replace(bytes.Split(bb, []byte("\n"))...)
+	case c.mod&Appending == Appending:
+		c.ll.append(bytes.Split(bb, []byte("\n"))...)
+	}
 	return len(bb), nil
+}
+
+func (c *component) Mod(cm ComponentMode) {
+	switch cm {
+	case Appending:
+		c.mod &^= Overwriting
+		c.mod |= Appending
+	case Overwriting:
+		c.mod &^= Appending
+		c.mod |= Overwriting
+	}
 }
 
 func (c *component) userComponent() Componenter {
@@ -98,6 +122,7 @@ func (c *Component) initialize(
 		ll:      &lines{},
 		sty:     tcell.StyleDefault,
 		userCmp: userComponent,
+		mod:     Overwriting,
 	}
 	c.FF = &Features{c: c}
 	switch userComponent.(type) {
@@ -177,17 +202,35 @@ func (c *Component) runeListenerOf(r rune) (Listener, bool) {
 	return wrapped.lst.runeListenerOf(r)
 }
 
+// sync writes receiving components lines to the screen.
 func (c *Component) sync(rw runeWriter) {
 	wrapped := c.layoutCmp.wrapped()
-	wrapped.ll.For(func(i int, l *line) {
-		l.sync(
-			wrapped.dim.X(),
-			wrapped.dim.Y()+i,
-			wrapped.dim.Width(),
-			rw,
-			wrapped.sty,
-		)
+	sx, sy, sw, sh := wrapped.dim.Area()
+	wrapped.ll.For(func(i int, l *line) (stop bool) {
+		if i >= sh {
+			return true
+		}
+		l.sync(sx, sy, sw, rw, wrapped.sty)
+		return false
 	})
+}
+
+// hardSync clears the screen area of receiving component before its
+// content is written to the screen.
+func (c *Component) hardSync(rw runeWriter) {
+	c.clear(rw)
+	c.sync(rw)
+}
+
+// clear fills the receiving component's printable area with spaces.
+func (c *Component) clear(rw runeWriter) {
+	wrapped := c.layoutCmp.wrapped()
+	sx, sy, sw, sh := wrapped.dim.Area()
+	for y := sy; y < sh; y++ {
+		for x := sx; x < sw; x++ {
+			rw.SetContent(x, y, ' ', nil, wrapped.sty)
+		}
+	}
 }
 
 // Features provides access and fine grained control over a components

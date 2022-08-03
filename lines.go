@@ -23,6 +23,15 @@ func (ll *lines) replace(cc ...[]byte) {
 	*ll = new
 }
 
+func (ll *lines) append(cc ...[]byte) {
+	for _, c := range cc {
+		*ll = append(*ll, &line{
+			content: string(c),
+			dirty:   true,
+		})
+	}
+}
+
 func (ll lines) IsDirty() bool {
 	for _, l := range ll {
 		if !l.dirty {
@@ -42,9 +51,11 @@ func (ll lines) ForDirty(cb func(int, *line)) {
 	}
 }
 
-func (ll lines) For(cb func(int, *line)) {
+func (ll lines) For(cb func(int, *line) (stop bool)) {
 	for i, l := range ll {
-		cb(i, l)
+		if cb(i, l) {
+			return
+		}
 	}
 }
 
