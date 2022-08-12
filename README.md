@@ -1,3 +1,5 @@
+[![Go](https://github.com/slukits/lines/actions/workflows/go.yml/badge.svg)](https://github.com/slukits/lines/actions/workflows/go.yml)
+
 # Overview
 
 lines provides an unopinionated, well tested and documented,
