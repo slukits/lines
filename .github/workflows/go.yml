@@ -22,7 +22,7 @@ jobs:
 
             - name: Prepare Testing
               env:
-                GITHUB_TOKEN: ${{ secrets.GOUNIT }}
+                GITHUB_TOKEN: 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
               run: git config --global url."https://$GITHUB_TOKEN:x-oauth-basic@github.com/".insteadOf "https://github.com/"
 
             - name: Test
