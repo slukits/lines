@@ -29,10 +29,4 @@ jobs:
               env:
                 GOPRIVATE: github.com/slukits/
               run: |
-                go test -race -cover ./... -covermode=atomic -coverprofile=coverage.out
-                go tool cover -func=coverage.out -o=coverage.out
-
-            - name: Go Coverage Badge
-              uses: tj-actions/coverage-badge-go@v1.2
-              with:
-                filename: coverage.out
+                go test -race -cover ./...
