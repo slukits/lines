@@ -26,4 +26,6 @@ jobs:
               run: git config --global url."https://$GITHUB_TOKEN:x-oauth-basic@github.com/".insteadOf "https://github.com/"
 
             - name: Test
-              run: GOPRIVATE=github.com/slukits/ go test -race -cover ./...
+              env:
+                GOPRIVATE: github.com/slukits/
+              run: go test -race -cover ./...
