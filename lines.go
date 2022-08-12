@@ -59,6 +59,14 @@ func (ll lines) For(cb func(int, *line) (stop bool)) {
 	}
 }
 
+func (ll lines) ForInverse(cb func(int, *line) (stop bool)) {
+	for i := len(ll) - 1; i >= 0; i-- {
+		if cb(i, ll[i]) {
+			return
+		}
+	}
+}
+
 type line struct {
 	dirty   bool
 	stale   string

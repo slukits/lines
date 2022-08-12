@@ -147,7 +147,10 @@ func (tt *Testing) listen() *Events {
 
 // FireResize posts a resize event and returns after this event
 // has been processed.  Is associated Events instance not listening
-// it is started before the event is fired.
+// it is started before the event is fired.  NOTE this event as such is
+// not reported, i.e. the event countdown is not reduced through this
+// event.  But subsequently triggered OnInit or OnLayout events are
+// counting down if reported.
 func (tt *Testing) FireResize(width, height int) *Events {
 	tt.t.Helper()
 	if !tt.ee.IsListening() {

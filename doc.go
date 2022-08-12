@@ -6,31 +6,31 @@
 // terminal UI library which does the heavy lifting for you when it
 // comes to
 //
-//     - concurrency safety
-//     - event handling
-//     - layout handling
-//     - content/format handling
-//     - feature handling
-//     - testing
+//   - concurrency safety
+//   - event handling
+//   - layout handling
+//   - content/format handling
+//   - feature handling
+//   - testing
 //
 // The motivation is to provide an UI-library with a small API and few
 // powerful features that lets its users quickly implement an terminal
 // ui exactly as needed.
 //
-//     import (
-//         fmt
+//	import (
+//	    fmt
 //
-//         "github.com/slukits/lines"
-//     )
+//	    "github.com/slukits/lines"
+//	)
 //
-//     type Cmp struct { lines.Component }
+//	type Cmp struct { lines.Component }
 //
-//     func (c *Cmp) OnInit(e *lines.Env) { // Env: component environment
-//         c.FF.Add(lines.Scrollable) // FF: component features
-//         fmt.Fprintf(e, "%s %s", "hello", "world")
-//     }
+//	func (c *Cmp) OnInit(e *lines.Env) { // Env: component environment
+//	    c.FF.Add(lines.Scrollable) // FF: component features
+//	    fmt.Fprintf(e, "%s %s", "hello", "world")
+//	}
 //
-//     func main() { lines.New(&Cmp{}).Listen() } // blocking
+//	func main() { lines.New(&Cmp{}).Listen() } // blocking
 //
 // New provides an Events-instance reporting user input and
 // programmatically posted events to listener implementations of
@@ -45,46 +45,46 @@
 // styling.  I.e. you will have to make yourself acquainted with tcell's
 // Key, ModeMap, ButtonMask and AttrMask constants as well as its Style
 // and Color type as needed.  I also tried to take care that lines
-// doesn't ``remove'' features that tcell provides.
+// doesn't “remove” features that tcell provides.
 //
-// Concurrency safety
+// # Concurrency safety
 //
 // What doesn't work
 //
-//     func (c *Cmp) OnInit(e *lines.Env) {
-//         go func() {
-//             time.Sleep(1*time.Second)
-//             fmt.Fprint(e, "awoken") // will panic
-//         }()
-//     }
+//	func (c *Cmp) OnInit(e *lines.Env) {
+//	    go func() {
+//	        time.Sleep(1*time.Second)
+//	        fmt.Fprint(e, "awoken") // will panic
+//	    }()
+//	}
 //
 // what does work
 //
-//     func (c *Cmp) OnInit(e *lines.Env) {
-//         go func(ee *lines.Events) {
-//             time.Sleep(1*time.Second)
-//             ee.Update(c, nil, func(e *lines.Env) {
-//                  fmt.Fprint(e, "awoken") // will not panic
-//             })
-//         }(e.EE)
-//     }
+//	func (c *Cmp) OnInit(e *lines.Env) {
+//	    go func(ee *lines.Events) {
+//	        time.Sleep(1*time.Second)
+//	        ee.Update(c, nil, func(e *lines.Env) {
+//	             fmt.Fprint(e, "awoken") // will not panic
+//	        })
+//	    }(e.EE)
+//	}
 //
 // Also using functionality or properties provided by embedded Component
 // instance after a listener has returned doesn't work.
 //
-//     func (c *Cmp) OnInit(e *lines.Env) {
-//         go func() {
-//             time.Sleep(1*time.Second)
-//             c.FF.Set(Scrollable) // most likely to panic
-//             c.Dim().SetWidth(42) // most likely to panic
-//         }()
-//     }
+//	func (c *Cmp) OnInit(e *lines.Env) {
+//	    go func() {
+//	        time.Sleep(1*time.Second)
+//	        c.FF.Set(Scrollable) // panics or creates a race condition
+//	        c.Dim().SetWidth(42) // panics or creates a race condition
+//	    }()
+//	}
 //
 // It is only save to pass (the initially created) events instance e.EE
 // on to a go routine where at the end provided update mechanisms of
 // said Events-instance are used to report back to a component.
 //
-// Event handling
+// # Event handling
 //
 // The majority of lines' interfaces are for event handling.  Is such an
 // interface implemented in a component, corresponding events are
@@ -94,7 +94,7 @@
 // ancestors.  The environment instance of such a reported bubbling
 // event may be used to suppress bubbling: e.StopBubbling().
 //
-// Layout handling
+// # Layout handling
 //
 // lines comes with a layout manager which does most of the work for
 // you.  If fine grained control is needed the embedded Component's Dim
@@ -107,7 +107,7 @@
 // a component which is both stacking and chaining other components
 // hence it silently ignores the chained components.
 //
-// Content and format handling
+// # Content and format handling
 //
 // The Env(ironment) instance passed to a event listener is associated
 // with the screen portion of the component the event is reported to.
@@ -118,7 +118,7 @@
 // color.  LL lets you address a specific line, Pos a line and a column.
 // Each of these methods return the Env instance, i.e. we can do this
 //
-//     fmt.Fprintln(e.Fmt(lines.Centered).LL(5), "a centered line")
+//	fmt.Fprintln(e.Fmt(lines.Centered).LL(5), "a centered line")
 //
 // The above prints "a centered line" centered into the component's
 // fifth line.  While e.Fmt binds the formatting to the next printed
@@ -141,7 +141,7 @@
 // address a specific line, Pos a line and a column.  GG finally makes
 // optional gaps around a component accessible.
 //
-// Feature handling
+// # Feature handling
 //
 // Features of a component are accessed and controlled through the FF
 // property of embedded Component-type.  Features are features for the
@@ -151,15 +151,15 @@
 // MessageBar, Workspace and Statusbar while a Workspace  chains two
 // panel instances p1 and p2.
 //
-//     APP--------------------------+
-//       |           mb             |
-//       WS-----------+-------------+
-//       |            |             |
-//       |    p1      |      p2     |
-//       |            |             |
-//       +------------+-------------+
-//       |           sb             |
-//       +--------------------------+
+//	APP--------------------------+
+//	  |           mb             |
+//	  WS-----------+-------------+
+//	  |            |             |
+//	  |    p1      |      p2     |
+//	  |            |             |
+//	  +------------+-------------+
+//	  |           sb             |
+//	  +--------------------------+
 //
 // Finally we have some event interfaces implemented for p1 and p2.  Now
 // we want to test implemented event handler and fire events for them
@@ -167,10 +167,10 @@
 // initially App will have the focus and that's not changing unless
 // lines is told to do so
 //
-//     func (a *App) OnInit(e *Env) {
-//         // ...
-//         e.EE.MoveFocus(p1)
-//     }
+//	func (a *App) OnInit(e *Env) {
+//	    // ...
+//	    e.EE.MoveFocus(p1)
+//	}
 //
 // Now p1 gets its events.  We have our App started and click into p2
 // where we have an OnClick implementation.  (Which might tries to move
@@ -183,49 +183,49 @@
 // not.  Hence lines doesn't try to be smart about such things and
 // implements the features concept instead
 //
-//     func (ws *Workspace) OnInit(e *Env) {
-//         ws.Features.AddRecursively(Focusable | Selectable)
-//     }
+//	func (ws *Workspace) OnInit(e *Env) {
+//	    ws.Features.AddRecursively(Focusable | Selectable)
+//	}
 //
 // This one line has  the following consequences: If the user clicks on
 // p1 or p2 the respective component gets the focus and events about
 // focus gain and loss are reported, the mouse click is reported.  If
 // ws, p1 or p2 has the focus and the user presses the the Tab key the
 // "next" panel gains the focus, focus gain and loss are reported, the
-// Tab key is reported.  If the user presses shift-tab the ``previous''
+// Tab key is reported.  If the user presses shift-tab the “previous”
 // panel gains the focus ...  While there is probably enough going on to
 // justify one line of code more importantly this line of code
 // represents full control over what is going on.
 //
-// Testing
+// # Testing
 //
 // lines comes with testing facilities:
 //
-//     import (
-//         "testing"
+//	import (
+//	    "testing"
 //
-//         "github.com/slukits/lines"
-//     )
-//
-//
-//     type CmpFixture struct {
-//         lines.Component
-//         exp string
-//     }
+//	    "github.com/slukits/lines"
+//	)
 //
 //
-//     func (c *CmpFixture) OnInit(e *lines.Env) {
-//         fmt.Fprint(e, c.exp)
-//     }
+//	type CmpFixture struct {
+//	    lines.Component
+//	    exp string
+//	}
 //
-//     func TestComponentInitialization(t *T) {
-//         fx := &CmpFixture{ exp: "init-reported" }
-//         ee, tt := lines.Test(t, fx)
-//         ee.Listen()
-//         if fx.exp != tt.LastScreen {
-//             t.Errorf("expected: '%s'; got '%s'", fx.exp, tt.LastScreen)
-//         }
-//     }
+//
+//	func (c *CmpFixture) OnInit(e *lines.Env) {
+//	    fmt.Fprint(e, c.exp)
+//	}
+//
+//	func TestComponentInitialization(t *T) {
+//	    fx := &CmpFixture{ exp: "init-reported" }
+//	    ee, tt := lines.Test(t, fx)
+//	    ee.Listen()
+//	    if fx.exp != tt.LastScreen {
+//	        t.Errorf("expected: '%s'; got '%s'", fx.exp, tt.LastScreen)
+//	    }
+//	}
 //
 // lines can be asked for a slightly modified Events instance augmented
 // with a lines.Testing instance which provides some convenience for
@@ -236,22 +236,22 @@
 //
 // The main features of an Testing-instance are:
 //
-//      - an event-countdown which automatically terminates the event loop,
-//      - providing methods for firing user input events
-//      - providing the simulated terminal screen's content.
+//   - an event-countdown which automatically terminates the event loop,
+//   - providing methods for firing user input events
+//   - providing the simulated terminal screen's content.
 //
 // All methods posting (user) events are guaranteed to return after the
 // event and potentially subsequently triggered events were processed
 // and the screen was synchronized.
 //
-// TODO
+// # TODO
 //
 // All examples and scenarios mentioned in this overview are implemented
 // the API is frozen and the package is used in a production
 // environment.  But there are still some features lacking which I'd
 // like lines to have in order to be in some sense complete.  You can
-// learn about these features by parsing the code base for ``// TODO:
-// implement''.  You will notice that it is manly constants which have
+// learn about these features by parsing the code base for “// TODO:
+// implement”.  You will notice that it is manly constants which have
 // this flag.  A sign that the API is stable.
 //
 // Enjoy!

@@ -54,8 +54,16 @@ type Component struct {
 type ComponentMode uint
 
 const (
+
+	// Overwriting a components content by an write operation.
 	Overwriting ComponentMode = 1 << iota
+
+	// Appending to a components content by an write operation.
 	Appending
+
+	// Tailing is appending and displaying the contents "tail"
+	// especially if the display area cannot show all the content.
+	Tailing
 )
 
 type component struct {
@@ -73,21 +81,32 @@ func (c *component) write(bb []byte) (int, error) {
 	switch {
 	case c.mod&Overwriting == Overwriting:
 		c.ll.replace(bytes.Split(bb, []byte("\n"))...)
-	case c.mod&Appending == Appending:
+	case c.mod&(Appending|Tailing) != 0:
 		c.ll.append(bytes.Split(bb, []byte("\n"))...)
 	}
 	return len(bb), nil
 }
 
+// Mod sets how given components content is maintained.
 func (c *component) Mod(cm ComponentMode) {
 	switch cm {
 	case Appending:
-		c.mod &^= Overwriting
+		c.mod &^= Overwriting | Tailing
 		c.mod |= Appending
 	case Overwriting:
-		c.mod &^= Appending
+		c.mod &^= Appending | Tailing
 		c.mod |= Overwriting
+	case Tailing:
+		c.mod &^= Appending | Overwriting
+		c.mod |= Tailing
 	}
+}
+
+// Len returns the number of lines currently stored in a component.
+// Note the line number is independent of a component's associated
+// screen area.
+func (c *component) Len() int {
+	return len(*c.ll)
 }
 
 func (c *component) userComponent() Componenter {
@@ -206,11 +225,31 @@ func (c *Component) runeListenerOf(r rune) (Listener, bool) {
 func (c *Component) sync(rw runeWriter) {
 	wrapped := c.layoutCmp.wrapped()
 	sx, sy, sw, sh := wrapped.dim.Area()
+	if wrapped.mod&Tailing == Tailing {
+		if len(*wrapped.ll) >= sh {
+			c.syncTailed(wrapped, rw, sx, sy, sw, sh)
+			return
+		}
+	}
 	wrapped.ll.For(func(i int, l *line) (stop bool) {
 		if i >= sh {
 			return true
 		}
 		l.sync(sx, sy+i, sw, rw, wrapped.sty)
+		return false
+	})
+}
+
+func (c *Component) syncTailed(
+	cmp *component, rw runeWriter, sx, sy, sw, sh int,
+) {
+	y := sy + sh - 1
+	cmp.ll.ForInverse(func(_ int, l *line) (stop bool) {
+		if y < sy {
+			return true
+		}
+		l.sync(sx, y, sw, rw, cmp.sty)
+		y--
 		return false
 	})
 }

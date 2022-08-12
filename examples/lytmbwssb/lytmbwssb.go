@@ -55,7 +55,7 @@ func (c *WS) OnInit(e *lines.Env) {
 type Panel struct{ lines.Component }
 
 func (c *Panel) OnInit(e *lines.Env) {
-	c.Mod(lines.Appending)
+	c.Mod(lines.Tailing)
 }
 
 func (c *Panel) OnLayout(e *lines.Env) {

@@ -5,6 +5,7 @@
 package lines
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -17,8 +18,14 @@ func (s *events) SetUp(t *T) {
 	t.Parallel()
 }
 
+type initFX struct{ Component }
+
+const expInit = "component-fixture initialized"
+
+func (c *initFX) OnInit(e *Env) { fmt.Fprint(e, expInit) }
+
 func (s *events) Initializes_initially_given_component(t *T) {
-	ee, tt := Test(t.GoT(), &cmpFX{})
+	ee, tt := Test(t.GoT(), &initFX{})
 	ee.Listen()
 	t.Eq(expInit, tt.LastScreen)
 }

@@ -11,15 +11,7 @@ import (
 	. "github.com/slukits/gounit"
 )
 
-type cmpFX struct {
-	Component
-}
-
-const expInit = "component-fixture initialized"
-
-func (c *cmpFX) OnInit(e *Env) {
-	fmt.Fprint(e, expInit)
-}
+type cmpFX struct{ Component }
 
 type _component struct{ Suite }
 
@@ -31,6 +23,59 @@ func (s *_component) Access_panics_outside_event_processing(t *T) {
 	defer ee.QuitListening()
 	t.Panics(func() { cmp.Dim().SetHeight(20) })
 }
+
+func (s *_component) Has_one_line_after_over_writing_one_line(t *T) {
+	cmp := &cmpFX{}
+	ee, _ := Test(t.GoT(), cmp)
+	ee.Update(cmp, nil, func(e *Env) {
+		cmp.Mod(Overwriting)
+		fmt.Fprint(e, "two\nlines")
+		t.Eq(2, cmp.Len())
+		fmt.Fprint(e, "one line")
+		t.Eq(1, cmp.Len())
+	})
+	t.False(ee.IsListening())
+}
+
+func (s *_component) Has_a_line_more_after_appending_an_line(t *T) {
+	cmp := &cmpFX{}
+	ee, _ := Test(t.GoT(), cmp)
+	ee.Update(cmp, nil, func(e *Env) {
+		cmp.Mod(Appending)
+		fmt.Fprint(e, "two\nlines")
+		fmt.Fprint(e, "one line")
+		t.Eq(3, cmp.Len())
+	})
+}
+
+func (s *_component) Has_a_line_more_after_writing_to_tailing(t *T) {
+	cmp := &cmpFX{}
+	ee, _ := Test(t.GoT(), cmp)
+	ee.Update(cmp, nil, func(e *Env) {
+		cmp.Mod(Tailing)
+		fmt.Fprint(e, "two\nlines")
+		fmt.Fprint(e, "one line")
+		t.Eq(3, cmp.Len())
+	})
+}
+
+func (s *_component) Shows_last_line_clips_above_if_tailing(t *T) {
+	cmp := &cmpFX{}
+	ee, tt := Test(t.GoT(), cmp)
+	tt.FireResize(20, 2)
+	ee.Update(cmp, nil, func(e *Env) {
+		cmp.Mod(Tailing)
+		fmt.Fprint(e, "three\nlines\nat last")
+	})
+	t.Eq("lines\nat last", tt.LastScreen)
+}
+
+type dbg struct{ Suite }
+
+func (s *dbg) Dbg(t *T) {
+}
+
+func TestDBG(t *testing.T) { Run(&dbg{}, t) }
 
 func TestComponent(t *testing.T) {
 	t.Parallel()
