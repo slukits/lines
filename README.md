@@ -27,7 +27,7 @@ ui exactly as needed.
     type Cmp struct { lines.Component }
 
     func (c *Cmp) OnInit(e *lines.Env) { // Env: component environment
-        fmt.Fprintf(e, "%s %s", "hello", "world")
+        fmt.Fprint(e, "hello world")
     }
 
     func main() { lines.New(&Cmp{}).Listen() } // blocking
