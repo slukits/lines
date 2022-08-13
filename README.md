@@ -27,7 +27,6 @@ ui exactly as needed.
     type Cmp struct { lines.Component }
 
     func (c *Cmp) OnInit(e *lines.Env) { // Env: component environment
-        c.FF.Add(lines.Scrollable) // FF: component features
         fmt.Fprintf(e, "%s %s", "hello", "world")
     }
 
