@@ -146,7 +146,7 @@
 // Features of a component are accessed and controlled through the FF
 // property of embedded Component-type.  Features are features for the
 // end user of a terminal application, e.g. Scrollable.  Lets assume we
-// have implement the components App, MessageBar, Statusbar, Workspace
+// have implemented the components App, MessageBar, Statusbar, Workspace
 // and Panel.  Lets further assume component App stacks the components
 // MessageBar, Workspace and Statusbar while a Workspace  chains two
 // panel instances p1 and p2.
@@ -184,18 +184,20 @@
 // implements the features concept instead
 //
 //	func (ws *Workspace) OnInit(e *Env) {
-//	    ws.Features.AddRecursively(Focusable | Selectable)
+//	    ws.FF.AddRecursively(Focusable)
 //	}
 //
-// This one line has  the following consequences: If the user clicks on
-// p1 or p2 the respective component gets the focus and events about
-// focus gain and loss are reported, the mouse click is reported.  If
-// ws, p1 or p2 has the focus and the user presses the the Tab key the
-// "next" panel gains the focus, focus gain and loss are reported, the
-// Tab key is reported.  If the user presses shift-tab the “previous”
-// panel gains the focus ...  While there is probably enough going on to
-// justify one line of code more importantly this line of code
-// represents full control over what is going on.
+// With the above line all descendant components of workspace are
+// focusable.  If the user clicks on p1 or p2 the respective component
+// gets the focus and events about focus gain and loss are reported, the
+// mouse click is reported while clicks on the message bar or on the
+// statusbar are ignored.  The FF-Instance also provides options to
+// modify associated key/mouse-bindings of a feature.  I.e. you get
+// common reasonable defaults like binding the Focusable-feature to the
+// left and right mouse click.  If you also want to add a mouse wheel or
+// a "middle-button" click you can.  As well as you can remove the right
+// mouse click if a component should be only Focusable by the left mouse
+// click...
 //
 // # Testing
 //

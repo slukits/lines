@@ -142,12 +142,12 @@ appended, or if it is shown tailed.
 # Feature handling
 
 Features of a component are accessed and controlled through the FF
-property of embedded Component-type.  Features are features for the
-end user of a terminal application, e.g. Scrollable.  Lets assume we
-have implement the components App, MessageBar, Statusbar, Workspace
-and Panel.  Lets further assume component App stacks the components
-MessageBar, Workspace and Statusbar while a Workspace  chains two
-panel instances p1 and p2.
+property of embedded Component-type.  Features are features for the end
+user of a terminal application, e.g. Scrollable.  Lets assume we have
+implemented the components App, MessageBar, Statusbar, Workspace and
+Panel.  Lets further assume component App stacks the components
+MessageBar, Workspace and Statusbar while a Workspace  chains two panel
+instances p1 and p2.
 
     APP--------------------------+
       |           mb             |
@@ -172,32 +172,34 @@ lines is told to do so
     }
 ```
 
-Now p1 gets its events.  We have our App started and click into p2
-where we have an OnClick implementation.  (Which might tries to move
-the focus to itself :)  But the click is never reported because p2
-has not the feature Focusable set.  While it might seem obvious to us
-that p2 should receive the focus if clicked, it is not obvious to
-lines.  For lines our Statusbar and our Panel are Componenter without
-any further semantics.  Now the question is: will we want also that
-the statusbar gets the focus if the user clicks on it?  Maybe, maybe
-not.  Hence lines doesn't try to be smart about such things and
-implements the features concept instead
+Now p1 gets its events.  We have our App started and click into p2 where
+we have an OnClick implementation.  (Which might tries to move the focus
+to itself :)  But the click is never reported because p2 has not the
+feature Focusable set.  While it might seem obvious to us that p2 should
+receive the focus if clicked, it is not obvious to lines.  For lines for
+example our Statusbar and our Panel are Componenter without any further
+semantics.  Now the question is: will we want also that the statusbar
+gets the focus if the user clicks on it?  Maybe, maybe not.  Hence lines
+doesn't try to be smart about such things and implements the features
+concept instead
 
 ```go
     func (ws *Workspace) OnInit(e *Env) {
-        ws.Features.AddRecursively(Focusable | Selectable)
+        ws.FF.AddRecursively(Focusable)
     }
 ```
 
-This one line has  the following consequences: If the user clicks on
-p1 or p2 the respective component gets the focus and events about
-focus gain and loss are reported, the mouse click is reported.  If
-ws, p1 or p2 has the focus and the user presses the the Tab key the
-"next" panel gains the focus, focus gain and loss are reported, the
-Tab key is reported.  If the user presses shift-tab the "previous"
-panel gains the focus ...  While there is probably enough going on to
-justify one line of code more importantly this line of code
-represents full control over what is going on.
+With the above line all descendant components of workspace are
+focusable.  If the user clicks on p1 or p2 the respective component gets
+the focus and events about focus gain and loss are reported, the mouse
+click is reported while clicks on the message bar or on the statusbar
+are ignored.  The FF-Instance also provides options to modify
+associated key/mouse-bindings of a feature.  I.e. you get common
+reasonable defaults like binding the Focusable-feature to the left and
+right mouse click.  If you also want to add a mouse wheel or a
+"middle-button" click you can.  As well as you can remove the right
+mouse click if a component should be only Focusable by the left mouse
+click...
 
 # Testing
 
