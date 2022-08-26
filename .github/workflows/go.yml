@@ -15,15 +15,15 @@ jobs:
             - name: Set up Go
               uses: actions/setup-go@v3
               with:
-                  go-version: 1.18
+                  go-version: 1.19
 
             - name: Build
               run: go build -v ./...
 
             - name: Test
               env:
-                GITHUB_TOKEN: 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
-                GOPRIVATE: github.com/slukits/
+                  GITHUB_TOKEN: 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
+                  GOPRIVATE: github.com/slukits/
               run: |
-                git config --global url."https://$GITHUB_TOKEN:x-oauth-basic@github.com/".insteadOf "https://github.com/"
-                go test -race -cover ./...
+                  git config --global url."https://$GITHUB_TOKEN:x-oauth-basic@github.com/".insteadOf "https://github.com/"
+                  go test -race -cover ./...
