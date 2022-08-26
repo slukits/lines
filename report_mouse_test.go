@@ -193,7 +193,7 @@ func (s *Mouse) Event_is_reported_to_focused_component(t *T) {
 	t.True(fx.HasMouse())
 }
 
-func (s *Mouse) Click_is_reported_to_focusable_component(t *T) {
+func (s *Mouse) Click_moves_focus_and_reports_to_focusable(t *T) {
 	fx := &nonZeroOriginFx{}
 	// OnInit, 2xOnUpdate, 2xOnClick, 2xOnMouse (because bubbling)
 	ee, tt := Test(t.GoT(), fx, 7)
@@ -213,7 +213,7 @@ func (s *Mouse) Click_is_reported_to_focusable_component(t *T) {
 	t.True(fx.cmp().HasClick())
 }
 
-func (s *Mouse) Context_is_reported_to_focusable_component(t *T) {
+func (s *Mouse) Context_moves_focus_and_reports_to_focusable(t *T) {
 	fx := &nonZeroOriginFx{}
 	// OnInit, 2xOnUpdate, 2xOnClick, 2xOnMouse (because bubbling)
 	ee, tt := Test(t.GoT(), fx, 7)
@@ -233,7 +233,7 @@ func (s *Mouse) Context_is_reported_to_focusable_component(t *T) {
 	t.True(fx.cmp().HasContext())
 }
 
-func (s *Mouse) Event_is_reported_to_focusable_component(t *T) {
+func (s *Mouse) Event_moves_focus_and_reports_to_focusable(t *T) {
 	fx := &nonZeroOriginFx{}
 	// OnInit, 2xOnUpdate, 2xOnMouse (because bubbling)
 	ee, tt := Test(t.GoT(), fx, 5)
@@ -251,29 +251,6 @@ func (s *Mouse) Event_is_reported_to_focusable_component(t *T) {
 	})
 	t.False(ee.IsListening())
 	t.True(fx.cmp().HasMouse())
-}
-
-func (s *Mouse) Is_not_reported_if_not_focusable_and_unfocused(t *T) {
-	fx := &nonZeroOriginFx{}
-	// OnInit, 2xOnUpdate
-	ee, tt := Test(t.GoT(), fx, 3)
-	ee.Listen()
-	var fxX, fxY int
-	ee.Update(fx.cmp(), nil, func(e *Env) {
-		t.False(e.Focused() == fx.cmp())
-		// need an event callback to access component features
-		fxX, fxY = fx.cmp().Dim().X(), fx.cmp().Dim().Y()
-	})
-	tt.FireClick(fxX+1, fxY+1)
-	tt.FireContext(fxX+1, fxY+1)
-	tt.FireMouse(fxX+1, fxY+1, tcell.ButtonMiddle, tcell.ModNone)
-	ee.Update(fx.cmp(), nil, func(e *Env) {
-		t.False(e.Focused() == fx.cmp())
-	})
-	t.False(ee.IsListening())
-	t.False(fx.cmp().HasClick())
-	t.False(fx.cmp().HasContext())
-	t.False(fx.cmp().HasMouse())
 }
 
 func (s *Mouse) Is_reported_along_with_other_mouse_listener(t *T) {

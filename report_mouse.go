@@ -74,27 +74,24 @@ func reportMouse(cntx *rprContext) {
 	lytCmp := path[len(path)-1].(layoutComponenter)
 
 	if lytCmp != cntx.scr.focus {
-		if !focusIfFocusable(lytCmp, cntx) {
-			return
-		}
+		focusIfFocusable(lytCmp, cntx)
 	}
 
-	cntx.scr.forFocused(func(lc layoutComponenter) (stop bool) {
+	for i := len(path) - 1; i >= 0; i-- {
+		lc := path[i].(layoutComponenter)
 		rx := x - lc.Dim().X()
 		ry := y - lc.Dim().Y()
 
 		if sb := reportClick(cntx, lc, rx, ry); sb {
-			return true
+			break
 		}
 		if sb := reportContext(cntx, lc, rx, ry); sb {
-			return true
+			break
 		}
 		if sb := reportOnMouse(cntx, lc, rx, ry); sb {
-			return true
+			break
 		}
-
-		return false
-	})
+	}
 }
 
 // reportClick reports a "left"-click if an according mouse button
