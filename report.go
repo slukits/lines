@@ -76,6 +76,9 @@ func reportInit(ee *Events, scr *screen) {
 	cntx := &rprContext{ee: ee, scr: scr}
 
 	scr.forUninitialized(func(cmp Componenter) {
+		if !cmp.hasLayoutWrapper() {
+			return
+		}
 
 		if ic, ok := cmp.(Initer); ok {
 			env := &Env{cmp: cmp, EE: ee, Evt: nil}
@@ -223,6 +226,9 @@ func callback(
 
 	if cmp == nil {
 		cmp = cntx.scr.focus.userComponent()
+	}
+	if !cmp.hasLayoutWrapper() {
+		return
 	}
 	env := &Env{cmp: cmp, EE: cntx.ee, Evt: cntx.evt,
 		size: sizeClosure(cntx.scr.lib)}

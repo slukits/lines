@@ -155,8 +155,10 @@ func (c *Component) initialize(
 	return c.layoutCmp
 }
 
+// enable component for client usage.
 func (c *Component) enable() { c.component = c.layoutCmp.wrapped() }
 
+// disable component for client usage.
 func (c *Component) disable() { c.component = nil }
 
 func (c *Component) layoutComponent() layoutComponenter {
@@ -365,20 +367,20 @@ func (ff *Features) SetRunesOf(
 // quit bindings by adding to your root component listeners for these
 // keys which call StopBubbling on their environment:
 //
-//     type Root struct { lines.Component }
+//	type Root struct { lines.Component }
 //
-//     func (c *Root) OnInit(e *lines.Env) { fmt.Fprint(e, "hello world") }
+//	func (c *Root) OnInit(e *lines.Env) { fmt.Fprint(e, "hello world") }
 //
-//     func (c *Root) Keys(register lines.KeyRegistration) {
-//         register(tcell.KeyCtrlC, tcell.ModNone, func(e *Env) {
-//             e.StopBubbling()
-//         })
-//         register(tcell.KeyCtrlD, tcell.ModNone, func(e *Env) {
-//             e.StopBubbling()
-//         })
-//     }
+//	func (c *Root) Keys(register lines.KeyRegistration) {
+//	    register(tcell.KeyCtrlC, tcell.ModNone, func(e *Env) {
+//	        e.StopBubbling()
+//	    })
+//	    register(tcell.KeyCtrlD, tcell.ModNone, func(e *Env) {
+//	        e.StopBubbling()
+//	    })
+//	}
 //
-//     lines.New(&Root{}).Listen()
+//	lines.New(&Root{}).Listen()
 //
 // gives you an application which can't be quit by its users.
 func (ff *Features) Delete(f FeatureMask) {
