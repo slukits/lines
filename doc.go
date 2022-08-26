@@ -3,8 +3,8 @@
 // license that can be found in the LICENSE file.
 
 // Package lines provides an unopinionated, well tested and documented,
-// terminal UI library which does the heavy lifting for you when it
-// comes to
+// terminal UI library.  It does the heavy lifting for you when it comes
+// to
 //
 //   - concurrency safety
 //   - event handling
@@ -130,17 +130,6 @@
 // component's content is overwritten or appended, or if it is shown
 // tailed.
 //
-// The Env(ironment) instance passed to a event listener is associated
-// with the screen portion of the component the event is reported to.
-// Writing to the environment prints provided content to its screen
-// portion.  Env's methods Fmt, Mod, BG, FG, LL, Pos, GG give fine
-// grained control of what is printed where and how.  Fmt stands for
-// formatting like bold, centered, framed.  Mod controls if a
-// component's content is overwritten or appended, or if it is shown
-// tailed.  FG, BG lets you set fore- and background color.  LL lets you
-// address a specific line, Pos a line and a column.  GG finally makes
-// optional gaps around a component accessible.
-//
 // # Feature handling
 //
 // Features of a component are accessed and controlled through the FF
@@ -253,8 +242,7 @@
 // environment.  But there are still some features lacking which I'd
 // like lines to have in order to be in some sense complete.  You can
 // learn about these features by parsing the code base for “// TODO:
-// implement”.  You will notice that it is manly constants which have
-// this flag.  A sign that the API is stable.
+// implement”.
 //
 // Enjoy!
 package lines
