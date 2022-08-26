@@ -213,9 +213,9 @@ type Componenter interface {
 // components Updater implementation is informed about the event.  Given
 // data will be provided by the Env instance of the receiving listener:
 //
-//     func(c *Cmp) OnUpdate(e *lines.Env) {
-//         data := e.Evt.(*lines.UpdateEvent).Data.(*MyType)
-//     }
+//	func(c *Cmp) OnUpdate(e *lines.Env) {
+//	    data := e.Evt.(*lines.UpdateEvent).Data.(*MyType)
+//	}
 //
 // Update fails if the event-loop is full; returned error will wrap
 // tcell's *PostEvent* error.  Update is an no-op if Componenter is nil.

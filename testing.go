@@ -5,6 +5,7 @@
 package lines
 
 import (
+	"fmt"
 	"strings"
 	"sync"
 	"testing"
@@ -65,12 +66,16 @@ type Testing struct {
 // methods start the event loop automatically if not started, i.e. a
 // call to Listen can be skipped.
 //
-// The Testing instance provides an events-countdown which ends the
-// event loop once it is zero.  Provide as last argument 0 for an
-// indefinitely running event loop.  The default is 1.  Testing provides
-// methods for firing user input events which start the event-loop if
-// not started and do return after the event and subsequently triggered
-// events have been processed and the screen has been synchronized.
+// The Testing instance provides an event countdown which ends the event
+// loop once it is zero.  Provide as last argument 0 for an indefinitely
+// running event loop.  The default is 1.  NOTE reported OnInit and
+// OnLayout events are accumulated and each is counted as one reported
+// event for the event countdown.
+//
+// Testing provides methods for firing user input events which start the
+// event-loop if not started and do return after the event and
+// subsequently triggered events have been processed and the screen has
+// been synchronized.
 func Test(t *testing.T, c Componenter, max ...int) (*Events, *Testing) {
 	t.Helper()
 	scr, err := newSim(c)
@@ -271,8 +276,45 @@ func (tt *Testing) FireMouse(
 	return tt.ee
 }
 
-const testPanic = "test: can't call event triggering operation " +
-	"in listener callback"
+// FireComponentClick posts an update event for given component which
+// will then fire the click event.  Hence calling this method with a
+// reported click event will decrease the event countdown by 2!  Is
+// associated Events instance not listening it is started before the
+// event is fired.
+func (tt *Testing) FireComponentClick(c Componenter) *Events {
+	tt.t.Helper()
+	if !tt.ee.IsListening() {
+		tt.listen()
+	}
+	err := tt.ee.Update(c, nil, func(e *Env) {
+		tt.FireClick(c.Dim().X(), c.Dim().Y())
+	})
+	if err != nil {
+		panic(fmt.Sprintf(
+			"lines: testing: fire component click: %v", err))
+	}
+	return tt.ee
+}
+
+// FireComponentContext posts an update event for given component which
+// will then fire the context event.  Hence calling this method with a
+// reported context event will decrease the event countdown by 2!  Is
+// associated Events instance not listening it is started before the
+// event is fired.
+func (tt *Testing) FireComponentContext(c Componenter) *Events {
+	tt.t.Helper()
+	if !tt.ee.IsListening() {
+		tt.listen()
+	}
+	err := tt.ee.Update(c, nil, func(e *Env) {
+		tt.FireContext(c.Dim().X(), c.Dim().Y())
+	})
+	if err != nil {
+		panic(fmt.Sprintf(
+			"lines: testing: fire component click: %v", err))
+	}
+	return tt.ee
+}
 
 // waitForSynced waits on associated Events.Synced channel if not
 // already waiting.  If already waiting the wait-stack is increased
@@ -345,11 +387,11 @@ func (tt *Testing) beforeFinalize() {
 // are removed as well as whitespace at the beginning and end of a line
 // is trimmed.  I.e.
 //
-//     +-------------+
-//     |             |
-//     |   content   |   => "content"
-//     |             |
-//     +-------------+
+//	+-------------+
+//	|             |
+//	|   content   |   => "content"
+//	|             |
+//	+-------------+
 func (tt *Testing) String() string {
 	b, w, h := tt.lib.GetContents()
 	sb := &strings.Builder{}
