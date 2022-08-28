@@ -67,14 +67,14 @@ func (s *env) Overwrites_given_line_and_following(t *T) {
 	ee.Listen()
 	ee.Update(fxCmp, func(e *Env) {
 		fmt.Fprint(e.LL(6), "seventh line\n"+
-			"overwritten eighth line\nninth line")
+			"short 8th\nninth line")
 	}, nil)
 
 	sl := strings.Split(tt.LastScreen, "\n")
 	t.FatalIfNot(t.Eq(9, len(sl)))
 	t.Eq(strings.TrimSpace(sl[0]), "first line")
 	t.Eq(strings.TrimSpace(sl[6]), "seventh line")
-	t.Eq(strings.TrimSpace(sl[7]), "overwritten eighth line")
+	t.Eq(strings.TrimSpace(sl[7]), "short 8th")
 	t.Eq(strings.TrimSpace(sl[8]), "ninth line")
 }
 

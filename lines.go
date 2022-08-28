@@ -40,13 +40,18 @@ func (ll *lines) replaceAt(idx int, cc ...[]byte) {
 	if idx < 0 || len(cc) == 0 {
 		return
 	}
-	if len(*ll) > idx {
-		*ll = (*ll)[:idx]
-	}
-	for i := len(*ll); i < idx; i++ {
+	for idx > len(*ll) {
 		*ll = append(*ll, &line{dirty: true})
 	}
-	ll.append(cc...)
+	max, j := idx+len(cc), 0
+	if max > len(*ll) {
+		max = len(*ll)
+	}
+	for i := idx; i < max; i++ {
+		(*ll)[i].set(string(cc[j]))
+		j++
+	}
+	ll.append(cc[j:]...)
 }
 
 func (ll lines) IsDirty() bool {
