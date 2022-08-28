@@ -195,7 +195,7 @@ type Componenter interface {
 	layoutComponent() layoutComponenter
 	enable()
 	disable()
-	write([]byte) (int, error)
+	write([]byte, int) (int, error)
 	isDirty() bool
 	isInitialized() bool
 	hasLayoutWrapper() bool

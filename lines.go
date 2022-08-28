@@ -12,6 +12,7 @@ import "github.com/gdamore/tcell/v2"
 
 type lines []*line
 
+// replace the current line set with given content lines.
 func (ll *lines) replace(cc ...[]byte) {
 	new := []*line{}
 	for _, c := range cc {
@@ -23,6 +24,7 @@ func (ll *lines) replace(cc ...[]byte) {
 	*ll = new
 }
 
+// append given content lines to current content
 func (ll *lines) append(cc ...[]byte) {
 	for _, c := range cc {
 		*ll = append(*ll, &line{
@@ -30,6 +32,21 @@ func (ll *lines) append(cc ...[]byte) {
 			dirty:   true,
 		})
 	}
+}
+
+// replaceAt replaces starting at given index the following lines with
+// given content lines.  replaceAt is a no-op if idx < 0 or len(cc) == 0
+func (ll *lines) replaceAt(idx int, cc ...[]byte) {
+	if idx < 0 || len(cc) == 0 {
+		return
+	}
+	if len(*ll) > idx {
+		*ll = (*ll)[:idx]
+	}
+	for i := len(*ll); i < idx; i++ {
+		*ll = append(*ll, &line{dirty: true})
+	}
+	ll.append(cc...)
 }
 
 func (ll lines) IsDirty() bool {

@@ -77,13 +77,21 @@ type component struct {
 	ff          *features
 }
 
-func (c *component) write(bb []byte) (int, error) {
+func (c *component) write(bb []byte, at int) (int, error) {
+	if at > -1 {
+		return c.writeAt(bb, at)
+	}
 	switch {
 	case c.mod&Overwriting == Overwriting:
 		c.ll.replace(bytes.Split(bb, []byte("\n"))...)
 	case c.mod&(Appending|Tailing) != 0:
 		c.ll.append(bytes.Split(bb, []byte("\n"))...)
 	}
+	return len(bb), nil
+}
+
+func (c *component) writeAt(bb []byte, at int) (int, error) {
+	c.ll.replaceAt(at, bytes.Split(bb, []byte("\n"))...)
 	return len(bb), nil
 }
 
