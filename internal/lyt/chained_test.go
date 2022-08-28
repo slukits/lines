@@ -96,19 +96,26 @@ func (s *chained) Fails_if_it_has_fixed_dimer_with_zero_width(t *T) {
 }
 
 // fxWF1 chainer with sole width filler.
-var fxWF1 = cf.New(df.Filling())
+var fxWF1 = func() *chainerFX { return cf.New(df.Filling()) }
 
 // fxWF2 stacker with width filler at the beginning.
-var fxWF2 = cf.New(df.Filling(), df.Fixed())
+var fxWF2 = func() *chainerFX {
+	return cf.New(df.Filling(), df.Fixed())
+}
 
 // fxWF3 stacker with width filler in between.
-var fxWF3 = cf.New(df.Fixed(), df.Filling(), df.Fixed())
+var fxWF3 = func() *chainerFX {
+	return cf.New(df.Fixed(), df.Filling(), df.Fixed())
+}
 
 // fxWF4 stacker with width filler at the end.
-var fxWF4 = cf.New(df.Fixed(), df.Filling())
+var fxWF4 = func() *chainerFX {
+	return cf.New(df.Fixed(), df.Filling())
+}
 
 func (s *chained) With_width_filler_consume_all_width(t *T) {
-	for _, fx := range []*chainerFX{fxWF1, fxWF2, fxWF3, fxWF4} {
+	for _, fx := range []*chainerFX{fxWF1(), fxWF2(), fxWF3(), fxWF4()} {
+		// TODO: fails if -race and -count=10
 		t.True(fx.Width() > fx.SumLayoutWidths())
 		t.FatalOn((&Manager{Root: fx}).Reflow(nil))
 		t.Eq(fx.Width(), fx.SumLayoutWidths())

@@ -88,16 +88,22 @@ func (sf *stackerFactory) Filling(dd ...Dimer) *stackerFX {
 }
 
 // fxHF1 stacker with sole height filler.
-var fxHF1 = sf.New(df.Filling())
+var fxHF1 = func() *stackerFX { return sf.New(df.Filling()) }
 
 // fxHF2 stacker with height filler at the beginning.
-var fxHF2 = sf.New(df.Filling(), df.Fixed())
+var fxHF2 = func() *stackerFX {
+	return sf.New(df.Filling(), df.Fixed())
+}
 
 // fxHF3 stacker with height filler in between.
-var fxHF3 = sf.New(df.Fixed(), df.Filling(), df.Fixed())
+var fxHF3 = func() *stackerFX {
+	return sf.New(df.Fixed(), df.Filling(), df.Fixed())
+}
 
 // fxHF4 stacker with height filler at the end.
-var fxHF4 = sf.New(df.Fixed(), df.Filling())
+var fxHF4 = func() *stackerFX {
+	return sf.New(df.Fixed(), df.Filling())
+}
 
 type stacked struct{ Suite }
 
@@ -111,7 +117,7 @@ func (s *stacked) Fails_if_it_has_fixed_dimer_with_zero_height(t *T) {
 }
 
 func (s *stacked) With_height_filler_consume_all_hight(t *T) {
-	for _, fx := range []*stackerFX{fxHF1, fxHF2, fxHF3, fxHF4} {
+	for _, fx := range []*stackerFX{fxHF1(), fxHF2(), fxHF3(), fxHF4()} {
 		t.True(fx.Height() > fx.SumLayoutHeights())
 		t.FatalOn((&Manager{Root: fx}).Reflow(nil))
 		t.Eq(fx.Height(), fx.SumLayoutHeights())
