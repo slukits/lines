@@ -70,13 +70,6 @@ func (s *_component) Shows_last_line_clips_above_if_tailing(t *T) {
 	t.Eq("lines\nat last", tt.LastScreen)
 }
 
-type dbg struct{ Suite }
-
-func (s *dbg) Dbg(t *T) {
-}
-
-func TestDBG(t *testing.T) { Run(&dbg{}, t) }
-
 func TestComponent(t *testing.T) {
 	t.Parallel()
 	Run(&_component{}, t)

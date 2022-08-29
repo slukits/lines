@@ -76,18 +76,21 @@ type clickFX struct {
 	Component
 	clicked, context    bool
 	x, y, width, height int
+	rx, ry              int
 }
 
 func (c *clickFX) OnLayout(_ *Env) {
 	c.x, c.y, c.width, c.height = c.Dim().Area()
 }
 
-func (c *clickFX) OnClick(_ *Env, _, _ int) {
+func (c *clickFX) OnClick(_ *Env, rx, ry int) {
 	c.clicked = true
+	c.rx, c.ry = rx, ry
 }
 
-func (c *clickFX) OnContext(_ *Env, _, _ int) {
+func (c *clickFX) OnContext(_ *Env, rx, ry int) {
 	c.context = true
+	c.rx, c.ry = rx, ry
 }
 
 func (s *_Testing) Starts_listening_on_a_fired_component_click(t *T) {
@@ -110,6 +113,16 @@ func (s *_Testing) Component_click_is_reported_to_component(t *T) {
 	_, tt := Test(t.GoT(), fx, 3)
 	tt.FireComponentClick(fx, 0, 0)
 	t.True(fx.clicked)
+}
+
+func (s *_Testing) Component_coordinates_are_reported_on_click(t *T) {
+	fx := &clickFX{}
+	ee, tt := Test(t.GoT(), fx, 3)
+	ee.Listen()
+	x, y := fx.width/2, fx.height/2
+	tt.FireComponentClick(fx, x, y)
+	t.Eq(x, fx.rx)
+	t.Eq(y, fx.ry)
 }
 
 func (s *_Testing) Ignores_component_click_if_coordinates_outside(t *T) {
@@ -143,9 +156,20 @@ func (s *_Testing) Counts_down_two_on_reported_context(t *T) {
 
 func (s *_Testing) Context_is_reported_to_component(t *T) {
 	fx := &clickFX{}
-	_, tt := Test(t.GoT(), fx, 3)
-	tt.FireComponentContext(fx, 0, 0)
+	ee, tt := Test(t.GoT(), fx, 3)
+	ee.Listen() // layouts fx
+	tt.FireComponentContext(fx, fx.width-1, fx.height-1)
 	t.True(fx.context)
+}
+
+func (s *_Testing) Component_coordinates_are_reported_on_context(t *T) {
+	fx := &clickFX{}
+	ee, tt := Test(t.GoT(), fx, 3)
+	ee.Listen()
+	x, y := fx.width/2, fx.height/2
+	tt.FireComponentContext(fx, x, y)
+	t.Eq(x, fx.rx)
+	t.Eq(y, fx.ry)
 }
 
 func (s *_Testing) Ignores_component_context_if_coordinates_outside(
