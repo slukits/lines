@@ -280,13 +280,19 @@ func (tt *Testing) FireMouse(
 // will then fire the click event.  Hence calling this method with a
 // reported click event will decrease the event countdown by 2!  Is
 // associated Events instance not listening it is started before the
-// event is fired.
-func (tt *Testing) FireComponentClick(c Componenter) *Events {
+// event is fired.  Note given coordinates are relative to the
+// components origin, i.e. if y == 2 a click to the 3rd line of the
+// component is fired.  Note if x or y are outside the component's
+// screen area no click will be fired.
+func (tt *Testing) FireComponentClick(c Componenter, x, y int) *Events {
 	tt.t.Helper()
 	if !tt.ee.IsListening() {
 		tt.listen()
 	}
 	err := tt.ee.Update(c, nil, func(e *Env) {
+		if !isInside(c, x, y) {
+			return
+		}
 		tt.FireClick(c.Dim().X(), c.Dim().Y())
 	})
 	if err != nil {
@@ -300,20 +306,40 @@ func (tt *Testing) FireComponentClick(c Componenter) *Events {
 // will then fire the context event.  Hence calling this method with a
 // reported context event will decrease the event countdown by 2!  Is
 // associated Events instance not listening it is started before the
-// event is fired.
-func (tt *Testing) FireComponentContext(c Componenter) *Events {
+// event is fired.  Note given coordinates are relative to the
+// components origin, i.e. if y == 2 a click to the 3rd line of the
+// component is fired.  Note if x or y are outside the component's
+// screen area no click will be fired.
+func (tt *Testing) FireComponentContext(c Componenter, x, y int) *Events {
 	tt.t.Helper()
 	if !tt.ee.IsListening() {
 		tt.listen()
 	}
 	err := tt.ee.Update(c, nil, func(e *Env) {
-		tt.FireContext(c.Dim().X(), c.Dim().Y())
+		if !isInside(c, x, y) {
+			return
+		}
+		tt.FireContext(c.Dim().X()+x, c.Dim().Y()+y)
 	})
 	if err != nil {
 		panic(fmt.Sprintf(
 			"lines: testing: fire component click: %v", err))
 	}
 	return tt.ee
+}
+
+func isInside(c Componenter, x, y int) bool {
+	if x < 0 || y < 0 || c.Dim().IsOffScreen() {
+		return false
+	}
+	_, _, width, height := c.Dim().Area()
+	if c.Dim().X()+x >= width {
+		return false
+	}
+	if c.Dim().Y()+y >= height {
+		return false
+	}
+	return true
 }
 
 // waitForSynced waits on associated Events.Synced channel if not

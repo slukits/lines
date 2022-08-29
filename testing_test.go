@@ -74,7 +74,12 @@ func (s *_Testing) Starts_listening_on_a_fired_mouse_event(t *T) {
 
 type clickFX struct {
 	Component
-	clicked, context bool
+	clicked, context    bool
+	x, y, width, height int
+}
+
+func (c *clickFX) OnLayout(_ *Env) {
+	c.x, c.y, c.width, c.height = c.Dim().Area()
 }
 
 func (c *clickFX) OnClick(_ *Env, _, _ int) {
@@ -90,43 +95,73 @@ func (s *_Testing) Starts_listening_on_a_fired_component_click(t *T) {
 	ee, tt := Test(t.GoT(), fx, 0) // listen for ever
 	defer ee.QuitListening()
 	t.False(ee.IsListening())
-	t.True(tt.FireComponentClick(fx).IsListening())
+	t.True(tt.FireComponentClick(fx, 0, 0).IsListening())
 }
 
 func (s *_Testing) Counts_down_two_on_reported_component_click(t *T) {
 	fx := &clickFX{}
-	ee, tt := Test(t.GoT(), fx, 2)
+	ee, tt := Test(t.GoT(), fx, 3) // plus OnLayout
 	t.False(ee.IsListening())
-	t.False(tt.FireComponentClick(fx).IsListening())
+	t.False(tt.FireComponentClick(fx, 0, 0).IsListening())
 }
 
 func (s *_Testing) Component_click_is_reported_to_component(t *T) {
 	fx := &clickFX{}
-	_, tt := Test(t.GoT(), fx, 2)
-	tt.FireComponentClick(fx)
+	_, tt := Test(t.GoT(), fx, 3)
+	tt.FireComponentClick(fx, 0, 0)
 	t.True(fx.clicked)
+}
+
+func (s *_Testing) Ignores_component_click_if_coordinates_outside(t *T) {
+	fx := &clickFX{}
+	ee, tt := Test(t.GoT(), fx, 5)
+	tt.FireComponentClick(fx, -1, 0)
+	t.False(fx.clicked)
+	tt.FireComponentClick(fx, 0, -1)
+	t.False(fx.clicked)
+	tt.FireComponentClick(fx, fx.x+fx.width+1, 0)
+	t.False(fx.clicked)
+	tt.FireComponentClick(fx, 0, fx.y+fx.height+1)
+	t.False(fx.clicked)
+	t.False(ee.IsListening())
 }
 
 func (s *_Testing) Starts_listening_on_a_fired_context(t *T) {
 	fx := &clickFX{}
-	ee, tt := Test(t.GoT(), fx, 0) // listen for ever
+	ee, tt := Test(t.GoT(), fx, 0)
 	defer ee.QuitListening()
 	t.False(ee.IsListening())
-	t.True(tt.FireComponentContext(fx).IsListening())
+	t.True(tt.FireComponentContext(fx, 0, 0).IsListening())
 }
 
 func (s *_Testing) Counts_down_two_on_reported_context(t *T) {
 	fx := &clickFX{}
-	ee, tt := Test(t.GoT(), fx, 2)
+	ee, tt := Test(t.GoT(), fx, 3)
 	t.False(ee.IsListening())
-	t.False(tt.FireComponentContext(fx).IsListening())
+	t.False(tt.FireComponentContext(fx, 0, 0).IsListening())
 }
 
 func (s *_Testing) Context_is_reported_to_component(t *T) {
 	fx := &clickFX{}
-	_, tt := Test(t.GoT(), fx, 2)
-	tt.FireComponentContext(fx)
+	_, tt := Test(t.GoT(), fx, 3)
+	tt.FireComponentContext(fx, 0, 0)
 	t.True(fx.context)
+}
+
+func (s *_Testing) Ignores_component_context_if_coordinates_outside(
+	t *T,
+) {
+	fx := &clickFX{}
+	ee, tt := Test(t.GoT(), fx, 5)
+	tt.FireComponentContext(fx, -1, 0)
+	t.False(fx.context)
+	tt.FireComponentContext(fx, 0, -1)
+	t.False(fx.context)
+	tt.FireComponentContext(fx, fx.x+fx.width+1, 0)
+	t.False(fx.context)
+	tt.FireComponentContext(fx, 0, fx.y+fx.height+1)
+	t.False(fx.context)
+	t.False(ee.IsListening())
 }
 
 func TestTesting(t *testing.T) {
