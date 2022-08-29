@@ -117,6 +117,15 @@ func (c *component) Len() int {
 	return len(*c.ll)
 }
 
+// Reset blanks out the content of the line with given index the next
+// time it is printed to the screen.
+func (c *component) Reset(idx int) {
+	if idx < 0 || idx >= len(*c.ll) {
+		return
+	}
+	(*c.ll)[idx].set("")
+}
+
 func (c *component) userComponent() Componenter {
 	return c.userCmp
 }

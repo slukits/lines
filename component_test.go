@@ -70,6 +70,23 @@ func (s *_component) Shows_last_line_clips_above_if_tailing(t *T) {
 	t.Eq("lines\nat last", tt.LastScreen)
 }
 
+func (s *_component) Blanks_a_reset_line(t *T) {
+	cmp := &cmpFX{}
+	ee, tt := Test(t.GoT(), cmp, 2)
+	tt.FireResize(20, 2)
+	ee.Update(cmp, nil, func(e *Env) {
+		fmt.Fprint(e, "first\nsecond")
+	})
+	t.Eq(tt.String(), "first\nsecond")
+
+	ee.Update(cmp, nil, func(e *Env) {
+		cmp.Reset(-1) // no-op, coverage
+		cmp.Reset(0)
+	})
+
+	t.Eq("second", tt.LastScreen)
+}
+
 func TestComponent(t *testing.T) {
 	t.Parallel()
 	Run(&_component{}, t)
