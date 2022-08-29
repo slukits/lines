@@ -333,10 +333,10 @@ func isInside(c Componenter, x, y int) bool {
 		return false
 	}
 	_, _, width, height := c.Dim().Area()
-	if c.Dim().X()+x >= width {
+	if x >= width {
 		return false
 	}
-	if c.Dim().Y()+y >= height {
+	if y >= height {
 		return false
 	}
 	return true
