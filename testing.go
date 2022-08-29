@@ -293,7 +293,7 @@ func (tt *Testing) FireComponentClick(c Componenter, x, y int) *Events {
 		if !isInside(c, x, y) {
 			return
 		}
-		tt.FireClick(c.Dim().X(), c.Dim().Y())
+		tt.FireClick(c.Dim().X()+x, c.Dim().Y()+y)
 	})
 	if err != nil {
 		panic(fmt.Sprintf(
