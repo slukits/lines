@@ -52,18 +52,34 @@ type Runer interface {
 }
 
 func registerKeys(cmp Componenter, cntx *rprContext) {
+	if !cmp.hasLayoutWrapper() {
+		return
+	}
+	wrapped := cmp.layoutComponent().wrapped()
+	if wrapped.lst == nil {
+		wrapped.lst = &listeners{}
+	}
 	kc, ok := cmp.(KeysRegisterer)
 	if ok {
 		kc.Keys(func(k tcell.Key, mm tcell.ModMask, l Listener) {
-			cmp.addKey(k, mm, l)
+			wrapped.lst.key(k, mm, l)
 		})
 	}
 }
 
 func registerRunes(cmp Componenter, cntx *rprContext) {
+	if !cmp.hasLayoutWrapper() {
+		return
+	}
+	wrapped := cmp.layoutComponent().wrapped()
+	if wrapped.lst == nil {
+		wrapped.lst = &listeners{}
+	}
 	rc, ok := cmp.(RunesRegisterer)
 	if ok {
-		rc.Runes(func(r rune, l Listener) { cmp.addRune(r, l) })
+		rc.Runes(func(r rune, l Listener) {
+			wrapped.lst.rune(r, l)
+		})
 	}
 }
 
@@ -96,7 +112,10 @@ func reportKey(cntx *rprContext) (quit bool) {
 func reportKeyListener(
 	c layoutComponenter, evt *tcell.EventKey, cntx *rprContext,
 ) (stopBubbling bool) {
-	l, ok := c.userComponent().keyListenerOf(evt.Key(), evt.Modifiers())
+	if c.wrapped().lst == nil {
+		return false
+	}
+	l, ok := c.wrapped().lst.keyListenerOf(evt.Key(), evt.Modifiers())
 	if !ok {
 		return false
 	}
@@ -152,7 +171,10 @@ func reportRune(cntx *rprContext) (quit bool) {
 func reportRuneListener(
 	c layoutComponenter, evt *tcell.EventKey, cntx *rprContext,
 ) (stopBubbling bool) {
-	l, ok := c.userComponent().runeListenerOf(evt.Rune())
+	if c.wrapped().lst == nil {
+		return false
+	}
+	l, ok := c.wrapped().lst.runeListenerOf(evt.Rune())
 	if !ok {
 		return false
 	}

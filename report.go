@@ -92,7 +92,7 @@ func reportInit(ee *Events, scr *screen) {
 		}
 		registerKeys(cmp, cntx)
 		registerRunes(cmp, cntx)
-		cmp.setInitialized()
+		cmp.layoutComponent().wrapped().setInitialized()
 	})
 	if reportedInit {
 		reportReported(ee)

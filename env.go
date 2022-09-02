@@ -62,20 +62,26 @@ type Env struct {
 // Write writes to the screen area of the component having given
 // environment.
 func (e *Env) Write(bb []byte) (int, error) {
-	return e.cmp.write(bb, -1)
+	return e.cmp.(interface {
+		write([]byte, int) (int, error)
+	}).write(bb, -1)
 }
 
 // atWriter implements the writer interface to write a set of line at a
 // specific line of a component.
 type atWriter struct {
 	at  int
-	cmp Componenter
+	cmp interface {
+		write([]byte, int) (int, error)
+	}
 }
 
 // LL returns a writer which writes to the line and its following lines
 // at given index.
 func (e *Env) LL(idx int) *atWriter {
-	return &atWriter{at: idx, cmp: e.cmp}
+	return &atWriter{at: idx, cmp: e.cmp.(interface {
+		write([]byte, int) (int, error)
+	})}
 }
 
 // Write to a specific line an onward.

@@ -156,8 +156,8 @@ func (s *screen) forBubbling(
 func (s *screen) hardSync(ee *Events) {
 	s.syncReLayout(ee, nil)
 	s.lyt.ForDimer(nil, func(d lyt.Dimer) (stop bool) {
-		cmp := d.(layoutComponenter).userComponent()
-		cmp.hardSync(s.lib)
+		wrapped := d.(layoutComponenter).wrapped()
+		wrapped.hardSync(s.lib)
 		return false
 	})
 	s.lib.Sync()
@@ -168,14 +168,16 @@ func (s *screen) hardSync(ee *Events) {
 // NOTE reflowing the layout is always necessary because we don't know
 // if the user added any new components.
 func (s *screen) softSync(ee *Events) {
-	s.syncReLayout(ee, func(cmp Componenter) { cmp.hardSync(s.lib) })
+	s.syncReLayout(ee, func(cmp Componenter) {
+		cmp.layoutComponent().wrapped().hardSync(s.lib)
+	})
 	s.syncDirty()
 	s.lib.Show()
 }
 
-//syncReLayout reflows the layout and reports to every component with
-//changed layout implementing Layouter.  It also calls back for every
-//component with changed layout if callback not nil.
+// syncReLayout reflows the layout and reports to every component with
+// changed layout implementing Layouter.  It also calls back for every
+// component with changed layout if callback not nil.
 func (s *screen) syncReLayout(ee *Events, cb func(Componenter)) {
 	if s.lyt.IsDirty() {
 		reported := false
@@ -204,9 +206,10 @@ func (s *screen) syncReLayout(ee *Events, cb func(Componenter)) {
 // syncDirty syncs component with updated content.
 func (s *screen) syncDirty() {
 	s.lyt.ForDimer(nil, func(d lyt.Dimer) (stop bool) {
-		cmp := d.(layoutComponenter).userComponent()
-		if cmp.isDirty() {
-			cmp.sync(s.lib)
+		// cmp := d.(layoutComponenter).userComponent()
+		wrapped := d.(layoutComponenter).wrapped()
+		if wrapped.ll.IsDirty() {
+			wrapped.sync(s.lib)
 		}
 		return false
 	})

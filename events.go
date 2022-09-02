@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/slukits/lines/internal/lyt"
 )
 
 // Events reports user-input and programmatically posted events to the
@@ -62,6 +61,21 @@ func New(cmp Componenter) *Events {
 	ee.pollEvent = ee.scr.lib.PollEvent
 	ee.postEvent = ee.scr.lib.PostEvent
 	return &ee
+}
+
+// Componenter is the private interface a type must implement to be used
+// as an terminal ui component by lines.  Embedding [lines.Component] in
+// a type automatically fulfills this condition:
+//
+//	type MyTUIComponent struct { lines.Component }
+//	lines.New(&MyTUIComponent{}).Listen()
+type Componenter interface {
+	enable()
+	disable()
+	hasLayoutWrapper() bool
+	layoutComponent() layoutComponenter
+	initialize(Componenter) layoutComponenter
+	isInitialized() bool
 }
 
 // Kiosk returns an Events instance without registered Quitable feature,
@@ -189,25 +203,6 @@ type quitEvent struct {
 
 func (u *quitEvent) When() time.Time { return u.when }
 
-type Componenter interface {
-	Dim() *lyt.Dim
-	initialize(Componenter) layoutComponenter
-	layoutComponent() layoutComponenter
-	enable()
-	disable()
-	write([]byte, int) (int, error)
-	isDirty() bool
-	isInitialized() bool
-	hasLayoutWrapper() bool
-	setInitialized()
-	sync(runeWriter)
-	hardSync(runeWriter)
-	addKey(k tcell.Key, mm tcell.ModMask, l Listener)
-	addRune(rune, Listener)
-	keyListenerOf(tcell.Key, tcell.ModMask) (Listener, bool)
-	runeListenerOf(rune) (Listener, bool)
-}
-
 // Update posts a new event into the event loop which calls once it is
 // polled given components update listener.  Is Listener nil the given
 // components Updater implementation is informed about the event.  Given
@@ -240,6 +235,7 @@ func (ee *Events) Update(
 		return fmt.Errorf(errEventFmt, err)
 	}
 	if ee.t != nil {
+		ee.t.t.Helper()
 		ee.t.waitForSynced("test: update: sync timed out")
 		ee.t.checkTermination()
 	}

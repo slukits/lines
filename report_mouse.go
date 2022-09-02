@@ -29,8 +29,8 @@ type Clicker interface {
 // event is reported first if and only if the clicked component has the
 // Focusable feature.
 //
-// TODO: implement: see if can report that event also for a potential
-// context-menu key (having x/y set to -1 then?).
+// TODO: implement: see if event can also be reported for a potential
+// context-menu key press (having x/y set to -1 then?).
 type Contexter interface {
 
 	// OnContext gets "right click"-events reported.  x and y provide

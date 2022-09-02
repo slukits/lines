@@ -23,6 +23,9 @@ type Component struct {
 	// end-user features (see FeatureMask).
 	FF *Features
 
+	// Scroll provides a component's API for scrolling.
+	Scroll *Scroller
+
 	// component provides properties/features of an Component.  A
 	// Component can't do it directly if it should panic if it is used
 	// outside an event reporting callback.  layoutCmp wraps the actual
@@ -36,7 +39,7 @@ type Component struct {
 	// used by the layout-manager and that it provides user defined
 	// components.  I.e. the problem here is that an embedded Component
 	// instance might be enabled or not (*component is nil or not).
-	// Thus we cant just pass on a user defined component to the layout
+	// Thus we can't just pass on a user defined component to the layout
 	// manager because its access to the components dimensions which are
 	// provided by the wrapped *component might panic.  On the other
 	// hand  we need to provide the user provided components
@@ -46,9 +49,6 @@ type Component struct {
 	// defined associated component.  Emitting other layoutComponenter
 	// to the layout manager.
 	layoutCmp layoutComponenter
-
-	// userCmp is the embedding Componenter which is provided by the user.
-	userCmp Componenter
 }
 
 type ComponentMode uint
@@ -65,85 +65,6 @@ const (
 	// especially if the display area cannot show all the content.
 	Tailing
 )
-
-type component struct {
-	userCmp     Componenter
-	dim         *lyt.Dim
-	mod         ComponentMode
-	initialized bool
-	ll          *lines
-	sty         tcell.Style
-	lst         *listeners
-	ff          *features
-}
-
-func (c *component) write(bb []byte, at int) (int, error) {
-	if at > -1 {
-		return c.writeAt(bb, at)
-	}
-	switch {
-	case c.mod&Overwriting == Overwriting:
-		c.ll.replace(bytes.Split(bb, []byte("\n"))...)
-	case c.mod&(Appending|Tailing) != 0:
-		c.ll.append(bytes.Split(bb, []byte("\n"))...)
-	}
-	return len(bb), nil
-}
-
-func (c *component) writeAt(bb []byte, at int) (int, error) {
-	c.ll.replaceAt(at, bytes.Split(bb, []byte("\n"))...)
-	return len(bb), nil
-}
-
-// Mod sets how given components content is maintained.
-func (c *component) Mod(cm ComponentMode) {
-	switch cm {
-	case Appending:
-		c.mod &^= Overwriting | Tailing
-		c.mod |= Appending
-	case Overwriting:
-		c.mod &^= Appending | Tailing
-		c.mod |= Overwriting
-	case Tailing:
-		c.mod &^= Appending | Overwriting
-		c.mod |= Tailing
-	}
-}
-
-// Len returns the number of lines currently stored in a component.
-// Note the line number is independent of a component's associated
-// screen area.
-func (c *component) Len() int {
-	return len(*c.ll)
-}
-
-// Reset blanks out the content of the line with given index the next
-// time it is printed to the screen.
-func (c *component) Reset(idx int) {
-	if idx < 0 || idx >= len(*c.ll) {
-		return
-	}
-	(*c.ll)[idx].set("")
-}
-
-func (c *component) userComponent() Componenter {
-	return c.userCmp
-}
-
-func (c *component) ensureFeatures() {
-	if c.ff != nil {
-		return
-	}
-	c.ff = defaultFeatures.copy()
-}
-
-// Dim provides a components layouted dimensions and features to adapt
-// them.
-func (c *component) Dim() *lyt.Dim { return c.dim }
-
-// component gets the component out of a layoutComponenter without using
-// a type-switch.
-func (c *component) wrapped() *component { return c }
 
 func (c *Component) initialize(
 	userComponent Componenter,
@@ -178,14 +99,8 @@ func (c *Component) enable() { c.component = c.layoutCmp.wrapped() }
 // disable component for client usage.
 func (c *Component) disable() { c.component = nil }
 
-func (c *Component) layoutComponent() layoutComponenter {
-	return c.layoutCmp
-}
-
-func (c *Component) hasLayoutWrapper() bool {
-	return c.layoutCmp != nil
-}
-
+// isInitialized returns true if embedded component-instance is wrapped
+// in a layout component and has been initialized.
 func (c *Component) isInitialized() bool {
 	if c.layoutCmp == nil {
 		return false
@@ -193,102 +108,143 @@ func (c *Component) isInitialized() bool {
 	return c.layoutCmp.wrapped().initialized
 }
 
-func (c *Component) isDirty() bool {
-	return c.layoutCmp.wrapped().ll.IsDirty()
+func (c *Component) hasLayoutWrapper() bool {
+	return c.layoutCmp != nil
 }
 
-func (c *Component) setInitialized() {
-	c.layoutCmp.wrapped().initialized = true
+func (c *Component) layoutComponent() layoutComponenter {
+	return c.layoutCmp
 }
 
-func (c *Component) addKey(k tcell.Key, mm tcell.ModMask, l Listener) {
-	wrapped := c.layoutCmp.wrapped()
-	if wrapped.lst == nil {
-		wrapped.lst = &listeners{}
+// component is the actual implementation of a lines-Component.
+type component struct {
+	userCmp     Componenter
+	dim         *lyt.Dim
+	mod         ComponentMode
+	initialized bool
+	ll          *lines
+	sty         tcell.Style
+	lst         *listeners
+	ff          *features
+}
+
+// Mod sets how given components content is maintained.
+func (c *component) Mod(cm ComponentMode) {
+	switch cm {
+	case Appending:
+		c.mod &^= Overwriting | Tailing
+		c.mod |= Appending
+	case Overwriting:
+		c.mod &^= Appending | Tailing
+		c.mod |= Overwriting
+	case Tailing:
+		c.mod &^= Appending | Overwriting
+		c.mod |= Tailing
 	}
-	wrapped.lst.key(k, mm, l)
 }
 
-func (c *Component) addRune(r rune, l Listener) {
-	wrapped := c.layoutCmp.wrapped()
-	if wrapped.lst == nil {
-		wrapped.lst = &listeners{}
-	}
-	wrapped.lst.rune(r, l)
+// Len returns the number of lines currently stored in a component.
+// Note the line number is independent of a component's associated
+// screen area.
+func (c *component) Len() int {
+	return len(*c.ll)
 }
 
-func (c *Component) keyListenerOf(
-	k tcell.Key, mm tcell.ModMask,
-) (Listener, bool) {
+// Dim provides a components layout dimensions and features to adapt
+// them.
+func (c *component) Dim() *lyt.Dim { return c.dim }
 
-	wrapped := c.layoutCmp.wrapped()
-	if wrapped.lst == nil {
-		return nil, false
+// Reset blanks out the content of the line with given index the next
+// time it is printed to the screen.
+func (c *component) Reset(idx int) {
+	if idx < 0 || idx >= len(*c.ll) {
+		return
 	}
-
-	return wrapped.lst.keyListenerOf(k, mm)
+	(*c.ll)[idx].set("")
 }
 
-func (c *Component) runeListenerOf(r rune) (Listener, bool) {
+func (c *component) setInitialized() {
+	c.initialized = true
+}
 
-	wrapped := c.layoutCmp.wrapped()
+// component gets the component out of a layoutComponenter without using
+// a type-switch.
+func (c *component) wrapped() *component { return c }
 
-	if wrapped.lst == nil {
-		return nil, false
+func (c *component) userComponent() Componenter {
+	return c.userCmp
+}
+
+func (c *component) ensureFeatures() {
+	if c.ff != nil {
+		return
 	}
+	c.ff = defaultFeatures.copy()
+}
 
-	return wrapped.lst.runeListenerOf(r)
+// hardSync clears the screen area of receiving component before its
+// content is written to the screen.
+func (c *component) hardSync(rw runeWriter) {
+	c.clear(rw)
+	c.sync(rw)
 }
 
 // sync writes receiving components lines to the screen.
-func (c *Component) sync(rw runeWriter) {
-	wrapped := c.layoutCmp.wrapped()
-	sx, sy, sw, sh := wrapped.dim.Area()
-	if wrapped.mod&Tailing == Tailing {
-		if len(*wrapped.ll) >= sh {
-			c.syncTailed(wrapped, rw, sx, sy, sw, sh)
+func (c *component) sync(rw runeWriter) {
+	sx, sy, sw, sh := c.dim.Area()
+	if c.mod&Tailing == Tailing {
+		if len(*c.ll) >= sh {
+			c.syncTailed(rw, sx, sy, sw, sh)
 			return
 		}
 	}
-	wrapped.ll.For(func(i int, l *line) (stop bool) {
+	c.ll.For(func(i int, l *line) (stop bool) {
 		if i >= sh {
 			return true
 		}
-		l.sync(sx, sy+i, sw, rw, wrapped.sty)
+		l.sync(sx, sy+i, sw, rw, c.sty)
 		return false
 	})
 }
 
-func (c *Component) syncTailed(
-	cmp *component, rw runeWriter, sx, sy, sw, sh int,
-) {
+func (c *component) syncTailed(rw runeWriter, sx, sy, sw, sh int) {
 	y := sy + sh - 1
-	cmp.ll.ForInverse(func(_ int, l *line) (stop bool) {
+	c.ll.ForInverse(func(_ int, l *line) (stop bool) {
 		if y < sy {
 			return true
 		}
-		l.sync(sx, y, sw, rw, cmp.sty)
+		l.sync(sx, y, sw, rw, c.sty)
 		y--
 		return false
 	})
 }
 
-// hardSync clears the screen area of receiving component before its
-// content is written to the screen.
-func (c *Component) hardSync(rw runeWriter) {
-	c.clear(rw)
-	c.sync(rw)
-}
-
 // clear fills the receiving component's printable area with spaces.
-func (c *Component) clear(rw runeWriter) {
-	wrapped := c.layoutCmp.wrapped()
-	sx, sy, sw, sh := wrapped.dim.Area()
+func (c *component) clear(rw runeWriter) {
+	sx, sy, sw, sh := c.dim.Area()
 	for y := sy; y < sh; y++ {
 		for x := sx; x < sw; x++ {
-			rw.SetContent(x, y, ' ', nil, wrapped.sty)
+			rw.SetContent(x, y, ' ', nil, c.sty)
 		}
 	}
+}
+
+func (c *component) write(bb []byte, at int) (int, error) {
+	if at > -1 {
+		return c.writeAt(bb, at)
+	}
+	switch {
+	case c.mod&Overwriting == Overwriting:
+		c.ll.replace(bytes.Split(bb, []byte("\n"))...)
+	case c.mod&(Appending|Tailing) != 0:
+		c.ll.append(bytes.Split(bb, []byte("\n"))...)
+	}
+	return len(bb), nil
+}
+
+func (c *component) writeAt(bb []byte, at int) (int, error) {
+	c.ll.replaceAt(at, bytes.Split(bb, []byte("\n"))...)
+	return len(bb), nil
 }
 
 // Features provides access and fine grained control over a components

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/slukits/lines/internal/lyt"
 )
 
 // Testing augments lines.Events instance created by *Test* with useful
@@ -293,7 +294,10 @@ func (tt *Testing) FireComponentClick(c Componenter, x, y int) *Events {
 		if !isInside(c, x, y) {
 			return
 		}
-		tt.FireClick(c.Dim().X()+x, c.Dim().Y()+y)
+		tt.FireClick(
+			c.(lyt.Dimer).Dim().X()+x,
+			c.(lyt.Dimer).Dim().Y()+y,
+		)
 	})
 	if err != nil {
 		panic(fmt.Sprintf(
@@ -319,7 +323,10 @@ func (tt *Testing) FireComponentContext(c Componenter, x, y int) *Events {
 		if !isInside(c, x, y) {
 			return
 		}
-		tt.FireContext(c.Dim().X()+x, c.Dim().Y()+y)
+		tt.FireContext(
+			c.(lyt.Dimer).Dim().X()+x,
+			c.(lyt.Dimer).Dim().Y()+y,
+		)
 	})
 	if err != nil {
 		panic(fmt.Sprintf(
@@ -329,10 +336,10 @@ func (tt *Testing) FireComponentContext(c Componenter, x, y int) *Events {
 }
 
 func isInside(c Componenter, x, y int) bool {
-	if x < 0 || y < 0 || c.Dim().IsOffScreen() {
+	if x < 0 || y < 0 || c.(lyt.Dimer).Dim().IsOffScreen() {
 		return false
 	}
-	_, _, width, height := c.Dim().Area()
+	_, _, width, height := c.(lyt.Dimer).Dim().Area()
 	if x >= width {
 		return false
 	}
@@ -350,6 +357,7 @@ func (tt *Testing) waitForSynced(err string) {
 	if tt.pushWaiting(err) { // return if already waiting
 		return
 	}
+	tt.t.Helper()
 	tmr := time.NewTimer(tt.Timeout)
 	for err := tt.popWaiting(); err != ""; err = tt.popWaiting() {
 		select {
