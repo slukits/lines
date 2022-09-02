@@ -73,17 +73,9 @@ func (ll lines) ForDirty(cb func(int, *line)) {
 	}
 }
 
-func (ll lines) For(cb func(int, *line) (stop bool)) {
-	for i, l := range ll {
+func (ll lines) For(offset int, cb func(int, *line) (stop bool)) {
+	for i, l := range ll[offset:] {
 		if cb(i, l) {
-			return
-		}
-	}
-}
-
-func (ll lines) ForInverse(cb func(int, *line) (stop bool)) {
-	for i := len(ll) - 1; i >= 0; i-- {
-		if cb(i, ll[i]) {
 			return
 		}
 	}

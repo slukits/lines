@@ -208,7 +208,7 @@ func (s *screen) syncDirty() {
 	s.lyt.ForDimer(nil, func(d lyt.Dimer) (stop bool) {
 		// cmp := d.(layoutComponenter).userComponent()
 		wrapped := d.(layoutComponenter).wrapped()
-		if wrapped.ll.IsDirty() {
+		if wrapped.IsDirty() {
 			wrapped.sync(s.lib)
 		}
 		return false

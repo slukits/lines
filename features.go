@@ -8,6 +8,119 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
+// Features provides access and fine grained control over a components
+// (end-user) features provided by lines.  Its methods will panic used
+// outside an event reporting listener-callback.
+type Features struct{ c *Component }
+
+func (ff *Features) ensureInitialized() *features {
+	ff.c.ensureFeatures()
+	return ff.c.ff
+}
+
+// Add adds the default key, rune and button bindings of given
+// feature(s) for associated component.
+func (ff *Features) Add(f FeatureMask) {
+	ff.ensureInitialized().add(f, false)
+}
+
+// AddRecursive sets the default key, rune and button bindings of given
+// feature(s) for associated component.  Whereas the feature(s) are
+// flagged recursive, i.e. they apply as well for nested components.
+func (ff *Features) AddRecursive(f FeatureMask) {
+	ff.ensureInitialized().add(f, true)
+}
+
+// Has returns true if receiving component features have key, rune or
+// button bindings for given feature(s)
+func (ff *Features) Has(f FeatureMask) bool {
+	return ff.ensureInitialized().has(f)
+}
+
+// All returns all features for which currently key, rune or button
+// bindings are registered. (note Has is faster to determine if a
+// particular feature is set.)
+func (ff *Features) All() FeatureMask {
+	return ff.ensureInitialized().all()
+}
+
+// KeysOf returns the keys with their modifiers bound to given feature
+// of associated component.
+func (ff *Features) KeysOf(f FeatureMask) FeatureKeys {
+	return ff.ensureInitialized().keysOf(f)
+}
+
+// SetKeysOf deletes all set keys for given feature (except for Quitable
+// defaults) and binds given keys to it instead.  If recursive is true
+// the feature becomes applicable for nested components.  The call is
+// ignored if given feature is not a power of two i.e. a single feature.
+// Providing no keys simply removes all key-bindings for given feature.
+func (ff *Features) SetKeysOf(
+	f FeatureMask, recursive bool, kk ...FeatureKey,
+) {
+	ff.ensureInitialized().setKeysOf(f, recursive, kk...)
+}
+
+// ButtonsOf returns the buttons with their modifiers bound to given
+// feature for associated component.
+func (ff *Features) ButtonsOf(f FeatureMask) FeatureButtons {
+	return ff.ensureInitialized().buttonsOf(f)
+}
+
+// SetButtonsOf deletes all set buttons for given feature and binds
+// given buttons to it instead.  If recursive is true the feature
+// becomes applicable for nested components.  The call is ignored if
+// given feature is not a power of two i.e. a single feature.  Providing
+// no buttons simply removes all button-bindings for given feature.
+func (ff *Features) SetButtonsOf(
+	f FeatureMask, recursive bool, bb ...FeatureButton,
+) {
+	ff.ensureInitialized().setButtonsOf(f, recursive, bb...)
+}
+
+// RunesOf returns the runes bound to given feature for associated
+// component.
+func (ff *Features) RunesOf(f FeatureMask) FeatureRunes {
+	return ff.ensureInitialized().runesOf(f)
+}
+
+// SetRunesOf deletes all set runes for given feature and binds given
+// runes to it instead.  If recursive is true the feature becomes
+// applicable for nested components.  The call is ignored if given
+// feature is not a power of two i.e. a single feature.  Providing no
+// runes simply removes all runes-bindings for given feature.
+func (ff *Features) SetRunesOf(
+	f FeatureMask, recursive bool, rr ...rune,
+) {
+	ff.ensureInitialized().setRunesOf(f, recursive, rr...)
+}
+
+// Delete removes all runes, key or button bindings of given feature(s)
+// except for Quitable.  The two default Quitable bindings ctrl-c and
+// ctrl-d remain.  NOTE you can prevent the processing of the default
+// quit bindings by adding to your root component listeners for these
+// keys which call StopBubbling on their environment:
+//
+//	type Root struct { lines.Component }
+//
+//	func (c *Root) OnInit(e *lines.Env) { fmt.Fprint(e, "hello world") }
+//
+//	func (c *Root) Keys(register lines.KeyRegistration) {
+//	    register(tcell.KeyCtrlC, tcell.ModNone, func(e *Env) {
+//	        e.StopBubbling()
+//	    })
+//	    register(tcell.KeyCtrlD, tcell.ModNone, func(e *Env) {
+//	        e.StopBubbling()
+//	    })
+//	}
+//
+//	lines.New(&Root{}).Listen()
+//
+// gives you an application which can't be quit by its users.
+func (ff *Features) Delete(f FeatureMask) {
+	ff.ensureInitialized().delete(f)
+}
+
 // FeatureMask classifies keys/runes/buttons for usability features.
 // I.e. features enable certain default UI-behavior for components
 // having this feature to be used by a user of the final terminal

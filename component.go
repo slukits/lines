@@ -82,6 +82,7 @@ func (c *Component) initialize(
 		mod:     Overwriting,
 	}
 	c.FF = &Features{c: c}
+	c.Scroll = &Scroller{c: c}
 	switch userComponent.(type) {
 	case Stacker:
 		c.layoutCmp = &stackingWrapper{component: inner}
@@ -126,6 +127,10 @@ type component struct {
 	sty         tcell.Style
 	lst         *listeners
 	ff          *features
+	dirty       bool
+
+	// first holds the index of the first displayed line
+	first int
 }
 
 // Mod sets how given components content is maintained.
@@ -150,6 +155,15 @@ func (c *component) Len() int {
 	return len(*c.ll)
 }
 
+// IsDirty is true if this component is flagged dirty or one of its
+// lines.
+func (c *component) IsDirty() bool {
+	if c.Len() == 0 {
+		return c.dirty
+	}
+	return c.ll.IsDirty() || c.dirty
+}
+
 // Dim provides a components layout dimensions and features to adapt
 // them.
 func (c *component) Dim() *lyt.Dim { return c.dim }
@@ -157,7 +171,7 @@ func (c *component) Dim() *lyt.Dim { return c.dim }
 // Reset blanks out the content of the line with given index the next
 // time it is printed to the screen.
 func (c *component) Reset(idx int) {
-	if idx < 0 || idx >= len(*c.ll) {
+	if idx < 0 || idx >= c.Len() {
 		return
 	}
 	(*c.ll)[idx].set("")
@@ -192,29 +206,18 @@ func (c *component) hardSync(rw runeWriter) {
 // sync writes receiving components lines to the screen.
 func (c *component) sync(rw runeWriter) {
 	sx, sy, sw, sh := c.dim.Area()
-	if c.mod&Tailing == Tailing {
-		if len(*c.ll) >= sh {
-			c.syncTailed(rw, sx, sy, sw, sh)
-			return
-		}
+	if c.mod&Tailing == Tailing && c.Len() >= sh {
+		c.setFirst(c.Len() - sh)
 	}
-	c.ll.For(func(i int, l *line) (stop bool) {
+	if c.dirty {
+		c.clear(rw)
+		c.dirty = false
+	}
+	c.ll.For(c.first, func(i int, l *line) (stop bool) {
 		if i >= sh {
 			return true
 		}
 		l.sync(sx, sy+i, sw, rw, c.sty)
-		return false
-	})
-}
-
-func (c *component) syncTailed(rw runeWriter, sx, sy, sw, sh int) {
-	y := sy + sh - 1
-	c.ll.ForInverse(func(_ int, l *line) (stop bool) {
-		if y < sy {
-			return true
-		}
-		l.sync(sx, y, sw, rw, c.sty)
-		y--
 		return false
 	})
 }
@@ -227,6 +230,20 @@ func (c *component) clear(rw runeWriter) {
 			rw.SetContent(x, y, ' ', nil, c.sty)
 		}
 	}
+}
+
+// setFirst sets the first displayed line and in case it changes given
+// component becomes also dirty (hence the indirection).
+func (c *component) setFirst(f int) {
+	if f < 0 || f == c.first || f >= c.Len() {
+		return
+	}
+
+	c.first = f
+	if c.dirty {
+		return
+	}
+	c.dirty = true
 }
 
 func (c *component) write(bb []byte, at int) (int, error) {
@@ -245,119 +262,6 @@ func (c *component) write(bb []byte, at int) (int, error) {
 func (c *component) writeAt(bb []byte, at int) (int, error) {
 	c.ll.replaceAt(at, bytes.Split(bb, []byte("\n"))...)
 	return len(bb), nil
-}
-
-// Features provides access and fine grained control over a components
-// (end-user) features provided by lines.  Its methods will panic used
-// outside an event reporting listener-callback.
-type Features struct{ c *Component }
-
-func (ff *Features) ensureInitialized() *features {
-	ff.c.ensureFeatures()
-	return ff.c.ff
-}
-
-// Add adds the default key, rune and button bindings of given
-// feature(s) for associated component.
-func (ff *Features) Add(f FeatureMask) {
-	ff.ensureInitialized().add(f, false)
-}
-
-// AddRecursive sets the default key, rune and button bindings of given
-// feature(s) for associated component.  Whereas the feature(s) are
-// flagged recursive, i.e. they apply as well for nested components.
-func (ff *Features) AddRecursive(f FeatureMask) {
-	ff.ensureInitialized().add(f, true)
-}
-
-// Has returns true if receiving component features have key, rune or
-// button bindings for given feature(s)
-func (ff *Features) Has(f FeatureMask) bool {
-	return ff.ensureInitialized().has(f)
-}
-
-// All returns all features for which currently key, rune or button
-// bindings are registered. (note Has is faster to determine if a
-// particular feature is set.)
-func (ff *Features) All() FeatureMask {
-	return ff.ensureInitialized().all()
-}
-
-// KeysOf returns the keys with their modifiers bound to given feature
-// of associated component.
-func (ff *Features) KeysOf(f FeatureMask) FeatureKeys {
-	return ff.ensureInitialized().keysOf(f)
-}
-
-// SetKeysOf deletes all set keys for given feature (except for Quitable
-// defaults) and binds given keys to it instead.  If recursive is true
-// the feature becomes applicable for nested components.  The call is
-// ignored if given feature is not a power of two i.e. a single feature.
-// Providing no keys simply removes all key-bindings for given feature.
-func (ff *Features) SetKeysOf(
-	f FeatureMask, recursive bool, kk ...FeatureKey,
-) {
-	ff.ensureInitialized().setKeysOf(f, recursive, kk...)
-}
-
-// ButtonsOf returns the buttons with their modifiers bound to given
-// feature for associated component.
-func (ff *Features) ButtonsOf(f FeatureMask) FeatureButtons {
-	return ff.ensureInitialized().buttonsOf(f)
-}
-
-// SetButtonsOf deletes all set buttons for given feature and binds
-// given buttons to it instead.  If recursive is true the feature
-// becomes applicable for nested components.  The call is ignored if
-// given feature is not a power of two i.e. a single feature.  Providing
-// no buttons simply removes all button-bindings for given feature.
-func (ff *Features) SetButtonsOf(
-	f FeatureMask, recursive bool, bb ...FeatureButton,
-) {
-	ff.ensureInitialized().setButtonsOf(f, recursive, bb...)
-}
-
-// RunesOf returns the runes bound to given feature for associated
-// component.
-func (ff *Features) RunesOf(f FeatureMask) FeatureRunes {
-	return ff.ensureInitialized().runesOf(f)
-}
-
-// SetRunesOf deletes all set runes for given feature and binds given
-// runes to it instead.  If recursive is true the feature becomes
-// applicable for nested components.  The call is ignored if given
-// feature is not a power of two i.e. a single feature.  Providing no
-// runes simply removes all runes-bindings for given feature.
-func (ff *Features) SetRunesOf(
-	f FeatureMask, recursive bool, rr ...rune,
-) {
-	ff.ensureInitialized().setRunesOf(f, recursive, rr...)
-}
-
-// Delete removes all runes, key or button bindings of given feature(s)
-// except for Quitable.  The two default Quitable bindings ctrl-c and
-// ctrl-d remain.  NOTE you can prevent the processing of the default
-// quit bindings by adding to your root component listeners for these
-// keys which call StopBubbling on their environment:
-//
-//	type Root struct { lines.Component }
-//
-//	func (c *Root) OnInit(e *lines.Env) { fmt.Fprint(e, "hello world") }
-//
-//	func (c *Root) Keys(register lines.KeyRegistration) {
-//	    register(tcell.KeyCtrlC, tcell.ModNone, func(e *Env) {
-//	        e.StopBubbling()
-//	    })
-//	    register(tcell.KeyCtrlD, tcell.ModNone, func(e *Env) {
-//	        e.StopBubbling()
-//	    })
-//	}
-//
-//	lines.New(&Root{}).Listen()
-//
-// gives you an application which can't be quit by its users.
-func (ff *Features) Delete(f FeatureMask) {
-	ff.ensureInitialized().delete(f)
 }
 
 // layoutComponenter combines the user-provided component with its
