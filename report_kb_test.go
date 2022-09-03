@@ -5,8 +5,8 @@
 package lines
 
 import (
+	"fmt"
 	"testing"
-	"time"
 
 	"github.com/gdamore/tcell/v2"
 	. "github.com/slukits/gounit"
@@ -292,7 +292,6 @@ func (s *KB) Event_bubbling_may_be_stopped(t *T) {
 	fx := &bbbKBCmpFX{}
 	// OnInit runeListener keyListener OnRune OnKey
 	ee, tt := Test(t.GoT(), fx, 5)
-	tt.Timeout = 20 * time.Minute
 	ee.Listen()
 	fx.inner().stopBubblingKeys = true
 	fx.inner().stopBubblingOnKey = true
@@ -311,6 +310,38 @@ func (s *KB) Event_bubbling_may_be_stopped(t *T) {
 	t.False(fx.HasRune())
 	t.False(fx.HasKeyListener())
 	t.False(fx.HasRuneListener())
+}
+
+type icmpFX struct {
+	Component
+	init func(*icmpFX, *Env)
+}
+
+func (c *icmpFX) OnInit(e *Env) {
+	if c.init == nil {
+		return
+	}
+	c.init(c, e)
+}
+
+func (s *KB) Key_feature_is_executed(t *T) {
+	ee, tt := Test(t.GoT(), &icmpFX{init: func(c *icmpFX, e *Env) {
+		c.FF.Add(Scrollable)
+		c.Dim().SetHeight(2)
+		fmt.Fprint(e, "first\nsecond\nthird\nforth")
+	}}, 0)
+	up := defaultBindings[UpScrollable].kk[0]
+	down := defaultBindings[DownScrollable].kk[0]
+	defer ee.QuitListening()
+
+	tt.FireKey(down.Key, down.Mod)
+	t.Eq(tt.String(), "second\nthird")
+	tt.FireKey(down.Key, down.Mod)
+	t.Eq(tt.String(), "third\nforth")
+
+	tt.FireKey(up.Key, up.Mod)
+	tt.FireKey(up.Key, up.Mod)
+	t.Eq(tt.String(), "first\nsecond")
 }
 
 func TestKB(t *testing.T) {

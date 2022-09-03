@@ -102,6 +102,7 @@ func reportKey(cntx *rprContext) (quit bool) {
 	if sb {
 		return false
 	}
+	execFeature(cntx, evt)
 	if !cntx.scr.root().ff.keyQuits(evt.Key()) {
 		return false
 	}
@@ -129,6 +130,18 @@ func keyCurry(
 	return func(e *Env) {
 		cb(e, evt.Key(), evt.Modifiers())
 	}
+}
+
+func execFeature(cntx *rprContext, evt *tcell.EventKey) {
+	usr := cntx.scr.focus.userComponent()
+	f := usr.layoutComponent().wrapped().ff.keyFeature(
+		evt.Key(), evt.Modifiers())
+	if f == NoFeature {
+		return
+	}
+	usr.enable()
+	defer usr.disable()
+	execute(usr, f)
 }
 
 func reportOnKey(

@@ -224,7 +224,7 @@ func (s *_component) Scrolls_up_by_90_percent_height(t *T) {
 		t.True(fx.Scroll.IsAtBottom())
 	})
 	exp = []string{}
-	for i := 0; i < 30; i++ { // first is still at fifth line
+	for i := 0; i < 30; i++ {
 		exp = append(exp, fmt.Sprintf("line %d", i+4))
 	}
 	ee.Update(fx, nil, func(e *Env) { fx.Scroll.Up() })

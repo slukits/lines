@@ -70,12 +70,30 @@ func New(cmp Componenter) *Events {
 //	type MyTUIComponent struct { lines.Component }
 //	lines.New(&MyTUIComponent{}).Listen()
 type Componenter interface {
+	// enable makes the embedded component usable for the client, i.e.
+	// accessing its properties and methods won't panic.
 	enable()
+	// disable makes the embedded component unusable for the client,
+	// i.e. accessing its properties and methods is likely to panic.
 	disable()
+	// hasLayoutWrapper is true if a component is part of the layout and
+	// its layout has been calculated by the layout manager.
 	hasLayoutWrapper() bool
+	// layoutComponent is a wrapper around a client-component and its
+	// embedded component independent of being enabled/disabled.  It
+	// combines the client-components stacking or chaining aspects and
+	// the internally calculated dimensional aspects of a component.
 	layoutComponent() layoutComponenter
+	// initialize sets up the embedded *component instance and wraps it
+	// together with the client-instance in a layoutComponenter which is
+	// returned.
 	initialize(Componenter) layoutComponenter
+	// isInitialized returns true if embedded *component was wrapped
+	// into a layout component.
 	isInitialized() bool
+	// embedded returns a reference to client-component's embedded
+	// Component-instance.
+	embedded() *Component
 }
 
 // Kiosk returns an Events instance without registered Quitable feature,

@@ -150,13 +150,13 @@ const (
 	// focus through key-board input) by the user. (default tab-key)
 	NextSelectable // TODO: implement
 
-	// upScrollable makes a component's content up-scrollable by the
+	// UpScrollable makes a component's content up-scrollable by the
 	// user (default page-up-key).
-	upScrollable // TODO: implement
+	UpScrollable
 
-	// downScrollable makes a component's content down-scrollable by the
+	// DownScrollable makes a component's content down-scrollable by the
 	// user (default page-down-key).
-	downScrollable // TODO: implement
+	DownScrollable
 
 	// leftScrollable enables a component to be scrolled to the left
 	// by the user (default left-key).
@@ -207,9 +207,9 @@ const (
 	// combining next- and previous-selectable.
 	Selectable = PreviousSelectable | NextSelectable // TODO: implement
 
-	// scrollable makes a component's content vertically scrollable by
-	// combining up- and down-scrollable.
-	scrollable = upScrollable | downScrollable // TODO: implement
+	// Scrollable makes a component's content vertically Scrollable by
+	// combining up- and down-Scrollable.
+	Scrollable = UpScrollable | DownScrollable
 
 	// horizontalScrollable makes a component horizontally scrollable by
 	// combining left- and right-scrollable.
@@ -710,6 +710,9 @@ var allButtons = []tcell.ButtonMask{
 // keyFeature maps a key to its associated feature or to NoEvent if not
 // registered.
 func (ff *features) keyFeature(k tcell.Key, m tcell.ModMask) FeatureMask {
+	if ff == nil || ff.keys == nil {
+		return NoFeature
+	}
 
 	if ff.keys[m] == nil {
 		return NoFeature
@@ -741,7 +744,7 @@ func (kk *features) runeFeature(r rune) FeatureMask {
 // handled features
 var allFeatures = []FeatureMask{
 	Quitable, Focusable,
-	upScrollable, downScrollable,
+	UpScrollable, DownScrollable,
 	leftScrollable, rightScrollable,
 	lineLeftScrollable, lineRightScrollable,
 	PreviousSelectable, NextSelectable,
@@ -798,4 +801,25 @@ var defaultBindings = map[FeatureMask]*bindings{
 			Mod: tcell.ModShift,
 		}},
 	},
+	UpScrollable: {
+		kk: FeatureKeys{{
+			Key: tcell.KeyPgUp,
+			Mod: tcell.ModNone,
+		}},
+	},
+	DownScrollable: {
+		kk: FeatureKeys{{
+			Key: tcell.KeyPgDn,
+			Mod: tcell.ModNone,
+		}},
+	},
+}
+
+func execute(usr Componenter, f FeatureMask) {
+	switch f {
+	case UpScrollable:
+		usr.embedded().Scroll.Up()
+	case DownScrollable:
+		usr.embedded().Scroll.Down()
+	}
 }

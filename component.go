@@ -117,6 +117,10 @@ func (c *Component) layoutComponent() layoutComponenter {
 	return c.layoutCmp
 }
 
+func (c *Component) embedded() *Component { return c }
+
+// func (c *Component) component() *Component
+
 // component is the actual implementation of a lines-Component.
 type component struct {
 	userCmp     Componenter
