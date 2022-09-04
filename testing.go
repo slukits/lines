@@ -434,7 +434,15 @@ func (tt *Testing) Screen() TestScreen {
 	ts, start := TestScreen{}, 0
 	b, w, h := tt.lib.GetContents()
 	for i := 0; i < h; i++ {
-		ts = append(ts, b[start:start+w])
+		l := TestLine{}
+		for _, c := range b[start : start+w] {
+			if len(c.Runes) == 0 {
+				l = append(l, testCell{r: ' ', sty: c.Style})
+				continue
+			}
+			l = append(l, testCell{r: c.Runes[0], sty: c.Style})
+		}
+		ts = append(ts, l)
 		start += w
 	}
 	return ts.trimVertical().trimHorizontal()
@@ -453,11 +461,7 @@ func (s TestScreen) String() string {
 	b := strings.Builder{}
 	for _, l := range s {
 		for _, c := range l {
-			if len(c.Runes) == 0 {
-				b.WriteRune(' ')
-				continue
-			}
-			b.WriteRune(c.Runes[0])
+			b.WriteRune(c.r)
 		}
 		b.WriteRune('\n')
 	}
@@ -513,7 +517,12 @@ func (s TestScreen) trimHorizontal() TestScreen {
 }
 
 // TestLine represents a line of a [lines.TestScreen].
-type TestLine []tcell.SimCell
+type TestLine []testCell
+
+type testCell struct {
+	r   rune
+	sty tcell.Style
+}
 
 const blanks = " \r\t"
 
@@ -524,10 +533,10 @@ func (l TestLine) Styles() LineTestStyles {
 	if len(l) == 0 {
 		return nil
 	}
-	cfg, cbg, caa := l[0].Style.Decompose()
+	cfg, cbg, caa := l[0].sty.Decompose()
 	ss, cr := LineTestStyles{}, Range{0}
 	for i, c := range l {
-		fg, bg, aa := c.Style.Decompose()
+		fg, bg, aa := c.sty.Decompose()
 		if cbg == bg && cfg == fg && caa == aa {
 			continue
 		}
@@ -543,10 +552,7 @@ func (l TestLine) Styles() LineTestStyles {
 
 func (l TestLine) isBlank() bool {
 	for _, c := range l {
-		if len(c.Runes) == 0 {
-			continue
-		}
-		if strings.ContainsRune(blanks, c.Runes[0]) {
+		if strings.ContainsRune(blanks, c.r) {
 			continue
 		}
 		return false
@@ -555,38 +561,26 @@ func (l TestLine) isBlank() bool {
 }
 
 func (l TestLine) blankPrefix() int {
-
 	n := 0
 	for _, c := range l {
-
-		if len(c.Runes) == 0 ||
-			strings.ContainsRune(blanks, c.Runes[0]) {
-
+		if strings.ContainsRune(blanks, c.r) {
 			n++
 			continue
 		}
-
 		break
 	}
-
 	return n
 }
 
 func (l TestLine) blankSuffix() int {
-
 	n := 0
 	for i := len(l) - 1; i >= 0; i-- {
-
-		if len(l[i].Runes) == 0 ||
-			strings.ContainsRune(blanks, l[i].Runes[0]) {
-
+		if strings.ContainsRune(blanks, l[i].r) {
 			n++
 			continue
 		}
-
 		break
 	}
-
 	return n
 }
 

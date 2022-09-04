@@ -93,7 +93,7 @@ func (s *env) Changes_fore_and_background_for_line_s_content(t *T) {
 	for i := range l {
 		t.True(ss.Of(i).HasBG(tcell.ColorRed))
 		t.True(ss.Of(i).HasFG(tcell.ColorWhite))
-		t.Eq(l[i].Runes[0], int32(str[i]))
+		t.Eq(l[i].r, int32(str[i]))
 	}
 }
 
@@ -131,7 +131,7 @@ func (s *env) Changes_fore_and_background_for_partial_line(t *T) {
 	ss := tt.LastScreen[1].Styles()
 	l := tt.LastScreen[1]
 	for i := range l {
-		if l[i].Runes[0] != ' ' || len(l) > i+1 && l[i+1].Runes[0] != ' ' {
+		if l[i].r != ' ' || len(l) > i+1 && l[i+1].r != ' ' {
 			t.True(ss.Of(i).HasBG(tcell.ColorRed))
 			t.True(ss.Of(i).HasFG(tcell.ColorWhite))
 			continue
