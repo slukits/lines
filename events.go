@@ -128,6 +128,7 @@ func (ee *Events) Listen() {
 		return
 	}
 	if ee.t != nil {
+		ee.t.t.Helper()
 		ee.t.listen()
 		return
 	}
@@ -164,6 +165,9 @@ func (ee *Events) listen() {
 			ee.scr.hardSync(ee)
 			ee.synced <- true
 		default:
+			// if _, ok := ev.(*quitEvent); ok {
+			// 	fmt.Println("dbg: QUIT reported")
+			// }
 			if quit := report(ev, ee, ee.scr); quit {
 				// ee.stopPolling()
 				ee.quitListening()
@@ -189,9 +193,16 @@ func (ee *Events) Reported(listener func()) {
 // content is made.
 func (ee *Events) QuitListening() {
 	if ee.isListening {
-		ee.scr.lib.PostEvent(&quitEvent{when: time.Now()})
+		var wait func()
 		if ee.t != nil {
-			ee.t.waitForSynced("test: quit listening: sync timed out")
+			// fmt.Println("register: quit listening")
+			wait = ee.t.registerEventSync(
+				"test: quit listening: sync timed out")
+		}
+		ee.scr.lib.PostEvent(&quitEvent{when: time.Now()})
+		if wait != nil {
+			ee.t.t.Helper()
+			wait()
 		}
 		return
 	}
@@ -249,12 +260,18 @@ func (ee *Events) Update(
 		lst:  l,
 		Data: data,
 	}
+	var wait func()
+	if ee.t != nil {
+		// fmt.Println("register: update")
+		wait = ee.t.registerEventSync("test: update: sync timed out")
+	}
 	if err := ee.scr.lib.PostEvent(evt); err != nil {
 		return fmt.Errorf(errEventFmt, err)
 	}
-	if ee.t != nil {
+	if wait != nil {
 		ee.t.t.Helper()
-		ee.t.waitForSynced("test: update: sync timed out")
+		// fmt.Println("wait for update")
+		wait()
 		ee.t.checkTermination()
 	}
 	return nil
@@ -296,11 +313,17 @@ func (ee *Events) MoveFocus(cmp Componenter) error {
 		when: time.Now(),
 		cmp:  cmp,
 	}
+	var wait func()
+	if ee.t != nil {
+		// fmt.Println("register: move focus")
+		wait = ee.t.registerEventSync("test: move-focus: sync timed out")
+	}
 	if err := ee.scr.lib.PostEvent(evt); err != nil {
 		return fmt.Errorf(errEventFmt, err)
 	}
-	if ee.t != nil {
-		ee.t.waitForSynced("test: move-focus: sync timed out")
+	if wait != nil {
+		ee.t.t.Helper()
+		wait()
 		ee.t.checkTermination()
 	}
 	return nil
@@ -333,11 +356,17 @@ func (ee *Events) UpdateRunes(cmp Componenter) error {
 		when: time.Now(),
 		cmp:  cmp,
 	}
+	var wait func()
+	if ee.t != nil {
+		// fmt.Println("register: update runes")
+		wait = ee.t.registerEventSync("test: update-keys: sync timed out")
+	}
 	if err := ee.scr.lib.PostEvent(evt); err != nil {
 		return fmt.Errorf(errEventFmt, err)
 	}
-	if ee.t != nil {
-		ee.t.waitForSynced("test: update-keys: sync timed out")
+	if wait != nil {
+		ee.t.t.Helper()
+		wait()
 		ee.t.checkTermination()
 	}
 	return nil
@@ -368,11 +397,17 @@ func (ee *Events) UpdateKeys(cmp Componenter) error {
 		when: time.Now(),
 		cmp:  cmp,
 	}
+	var wait func()
+	if ee.t != nil {
+		// fmt.Println("register: update keys")
+		wait = ee.t.registerEventSync("test: update-keys: sync timed out")
+	}
 	if err := ee.scr.lib.PostEvent(evt); err != nil {
 		return fmt.Errorf(errEventFmt, err)
 	}
-	if ee.t != nil {
-		ee.t.waitForSynced("test: update-keys: sync timed out")
+	if wait != nil {
+		ee.t.t.Helper()
+		wait()
 		ee.t.checkTermination()
 	}
 	return nil

@@ -5,7 +5,6 @@
 package lines
 
 import (
-	"fmt"
 	"strings"
 	"sync"
 	"testing"
@@ -37,8 +36,7 @@ type Testing struct {
 	lib                       tcell.SimulationScreen
 	autoTerminate, terminated bool
 	mutex                     *sync.Mutex
-	waitStack                 []string
-	waiting                   bool
+	syncAdd                   chan bool
 	t                         *testing.T
 
 	// Max is the number of reported events after which the
@@ -138,16 +136,18 @@ func (tt *Testing) listen() *Events {
 	if tt.terminated {
 		panic("listening has already been terminated.")
 	}
-	if !tt.ee.setListening() {
-		tt.ee.setListening()
-	}
+	tt.ee.setListening()
+	go tt.ee.listen()
+	// fmt.Println("register: listen")
+	wait := tt.registerEventSync("test: listen: sync timed out")
 	err := tt.lib.PostEvent(tcell.NewEventResize(tt.lib.Size()))
 	if err != nil { // TODO: coverage
 		tt.t.Fatalf("test: listen: post resize: %v", err)
 	}
-	go tt.ee.listen()
-	tt.waitForSynced("test: listen: sync timed out")
-	tt.checkTermination()
+	if wait != nil {
+		wait()
+		tt.checkTermination()
+	}
 	return tt.ee
 }
 
@@ -176,12 +176,16 @@ func (tt *Testing) FireResize(width, height int) *Events {
 		height = h
 	}
 	tt.lib.SetSize(width, height)
+	// fmt.Println("register: resize")
+	wait := tt.registerEventSync("test: set number of lines: sync timed out")
 	err := tt.lib.PostEvent(tcell.NewEventResize(width, height))
 	if err != nil {
 		tt.t.Fatal(err) // TODO: not covered
 	}
-	tt.waitForSynced("test: set number of lines: sync timed out")
-	tt.checkTermination()
+	if wait != nil {
+		wait()
+		tt.checkTermination()
+	}
 	return tt.ee
 }
 
@@ -193,9 +197,13 @@ func (tt *Testing) FireRune(r rune) *Events {
 	if !tt.ee.IsListening() {
 		tt.listen()
 	}
+	// fmt.Println("register: fire rune")
+	wait := tt.registerEventSync("test: fire rune: sync timed out")
 	tt.lib.InjectKey(tcell.KeyRune, r, tcell.ModNone)
-	tt.waitForSynced("test: fire rune: sync timed out")
-	tt.checkTermination()
+	if wait != nil {
+		wait()
+		tt.checkTermination()
+	}
 	return tt.ee
 }
 
@@ -207,13 +215,17 @@ func (tt *Testing) FireKey(k tcell.Key, m ...tcell.ModMask) *Events {
 	if !tt.ee.IsListening() {
 		tt.listen()
 	}
+	// fmt.Println("register: fire key")
+	wait := tt.registerEventSync("test: fire key: sync timed out")
 	if len(m) == 0 {
 		tt.lib.InjectKey(k, 0, tcell.ModNone)
 	} else {
 		tt.lib.InjectKey(k, 0, m[0])
 	}
-	tt.waitForSynced("test: fire key: sync timed out")
-	tt.checkTermination()
+	if wait != nil {
+		wait()
+		tt.checkTermination()
+	}
 	return tt.ee
 }
 
@@ -230,9 +242,14 @@ func (tt *Testing) FireClick(x, y int) *Events {
 	if x < 0 || y < 0 || x >= width || y >= height {
 		return tt.ee
 	}
+	// fmt.Println("register: fire click")
+	wait := tt.registerEventSync("test: fire click: sync timed out")
 	tt.lib.InjectMouse(x, y, tcell.ButtonPrimary, tcell.ModNone)
-	tt.waitForSynced("test: fire click: sync timed out")
-	tt.checkTermination()
+	if wait != nil {
+		// fmt.Println("wait for mouse")
+		wait()
+		tt.checkTermination()
+	}
 	return tt.ee
 }
 
@@ -250,9 +267,13 @@ func (tt *Testing) FireContext(x, y int) *Events {
 	if x < 0 || y < 0 || x >= width || y >= height {
 		return tt.ee
 	}
+	// fmt.Println("register: fire context")
+	wait := tt.registerEventSync("test: fire click: sync timed out")
 	tt.lib.InjectMouse(x, y, tcell.ButtonSecondary, tcell.ModNone)
-	tt.waitForSynced("test: fire click: sync timed out")
-	tt.checkTermination()
+	if wait != nil {
+		wait()
+		tt.checkTermination()
+	}
 	return tt.ee
 }
 
@@ -271,131 +292,81 @@ func (tt *Testing) FireMouse(
 	if x < 0 || y < 0 || x >= width || y >= height {
 		return tt.ee
 	}
+	// fmt.Println("register: fire mouse")
+	wait := tt.registerEventSync("test: fire mouse: sync timed out")
 	tt.lib.InjectMouse(x, y, bm, mm)
-	tt.waitForSynced("test: fire mouse: sync timed out")
-	tt.checkTermination()
+	if wait != nil {
+		wait()
+		tt.checkTermination()
+	}
 	return tt.ee
 }
 
-// FireComponentClick posts an update event for given component which
-// will then fire the click event.  Hence calling this method with a
-// reported click event will decrease the event countdown by 2!  Is
-// associated Events instance not listening it is started before the
-// event is fired.  Note given coordinates are relative to the
-// components origin, i.e. if y == 2 a click to the 3rd line of the
-// component is fired.  Note if x or y are outside the component's
-// screen area no click will be fired.
+// FireComponentClick posts an click on given relative coordinate in
+// given componenter.  Is associated Events instance not listening it is
+// started before the event is fired.  Note if x or y are outside the
+// component's screen area or the component is not part of the layout no
+// click will be fired.
 func (tt *Testing) FireComponentClick(c Componenter, x, y int) *Events {
 	tt.t.Helper()
-	if !tt.ee.IsListening() {
+	if !tt.ee.IsListening() { // to calculate the layout
 		tt.listen()
 	}
-	err := tt.ee.Update(c, nil, func(e *Env) {
-		if !isInside(c, x, y) {
-			return
-		}
-		tt.FireClick(
-			c.(lyt.Dimer).Dim().X()+x,
-			c.(lyt.Dimer).Dim().Y()+y,
-		)
-	})
-	if err != nil {
-		panic(fmt.Sprintf(
-			"lines: testing: fire component click: %v", err))
+	if !c.hasLayoutWrapper() {
+		return tt.ee
 	}
-	return tt.ee
+	ox, oy, ok := isInside(c.layoutComponent().wrapped().dim, x, y)
+	if !ok {
+		return tt.ee
+	}
+	return tt.FireClick(ox+x, oy+y)
 }
 
-// FireComponentContext posts an update event for given component which
-// will then fire the context event.  Hence calling this method with a
-// reported context event will decrease the event countdown by 2!  Is
-// associated Events instance not listening it is started before the
-// event is fired.  Note given coordinates are relative to the
-// components origin, i.e. if y == 2 a click to the 3rd line of the
-// component is fired.  Note if x or y are outside the component's
-// screen area no click will be fired.
+// FireComponentContext posts an "right"-click on given relative
+// coordinate in given componenter.  Is associated Events instance not
+// listening it is started before the event is fired.  Note if x or y
+// are outside the component's screen area or the component is not part
+// of the layout no click will be fired.
 func (tt *Testing) FireComponentContext(c Componenter, x, y int) *Events {
 	tt.t.Helper()
-	if !tt.ee.IsListening() {
+	if !tt.ee.IsListening() { // to calculate the layout
 		tt.listen()
 	}
-	err := tt.ee.Update(c, nil, func(e *Env) {
-		if !isInside(c, x, y) {
-			return
-		}
-		tt.FireContext(
-			c.(lyt.Dimer).Dim().X()+x,
-			c.(lyt.Dimer).Dim().Y()+y,
-		)
-	})
-	if err != nil {
-		panic(fmt.Sprintf(
-			"lines: testing: fire component click: %v", err))
+	if !c.hasLayoutWrapper() {
+		return tt.ee
 	}
-	return tt.ee
+	ox, oy, ok := isInside(c.layoutComponent().wrapped().dim, x, y)
+	if !ok {
+		return tt.ee
+	}
+	return tt.FireContext(ox+x, oy+y)
 }
 
-func isInside(c Componenter, x, y int) bool {
-	if x < 0 || y < 0 || c.(lyt.Dimer).Dim().IsOffScreen() {
-		return false
+func isInside(dim *lyt.Dim, x, y int) (ox, oy int, ok bool) {
+	if x < 0 || y < 0 || dim.IsOffScreen() {
+		return 0, 0, false
 	}
-	_, _, width, height := c.(lyt.Dimer).Dim().Area()
+	_, _, width, height := dim.Area()
 	if x >= width {
-		return false
+		return 0, 0, false
 	}
 	if y >= height {
-		return false
+		return 0, 0, false
 	}
-	return true
+	return dim.X(), dim.Y(), true
 }
 
-// waitForSynced waits on associated Events.Synced channel if not
-// already waiting.  If already waiting the wait-stack is increased
-// by given err and waitForSynced returns; leaving it to the currently
-// waiting waitForSynced call to wait for this synchronization as well.
-func (tt *Testing) waitForSynced(err string) {
-	if tt.pushWaiting(err) { // return if already waiting
-		return
-	}
-	tt.t.Helper()
-	tmr := time.NewTimer(tt.Timeout)
-	for err := tt.popWaiting(); err != ""; err = tt.popWaiting() {
-		select {
-		case <-tt.ee.synced:
-			tmr.Reset(tt.Timeout)
-		case <-tmr.C:
-			tt.t.Fatalf(err) // TODO: coverage
-		}
-	}
-	tmr.Stop()
-}
-
-// pushWaiting adds given string onto the wait-stack and returns true if
-// if we are already waiting otherwise false and waiting is started.
-func (tt *Testing) pushWaiting(err string) bool {
+func (tt *Testing) registerEventSync(err string) (wait func()) {
 	tt.mutex.Lock()
 	defer tt.mutex.Unlock()
-	tt.waitStack = append(tt.waitStack, err)
-	if tt.waiting {
-		return true
+	if tt.syncAdd != nil {
+		tt.syncAdd <- true
+		return nil
 	}
-	tt.waiting = true
-	return false
-}
-
-// popWaiting pops the first entry from the wait-stack and returns its
-// error string unless the wait-stack is empty in which case the empty
-// string is returned and we stop *waiting*.
-func (tt *Testing) popWaiting() string {
-	tt.mutex.Lock()
-	defer tt.mutex.Unlock()
-	if len(tt.waitStack) == 0 {
-		tt.waiting = false
-		return ""
-	}
-	err := tt.waitStack[0]
-	tt.waitStack = tt.waitStack[1:]
-	return err
+	sw := newSyncWait(tt, err)
+	tt.syncAdd = make(chan bool)
+	go syncGroup(sw.c, tt.syncAdd, tt.ee.synced)
+	return sw.f
 }
 
 func (tt *Testing) checkTermination() {
@@ -406,14 +377,69 @@ func (tt *Testing) checkTermination() {
 		// the last reported event might was a quit event,
 		if tt.ee.IsListening() { // i.e. we stopped already listening
 			tt.ee.QuitListening()
-			tt.waitForSynced("quit listening: sync timed out")
+		}
+	}
+}
+
+// syncGroup is send of in a go routing which waits for so many sync
+// events until a counter fed by add is zero.
+func syncGroup(waite chan struct{}, add chan bool, less chan bool) {
+	n := 0
+	for {
+		select {
+		case add := <-add:
+			if !add {
+				close(waite)
+				// fmt.Println("dbg: add: closed")
+				return
+			}
+			n++
+			// fmt.Printf("dbg: added: %d\n", n)
+		case less := <-less:
+			if !less || n == 0 {
+				close(waite)
+				// fmt.Println("dbg: less: closed")
+				return
+			}
+			n--
+			// fmt.Printf("dbg: lessened: %d\n", n)
+		}
+	}
+}
+
+type syncWait struct {
+	c chan struct{}
+	f func()
+}
+
+func newSyncWait(tt *Testing, err string) *syncWait {
+	c := make(chan struct{})
+	return &syncWait{c: c, f: syncClosure(tt, err, c)}
+}
+
+func syncClosure(tt *Testing, err string, c chan struct{}) func() {
+	return func() {
+		tt.t.Helper()
+		select {
+		case <-time.After(tt.Timeout):
+			tt.t.Fatal(err)
+		case <-c:
+			// fmt.Println("dbg: stopped waiting")
+			tt.mutex.Lock()
+			defer tt.mutex.Unlock()
+			tt.syncAdd = nil
 		}
 	}
 }
 
 func (tt *Testing) beforeFinalize() {
+	tt.mutex.Lock()
+	defer tt.mutex.Unlock()
 	tt.terminated = true
 	tt.LastScreen = tt.Screen()
+	if tt.syncAdd != nil {
+		close(tt.syncAdd)
+	}
 }
 
 // Screen returns a trimmed cells matrix which may be stringified or
@@ -431,6 +457,12 @@ func (tt *Testing) beforeFinalize() {
 //
 // A cell is considered blank if its rune is ' ', '\t' or '\r'
 func (tt *Testing) Screen() TestScreen {
+	return tt.FullScreen().trimVertical().trimHorizontal()
+}
+
+// FullScreen returns a matrix of test cells holding a copy of each
+// tcell's sim-cell rune and style information.
+func (tt *Testing) FullScreen() TestScreen {
 	ts, start := TestScreen{}, 0
 	b, w, h := tt.lib.GetContents()
 	for i := 0; i < h; i++ {
@@ -445,7 +477,7 @@ func (tt *Testing) Screen() TestScreen {
 		ts = append(ts, l)
 		start += w
 	}
-	return ts.trimVertical().trimHorizontal()
+	return ts
 }
 
 // TestScreen is a trimmed convenience representation of a tcell

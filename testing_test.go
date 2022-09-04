@@ -102,23 +102,36 @@ func (s *_Testing) Starts_listening_on_a_fired_component_click(t *T) {
 	t.True(tt.FireComponentClick(fx, 0, 0).IsListening())
 }
 
+type dbg struct{ Suite }
+
+func (s *dbg) Dbg(t *T) {
+	fx := &clickFX{}
+	ee, tt := Test(t.GoT(), fx, 0) // listen for ever
+	defer ee.QuitListening()
+	t.False(ee.IsListening())
+	t.True(tt.FireComponentClick(fx, 0, 0).IsListening())
+}
+
+func TestDBG(t *testing.T) { Run(&dbg{}, t) }
+
 func (s *_Testing) Counts_down_two_on_reported_component_click(t *T) {
 	fx := &clickFX{}
-	ee, tt := Test(t.GoT(), fx, 3) // plus OnLayout
+	ee, tt := Test(t.GoT(), fx, 2) // plus OnLayout
 	t.False(ee.IsListening())
-	t.False(tt.FireComponentClick(fx, 0, 0).IsListening())
+	tt.FireComponentClick(fx, 0, 0)
+	t.False(ee.IsListening())
 }
 
 func (s *_Testing) Component_click_is_reported_to_component(t *T) {
 	fx := &clickFX{}
-	_, tt := Test(t.GoT(), fx, 3)
+	_, tt := Test(t.GoT(), fx, 2)
 	tt.FireComponentClick(fx, 0, 0)
 	t.True(fx.clicked)
 }
 
 func (s *_Testing) Component_coordinates_are_reported_on_click(t *T) {
 	fx := &clickFX{}
-	ee, tt := Test(t.GoT(), fx, 3)
+	ee, tt := Test(t.GoT(), fx, 2)
 	ee.Listen()
 	x, y := fx.width/2, fx.height/2
 	tt.FireComponentClick(fx, x, y)
@@ -128,7 +141,8 @@ func (s *_Testing) Component_coordinates_are_reported_on_click(t *T) {
 
 func (s *_Testing) Ignores_component_click_if_coordinates_outside(t *T) {
 	fx := &clickFX{}
-	ee, tt := Test(t.GoT(), fx, 5)
+	ee, tt := Test(t.GoT(), fx, 2)
+	defer ee.QuitListening()
 	tt.FireComponentClick(fx, -1, 0)
 	t.False(fx.clicked)
 	tt.FireComponentClick(fx, 0, -1)
@@ -137,27 +151,28 @@ func (s *_Testing) Ignores_component_click_if_coordinates_outside(t *T) {
 	t.False(fx.clicked)
 	tt.FireComponentClick(fx, 0, fx.y+fx.height+1)
 	t.False(fx.clicked)
-	t.False(ee.IsListening())
+	t.True(ee.IsListening())
 }
 
-func (s *_Testing) Starts_listening_on_a_fired_context(t *T) {
+func (s *_Testing) Starts_listening_on_a_fired_component_context(t *T) {
 	fx := &clickFX{}
 	ee, tt := Test(t.GoT(), fx, 0)
 	defer ee.QuitListening()
 	t.False(ee.IsListening())
-	t.True(tt.FireComponentContext(fx, 0, 0).IsListening())
+	tt.FireComponentContext(fx, 0, 0)
+	t.True(ee.IsListening())
 }
 
-func (s *_Testing) Counts_down_two_on_reported_context(t *T) {
+func (s *_Testing) Counts_down_two_on_reported_component_context(t *T) {
 	fx := &clickFX{}
-	ee, tt := Test(t.GoT(), fx, 3)
+	ee, tt := Test(t.GoT(), fx, 2)
 	t.False(ee.IsListening())
 	t.False(tt.FireComponentContext(fx, 0, 0).IsListening())
 }
 
 func (s *_Testing) Context_is_reported_to_component(t *T) {
 	fx := &clickFX{}
-	ee, tt := Test(t.GoT(), fx, 3)
+	ee, tt := Test(t.GoT(), fx, 2)
 	ee.Listen() // layouts fx
 	tt.FireComponentContext(fx, fx.width-1, fx.height-1)
 	t.True(fx.context)
@@ -165,7 +180,7 @@ func (s *_Testing) Context_is_reported_to_component(t *T) {
 
 func (s *_Testing) Component_coordinates_are_reported_on_context(t *T) {
 	fx := &clickFX{}
-	ee, tt := Test(t.GoT(), fx, 3)
+	ee, tt := Test(t.GoT(), fx, 2)
 	ee.Listen()
 	x, y := fx.width/2, fx.height/2
 	tt.FireComponentContext(fx, x, y)
@@ -177,7 +192,8 @@ func (s *_Testing) Ignores_component_context_if_coordinates_outside(
 	t *T,
 ) {
 	fx := &clickFX{}
-	ee, tt := Test(t.GoT(), fx, 5)
+	ee, tt := Test(t.GoT(), fx, 2)
+	defer ee.QuitListening()
 	tt.FireComponentContext(fx, -1, 0)
 	t.False(fx.context)
 	tt.FireComponentContext(fx, 0, -1)
@@ -186,7 +202,7 @@ func (s *_Testing) Ignores_component_context_if_coordinates_outside(
 	t.False(fx.context)
 	tt.FireComponentContext(fx, 0, fx.y+fx.height+1)
 	t.False(fx.context)
-	t.False(ee.IsListening())
+	t.True(ee.IsListening())
 }
 
 func (s *_Testing) Provides_trimmed_screen(t *T) {
