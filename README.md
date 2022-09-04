@@ -34,10 +34,10 @@ ui exactly as needed.
 ```
 
 New provides an Events-instance reporting user input and
-programmatically posted events to listener implementations of
-provided components.  While listener implementations print to an
-provided environment which is associated with the portion of the
-screen of their component.
+programmatically posted events to listener implementations of client
+provided components.  While client listener implementations print to
+an provided environment which is associated with the component's
+portion of the screen.
 
 lines wraps the package [tcell](https://github.com/gdamore/tcell)
 which does the heavy lifting on the terminal side.  I didn't see a
@@ -120,34 +120,43 @@ hence it silently ignores the chained components.
 The Env(ironment) instance passed to a event listener is associated with
 the screen portion of the component the event is reported to.  Writing
 to the environment prints provided content to its screen portion.  Env's
-methods Fmt, BG, FG, LL, Pos give fine grained control of what is
-printed where and how.  Fmt stands for formatting like bold or centered.
-FG, BG lets you set fore- and background color.  LL lets you address a
-specific line, Pos a line and a column.  Each of these methods
-return the Env instance, i.e. we can do this
+methods Fmt, Sty, BG, FG, LL, Pos give fine grained control of what is
+printed where and how.  Fmt stands for formatting like centered.  Sty
+refers to tcell's style attributes of type tcell.AttrMask.  Methods  FG,
+BG lets you set fore- and background color.  LL lets you address a
+specific line, Pos a line and a column.  Each of these methods return a
+writer implementation, i.e. we can do this
 
 ```go
-fmt.Fprintln(e.Fmt(lines.Centered).LL(5), "a centered line")
+	fmt.Fprint(
+	    e.Fmt(lines.Centered).Sty(tcell.AttrBold).LL(5),
+	    "a centered bold line",
+	)
 ```
 
-The above prints "a centered line" centered into the component's fifth
-line.  While e.Fmt binds the formatting to the next printed text there
-is a similar API on component level provided by the embedded Component
-instance: Component.Fmt, .BG, .FG sets formatting directives for each
-printed content of a component.  There is also the property Component.GG
-which makes optional gaps around a component accessible.  And the method
-Component.Mod controls if a component's content is overwritten or
-appended, or if it is shown tailed.
+The above prints "a centered bold line" centered in bold letters into the
+component's fifth line.  While the e-methods bind formatting and styles
+to the next printed text there is a similar API on component level
+provided by the embedded Component instance: Component.Fmt, .BG, .FG
+sets formatting directives for each printed content of a component.
+There is also the property Component.GG which makes optional gaps around
+a component accessible.  And the method Component.Mod controls if a
+component's content is overwritten or appended, or if it is shown
+tailed.
+
 
 # Feature handling
 
-Features of a component are accessed and controlled through the FF
-property of embedded Component-type.  Features are features for the end
-user of a terminal application, e.g. Scrollable.  Lets assume we have
-implemented the components App, MessageBar, Statusbar, Workspace and
-Panel.  Lets further assume component App stacks the components
-MessageBar, Workspace and Statusbar while a Workspace  chains two panel
-instances p1 and p2.
+The feature concept answers the question after the default behavior of
+an ui-component.  While we probably expect that we can scroll a
+component whose content doesn't fit in its screen area, do we also want
+a component whose content is shown tailed to be able to scroll up and
+down? Maybe, maybe not.
+
+Lets assume we have implemented the components App, MessageBar,
+Statusbar, Workspace and Panel.  Lets further assume component App
+stacks the components MessageBar, Workspace and Statusbar while a
+Workspace  chains two panel instances p1 and p2.
 
     APP--------------------------+
       |           mb             |
@@ -159,29 +168,27 @@ instances p1 and p2.
       |           sb             |
       +--------------------------+
 
-Finally we have some event interfaces implemented for p1 and p2.  Now
-we want to test implemented event handler and fire events for them
-(provided by the Testing type).  Nothing will happen because
-initially App will have the focus and that's not changing unless
-lines is told to do so
+If we now click into p2 we probably expect p2 to receive the focus.  But
+if we click into the statusbar will we also want sb to receive the
+focus? Maybe, maybe not.
+
+For lines all UI-components have the same semantics, i.e. for lines
+there is no difference between a working space's panel and a statusbar.
+Further more you were promised an unopinionated terminal ui-library.
+Hence the feature concept was implemented providing convenient and fine
+grained control over component behavior:
 
 ```go
-    func (a *App) OnInit(e *Env) {
-        // ...
-        e.EE.MoveFocus(p1)
+    type MyComponent { lines.Component }
+
+    func (c *MyComponent) OnInit(_ *Env) {
+        c.FF.Add(lines.Scrollable)
     }
 ```
 
-Now p1 gets its events.  We have our App started and click into p2 where
-we have an OnClick implementation.  (Which might tries to move the focus
-to itself :)  But the click is never reported because p2 has not the
-feature Focusable set.  While it might seem obvious to us that p2 should
-receive the focus if clicked, it is not obvious to lines.  For lines for
-example our Statusbar and our Panel are Componenter without any further
-semantics.  Now the question is: will we want also that the statusbar
-gets the focus if the user clicks on it?  Maybe, maybe not.  Hence lines
-doesn't try to be smart about such things and implements the features
-concept instead
+Now our component will react on page up/down key-presses if its content
+doesn't fit (vertically) into c's screen area.  But we don't need to set
+each feature for each component separately:
 
 ```go
     func (ws *Workspace) OnInit(e *Env) {
@@ -189,17 +196,9 @@ concept instead
     }
 ```
 
-With the above line all descendant components of workspace are
-focusable.  If the user clicks on p1 or p2 the respective component gets
-the focus and events about focus gain and loss are reported, the mouse
-click is reported while clicks on the message bar or on the statusbar
-are ignored.  The FF-Instance also provides options to modify
-associated key/mouse-bindings of a feature.  I.e. you get common
-reasonable defaults like binding the Focusable-feature to the left and
-right mouse click.  If you also want to add a mouse wheel or a
-"middle-button" click you can.  As well as you can remove the right
-mouse click if a component should be only Focusable by the left mouse
-click...
+The above line makes all descendants of the workspace focusable, i.e.
+they receive the focus if clicked with the mouse on them.
+
 
 # Testing
 
@@ -227,8 +226,9 @@ lines comes with testing facilities:
         fx := &CmpFixture{ exp: "init-reported" }
         ee, tt := lines.Test(t, fx)
         ee.Listen()
-        if fx.exp != tt.LastScreen {
-            t.Errorf("expected: '%s'; got '%s'", fx.exp, tt.LastScreen)
+        if fx.exp != tt.LastScreen.String() {
+            t.Errorf("expected: '%s'; got '%s'", fx.exp,
+                tt.LastScreen.String())
         }
     }
 ```
@@ -244,7 +244,7 @@ The main features of an Testing-instance are:
 
 * an event-countdown which automatically terminates the event loop,
 * providing methods for firing user input events
-* providing the simulated terminal screen's content.
+* providing the simulated terminal screen's content and its styles.
 
 All methods posting (user) events are guaranteed to return after the
 event and potentially subsequently triggered events were processed

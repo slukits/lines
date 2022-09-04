@@ -324,7 +324,7 @@ func (c *icmpFX) OnInit(e *Env) {
 	c.init(c, e)
 }
 
-func (s *KB) Key_feature_is_executed(t *T) {
+func (s *KB) Executes_key_feature(t *T) {
 	ee, tt := Test(t.GoT(), &icmpFX{init: func(c *icmpFX, e *Env) {
 		c.FF.Add(Scrollable)
 		c.Dim().SetHeight(2)
@@ -335,13 +335,13 @@ func (s *KB) Key_feature_is_executed(t *T) {
 	defer ee.QuitListening()
 
 	tt.FireKey(down.Key, down.Mod)
-	t.Eq(tt.String(), "second\nthird")
+	t.Eq("second\nthird ", tt.Screen().String())
 	tt.FireKey(down.Key, down.Mod)
-	t.Eq(tt.String(), "third\nforth")
+	t.Eq("third\nforth", tt.Screen().String())
 
 	tt.FireKey(up.Key, up.Mod)
 	tt.FireKey(up.Key, up.Mod)
-	t.Eq(tt.String(), "first\nsecond")
+	t.Eq("first \nsecond", tt.Screen().String())
 }
 
 func TestKB(t *testing.T) {

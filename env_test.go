@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/gdamore/tcell/v2"
 	. "github.com/slukits/gounit"
 )
 
@@ -52,7 +53,7 @@ func (s *env) Provides_writer_for_the_nth_line(t *T) {
 	}})
 	ee.Listen()
 
-	sl := strings.Split(tt.LastScreen, "\n")
+	sl := strings.Split(tt.LastScreen.String(), "\n")
 	t.FatalIfNot(t.Eq(8, len(sl)))
 	t.Eq(strings.TrimSpace(sl[0]), "first line")
 	t.Eq(strings.TrimSpace(sl[7]), "eighth line")
@@ -70,12 +71,81 @@ func (s *env) Overwrites_given_line_and_following(t *T) {
 			"short 8th\nninth line")
 	}, nil)
 
-	sl := strings.Split(tt.LastScreen, "\n")
+	sl := strings.Split(tt.LastScreen.String(), "\n")
 	t.FatalIfNot(t.Eq(9, len(sl)))
 	t.Eq(strings.TrimSpace(sl[0]), "first line")
 	t.Eq(strings.TrimSpace(sl[6]), "seventh line")
 	t.Eq(strings.TrimSpace(sl[7]), "short 8th")
 	t.Eq(strings.TrimSpace(sl[8]), "ninth line")
+}
+
+func (s *env) Changes_fore_and_background_for_line_s_content(t *T) {
+	ee, tt := Test(t.GoT(), &icmpFX{init: func(_ *icmpFX, e *Env) {
+		fmt.Fprint(
+			e.BG(tcell.ColorRed).FG(tcell.ColorWhite),
+			"text with read back- and white foreground",
+		)
+	}})
+	ee.Listen()
+	ss := tt.LastScreen[0].Styles()
+	str := tt.LastScreen.String()
+	l := tt.LastScreen[0]
+	for i := range l {
+		t.True(ss.Of(i).HasBG(tcell.ColorRed))
+		t.True(ss.Of(i).HasFG(tcell.ColorWhite))
+		t.Eq(l[i].Runes[0], int32(str[i]))
+	}
+}
+
+func (s *env) Changes_fore_and_background_for_whole_line(t *T) {
+	ee, tt := Test(t.GoT(), &icmpFX{init: func(_ *icmpFX, e *Env) {
+		fmt.Fprint(e, "define width for last screen")
+		fmt.Fprint(
+			e.BG(tcell.ColorRed).Filled().FG(tcell.ColorWhite).LL(1),
+			"line with space",
+		)
+	}})
+	ee.Listen()
+	ss := tt.LastScreen[1].Styles()
+	l := tt.LastScreen[1]
+	for i := range l {
+		t.True(ss.Of(i).HasBG(tcell.ColorRed))
+		t.True(ss.Of(i).HasFG(tcell.ColorWhite))
+	}
+}
+
+func (s *env) Changes_fore_and_background_for_partial_line(t *T) {
+	ee, tt := Test(t.GoT(), &icmpFX{init: func(_ *icmpFX, e *Env) {
+		fmt.Fprint(e, "define width for last screen")
+		fmt.Fprint(
+			e.BG(tcell.ColorRed).FG(tcell.ColorWhite).LL(1),
+			"un-filled with space",
+		)
+		fmt.Fprint(
+			e.BG(tcell.ColorRed).Filled().FG(tcell.ColorWhite).LL(2),
+			"filled with space",
+		)
+	}})
+	ee.Listen()
+
+	ss := tt.LastScreen[1].Styles()
+	l := tt.LastScreen[1]
+	for i := range l {
+		if l[i].Runes[0] != ' ' || len(l) > i+1 && l[i+1].Runes[0] != ' ' {
+			t.True(ss.Of(i).HasBG(tcell.ColorRed))
+			t.True(ss.Of(i).HasFG(tcell.ColorWhite))
+			continue
+		}
+		t.False(ss.Of(i).HasBG(tcell.ColorRed))
+		t.False(ss.Of(i).HasFG(tcell.ColorWhite))
+	}
+
+	ss = tt.LastScreen[2].Styles()
+	l = tt.LastScreen[2]
+	for i := range l {
+		t.True(ss.Of(i).HasBG(tcell.ColorRed))
+		t.True(ss.Of(i).HasFG(tcell.ColorWhite))
+	}
 }
 
 func TestEnv(t *testing.T) {

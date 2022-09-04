@@ -50,7 +50,7 @@ type Testing struct {
 	// LastScreen provides the screen content right before quitting
 	// listening.  NOTE it is guaranteed that that this snapshot is
 	// taken *after* all lines-updates have made it to the screen.
-	LastScreen string
+	LastScreen TestScreen
 
 	// Timeout defines how long an event-triggering method waits for the
 	// event to be processed.  It defaults to 100ms.
@@ -413,48 +413,245 @@ func (tt *Testing) checkTermination() {
 
 func (tt *Testing) beforeFinalize() {
 	tt.terminated = true
-	tt.LastScreen = tt.String()
+	tt.LastScreen = tt.Screen()
 }
 
-// String returns the test-screen's content as string with line breaks
-// where a new screen line starts.  Empty lines before and after content
-// are removed as well as whitespace at the beginning and end of a line
-// is trimmed.  I.e.
+// Screen returns a trimmed cells matrix which may be stringified or
+// investigated for expected styling.  The screen content is trimmed to
+// the smallest possible rectangle containing all non blank cells:
 //
-//	+-------------+
-//	|             |
-//	|   content   |   => "content"
-//	|             |
-//	+-------------+
-func (tt *Testing) String() string {
+//	+--------------------+
+//	|                    |       +------------+
+//	|   upper left       |       |upper left  |
+//	|                    |  =>   |            |
+//	|          right     |       |       right|
+//	|      bottom        |       |   bottom   |
+//	|                    |       +------------+
+//	+--------------------+
+//
+// A cell is considered blank if its rune is ' ', '\t' or '\r'
+func (tt *Testing) Screen() TestScreen {
+	ts, start := TestScreen{}, 0
 	b, w, h := tt.lib.GetContents()
-	sb := &strings.Builder{}
 	for i := 0; i < h; i++ {
-		line := ""
-		for j := 0; j < w; j++ {
-			cell := b[cellIdx(j, i, w)]
-			if len(cell.Runes) == 0 {
-				continue // TODO: coverage
+		ts = append(ts, b[start:start+w])
+		start += w
+	}
+	return ts.trimVertical().trimHorizontal()
+}
+
+// TestScreen is a trimmed convenience representation of a tcell
+// simulation screen to evaluate the simulation screen's state
+// against an expected state.
+type TestScreen []TestLine
+
+// String returns a string representation of a [lines.TestScreen]
+func (s TestScreen) String() string {
+	if len(s) == 0 {
+		return ""
+	}
+	b := strings.Builder{}
+	for _, l := range s {
+		for _, c := range l {
+			if len(c.Runes) == 0 {
+				b.WriteRune(' ')
+				continue
 			}
-			line += string(cell.Runes[0])
+			b.WriteRune(c.Runes[0])
 		}
-		if len(strings.TrimSpace(line)) == 0 {
-			sb.WriteString("\n")
+		b.WriteRune('\n')
+	}
+	return b.String()[:b.Len()-1]
+}
+
+func (s TestScreen) trimVertical() TestScreen {
+	if len(s) == 0 {
+		return s
+	}
+
+	blankAtBeginning := 0
+	for _, l := range s {
+		if !l.isBlank() {
+			break
+		}
+		blankAtBeginning++
+	}
+	blankAtEnd := 0
+	for i := len(s) - 1; i >= 0; i-- {
+		if !s[i].isBlank() {
+			break
+		}
+		blankAtEnd++
+	}
+
+	if len(s) == blankAtBeginning {
+		return TestScreen{}
+	}
+	return s[blankAtBeginning : len(s)-blankAtEnd]
+}
+
+func (s TestScreen) trimHorizontal() TestScreen {
+	if len(s) == 0 {
+		return s
+	}
+	leftTrim, rightTrim := len(s[0]), len(s[0])
+	for _, l := range s {
+		if leftTrim > 0 && leftTrim > l.blankPrefix() {
+			leftTrim = l.blankPrefix()
+		}
+		if rightTrim > 0 && rightTrim > l.blankSuffix() {
+			rightTrim = l.blankSuffix()
+		}
+		if leftTrim == 0 && rightTrim == 0 {
+			break
+		}
+	}
+	for i, l := range s {
+		s[i] = l[leftTrim : len(l)-rightTrim]
+	}
+	return s
+}
+
+// TestLine represents a line of a [lines.TestScreen].
+type TestLine []tcell.SimCell
+
+const blanks = " \r\t"
+
+// Styles returns a test screen's test line's styles to validate a test
+// line's cell's styles like foreground color, background color or style
+// attributes.
+func (l TestLine) Styles() LineTestStyles {
+	if len(l) == 0 {
+		return nil
+	}
+	cfg, cbg, caa := l[0].Style.Decompose()
+	ss, cr := LineTestStyles{}, Range{0}
+	for i, c := range l {
+		fg, bg, aa := c.Style.Decompose()
+		if cbg == bg && cfg == fg && caa == aa {
 			continue
 		}
-		sb.WriteString(strings.TrimRight(
-			line, " \t\r") + "\n")
+		cr[1] = i
+		ss[cr] = TestStyle{bg: cbg, fg: cfg, aa: caa}
+		cr = Range{i}
+		cfg, cbg, caa = fg, bg, aa
 	}
-	return strings.TrimLeft(
-		strings.TrimRight(sb.String(), " \t\r\n"), "\n")
+	cr[1] = len(l)
+	ss[cr] = TestStyle{bg: cbg, fg: cfg, aa: caa}
+	return ss
 }
 
-func cellIdx(x, y, w int) int {
-	if x == 0 {
-		return y * w
+func (l TestLine) isBlank() bool {
+	for _, c := range l {
+		if len(c.Runes) == 0 {
+			continue
+		}
+		if strings.ContainsRune(blanks, c.Runes[0]) {
+			continue
+		}
+		return false
 	}
-	if y == 0 {
-		return x
+	return true
+}
+
+func (l TestLine) blankPrefix() int {
+
+	n := 0
+	for _, c := range l {
+
+		if len(c.Runes) == 0 ||
+			strings.ContainsRune(blanks, c.Runes[0]) {
+
+			n++
+			continue
+		}
+
+		break
 	}
-	return y*w + x
+
+	return n
+}
+
+func (l TestLine) blankSuffix() int {
+
+	n := 0
+	for i := len(l) - 1; i >= 0; i-- {
+
+		if len(l[i].Runes) == 0 ||
+			strings.ContainsRune(blanks, l[i].Runes[0]) {
+
+			n++
+			continue
+		}
+
+		break
+	}
+
+	return n
+}
+
+// Range is a two component array of which the first component should be
+// smaller than the second, i.e. r.Start() <= r.End() if r is a
+// Range-instance.
+type Range [2]int
+
+// Start index of a [lines.TestLine] style range.  Not the start index
+// is inclusive.
+func (r Range) Start() int { return r[0] }
+
+// End index of a [lines.TestLine] style range.  Note the end index is
+// exclusive.
+func (r Range) End() int { return r[1] }
+
+// Contains returns true if given i is in the style range r
+// [r.Start,r.End[.
+func (r Range) Contains(i int) bool {
+	return r.Start() <= i && i < r.End()
+}
+
+// LineTestStyles are provided by a [lines.TestLine] of a [lines.TestScreen]
+// to validate a line cell's styles like foreground color, background
+// color or style attributes (see [tcell.AttrMask]).
+type LineTestStyles map[Range]TestStyle
+
+var defaultTestStyle = func() TestStyle {
+	fg, bg, aa := tcell.StyleDefault.Decompose()
+	return TestStyle{bg: bg, fg: fg, aa: aa}
+}()
+
+// Of returns an [lines.TestStyle] instance for given line styles' cell.
+func (s LineTestStyles) Of(cell int) TestStyle {
+	for r := range s {
+		if !r.Contains(cell) {
+			continue
+		}
+		return s[r]
+	}
+	return defaultTestStyle
+}
+
+// TestStyle returned by a test screen's line for one of its cells to
+// verify its style like background color, foreground color or style
+// attribute.
+type TestStyle struct {
+	fg, bg tcell.Color
+	aa     tcell.AttrMask
+}
+
+// Has returns true if test style s has given style attribute attr;
+// false otherwise.
+func (s TestStyle) Has(attr tcell.AttrMask) bool {
+	return s.aa&attr == attr
+}
+
+// HasBG returns true if test style s has given color as background
+// color; false otherwise.
+func (s TestStyle) HasBG(color tcell.Color) bool {
+	return s.bg == color
+}
+
+// HasFG returns true if test style s has given color as foreground
+// color; false otherwise.
+func (s TestStyle) HasFG(color tcell.Color) bool {
+	return s.fg == color
 }

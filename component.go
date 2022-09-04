@@ -77,7 +77,7 @@ func (c *Component) initialize(
 	inner := &component{
 		dim:     lyt.DimFilling(1, 1),
 		ll:      &lines{},
-		sty:     tcell.StyleDefault,
+		fmt:     llFmt{sty: tcell.StyleDefault},
 		userCmp: userComponent,
 		mod:     Overwriting,
 	}
@@ -128,7 +128,7 @@ type component struct {
 	mod         ComponentMode
 	initialized bool
 	ll          *lines
-	sty         tcell.Style
+	fmt         llFmt
 	lst         *listeners
 	ff          *features
 	dirty       bool
@@ -150,6 +150,24 @@ func (c *component) Mod(cm ComponentMode) {
 		c.mod &^= Appending | Overwriting
 		c.mod |= Tailing
 	}
+}
+
+// Sty sets a component style attributes like bold or dimmed.  See tcell
+// AttrMask.
+func (c *component) Sty(attr tcell.AttrMask) {
+	c.fmt.sty = c.fmt.sty.Attributes(attr)
+}
+
+// FG sets a component's foreground color.
+func (c *component) FG(color tcell.Color) {
+	c.dirty = true
+	c.fmt.sty = c.fmt.sty.Foreground(color)
+}
+
+// BG sets a component's background color.
+func (c *component) BG(color tcell.Color) {
+	c.dirty = true
+	c.fmt.sty = c.fmt.sty.Background(color)
 }
 
 // Len returns the number of lines currently stored in a component.
@@ -221,7 +239,7 @@ func (c *component) sync(rw runeWriter) {
 		if i >= sh {
 			return true
 		}
-		l.sync(sx, sy+i, sw, rw, c.sty)
+		l.sync(sx, sy+i, sw, rw, c.fmt)
 		return false
 	})
 }
@@ -231,7 +249,7 @@ func (c *component) clear(rw runeWriter) {
 	sx, sy, sw, sh := c.dim.Area()
 	for y := sy; y < sh; y++ {
 		for x := sx; x < sw; x++ {
-			rw.SetContent(x, y, ' ', nil, c.sty)
+			rw.SetContent(x, y, ' ', nil, c.fmt.sty)
 		}
 	}
 }
@@ -250,21 +268,13 @@ func (c *component) setFirst(f int) {
 	c.dirty = true
 }
 
-func (c *component) write(bb []byte, at int) (int, error) {
-	if at > -1 {
-		return c.writeAt(bb, at)
-	}
+func (c *component) write(bb []byte, at int, fmt *llFmt) (int, error) {
 	switch {
-	case c.mod&Overwriting == Overwriting:
-		c.ll.replace(bytes.Split(bb, []byte("\n"))...)
 	case c.mod&(Appending|Tailing) != 0:
-		c.ll.append(bytes.Split(bb, []byte("\n"))...)
+		c.ll.append(fmt, bytes.Split(bb, []byte("\n"))...)
+	default:
+		c.ll.replaceAt(at, fmt, bytes.Split(bb, []byte("\n"))...)
 	}
-	return len(bb), nil
-}
-
-func (c *component) writeAt(bb []byte, at int) (int, error) {
-	c.ll.replaceAt(at, bytes.Split(bb, []byte("\n"))...)
 	return len(bb), nil
 }
 

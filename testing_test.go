@@ -5,6 +5,7 @@
 package lines
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
@@ -186,6 +187,30 @@ func (s *_Testing) Ignores_component_context_if_coordinates_outside(
 	tt.FireComponentContext(fx, 0, fx.y+fx.height+1)
 	t.False(fx.context)
 	t.False(ee.IsListening())
+}
+
+func (s *_Testing) Provides_trimmed_screen(t *T) {
+	ee, tt := Test(t.GoT(), &icmpFX{init: func(c *icmpFX, e *Env) {
+		fmt.Fprint(e,
+			"                    \n"+
+				"   upper left       \n"+
+				"                    \n"+
+				"          right     \n"+
+				"      bottom        \n"+
+				"                    ",
+		)
+	}}, 0)
+	tt.FireResize(20, 6)
+	defer ee.QuitListening()
+	exp := "upper left  \n" +
+		"            \n" +
+		"       right\n" +
+		"   bottom   "
+
+	t.Eq(exp, tt.Screen().String())
+}
+
+func (s *_Testing) Provides_line_s_cell_styles(t *T) {
 }
 
 func TestTesting(t *testing.T) {

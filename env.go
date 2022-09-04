@@ -59,34 +59,43 @@ type Env struct {
 	flags envMask
 }
 
+type cmpWriter interface {
+	write(lines []byte, at int, fmt *llFmt) (int, error)
+}
+
 // Write writes to the screen area of the component having given
 // environment.
 func (e *Env) Write(bb []byte) (int, error) {
-	return e.cmp.(interface {
-		write([]byte, int) (int, error)
-	}).write(bb, -1)
+	return e.cmp.(cmpWriter).write(bb, 0, nil)
 }
 
-// atWriter implements the writer interface to write a set of line at a
-// specific line of a component.
-type atWriter struct {
-	at  int
-	cmp interface {
-		write([]byte, int) (int, error)
-	}
+// Fmt sets the next write's formattings like centered.
+// func (e *Env) Fmt(f FmtMask) *FmtWriter {
+// 	return &FmtWriter{cmp: e.cmp.(cmpWriter), fmt: &llFmt{mask: f}}
+// }
+
+// Attr sets the next write's style attributes like bold.
+func (e *Env) Attr(aa tcell.AttrMask) *FmtWriter {
+	return &FmtWriter{cmp: e.cmp.(cmpWriter), fmt: &llFmt{
+		sty: e.cmp.embedded().fmt.sty.Attributes(aa)}}
+}
+
+// FG sets the next write's foreground color.
+func (e *Env) FG(color tcell.Color) *FmtWriter {
+	return &FmtWriter{cmp: e.cmp.(cmpWriter), fmt: &llFmt{
+		sty: e.cmp.embedded().fmt.sty.Foreground(color)}}
+}
+
+// BG sets the next write's foreground color.
+func (e *Env) BG(color tcell.Color) *BGWriter {
+	return &BGWriter{cmp: e.cmp.(cmpWriter), fmt: &llFmt{
+		sty: e.cmp.embedded().fmt.sty.Background(color)}}
 }
 
 // LL returns a writer which writes to the line and its following lines
 // at given index.
-func (e *Env) LL(idx int) *atWriter {
-	return &atWriter{at: idx, cmp: e.cmp.(interface {
-		write([]byte, int) (int, error)
-	})}
-}
-
-// Write to a specific line an onward.
-func (w *atWriter) Write(bb []byte) (int, error) {
-	return w.cmp.write(bb, w.at)
+func (e *Env) LL(idx int) *locWriter {
+	return &locWriter{at: idx, cmp: e.cmp.(cmpWriter)}
 }
 
 // Focused returns the currently focused component.  Please remember to
