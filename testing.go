@@ -35,8 +35,8 @@ type Testing struct {
 	ee                        *Events
 	lib                       tcell.SimulationScreen
 	autoTerminate, terminated bool
-	mutex                     *sync.Mutex
 	syncAdd                   chan bool
+	syncWait                  chan (chan bool)
 	t                         *testing.T
 
 	// Max is the number of reported events after which the
@@ -89,12 +89,13 @@ func Test(t *testing.T, c Componenter, max ...int) (*Events, *Testing) {
 		synced:    make(chan bool, 1),
 	}
 	ee.t = &Testing{
-		ee:      ee,
-		lib:     scr.lib.(tcell.SimulationScreen),
-		t:       t,
-		Timeout: 200 * time.Millisecond,
-		mutex:   &sync.Mutex{},
+		ee:       ee,
+		lib:      scr.lib.(tcell.SimulationScreen),
+		t:        t,
+		Timeout:  200 * time.Millisecond,
+		syncWait: make(chan (chan bool)),
 	}
+	go syncGroup(ee.t.syncWait, ee.synced)
 	switch len(max) {
 	case 0:
 		ee.t.SetMax(1)
@@ -143,10 +144,7 @@ func (tt *Testing) listen() *Events {
 	if err != nil { // TODO: coverage
 		tt.t.Fatalf("test: listen: post resize: %v", err)
 	}
-	if wait != nil {
-		wait()
-		tt.checkTermination()
-	}
+	wait()
 	return tt.ee
 }
 
@@ -180,10 +178,7 @@ func (tt *Testing) FireResize(width, height int) *Events {
 	if err != nil {
 		tt.t.Fatal(err) // TODO: not covered
 	}
-	if wait != nil {
-		wait()
-		tt.checkTermination()
-	}
+	wait()
 	return tt.ee
 }
 
@@ -198,10 +193,7 @@ func (tt *Testing) FireRune(r rune) *Events {
 	}
 	wait := tt.registerEventSync("test: fire rune: sync timed out")
 	tt.lib.InjectKey(tcell.KeyRune, r, tcell.ModNone)
-	if wait != nil {
-		wait()
-		tt.checkTermination()
-	}
+	wait()
 	return tt.ee
 }
 
@@ -219,10 +211,7 @@ func (tt *Testing) FireKey(k tcell.Key, m ...tcell.ModMask) *Events {
 	} else {
 		tt.lib.InjectKey(k, 0, m[0])
 	}
-	if wait != nil {
-		wait()
-		tt.checkTermination()
-	}
+	wait()
 	return tt.ee
 }
 
@@ -241,10 +230,7 @@ func (tt *Testing) FireClick(x, y int) *Events {
 	}
 	wait := tt.registerEventSync("test: fire click: sync timed out")
 	tt.lib.InjectMouse(x, y, tcell.ButtonPrimary, tcell.ModNone)
-	if wait != nil {
-		wait()
-		tt.checkTermination()
-	}
+	wait()
 	return tt.ee
 }
 
@@ -264,10 +250,7 @@ func (tt *Testing) FireContext(x, y int) *Events {
 	}
 	wait := tt.registerEventSync("test: fire click: sync timed out")
 	tt.lib.InjectMouse(x, y, tcell.ButtonSecondary, tcell.ModNone)
-	if wait != nil {
-		wait()
-		tt.checkTermination()
-	}
+	wait()
 	return tt.ee
 }
 
@@ -288,10 +271,7 @@ func (tt *Testing) FireMouse(
 	}
 	wait := tt.registerEventSync("test: fire mouse: sync timed out")
 	tt.lib.InjectMouse(x, y, bm, mm)
-	if wait != nil {
-		wait()
-		tt.checkTermination()
-	}
+	wait()
 	return tt.ee
 }
 
@@ -350,21 +330,10 @@ func isInside(dim *lyt.Dim, x, y int) (ox, oy int, ok bool) {
 }
 
 func (tt *Testing) registerEventSync(err string) (wait func()) {
-	wait = tt.ensureSyncGroup(err)
-	tt.syncAdd <- true
+	done := make(chan bool)
+	wait = syncClosure(tt, err, done)
+	tt.syncWait <- done
 	return wait
-}
-
-func (tt *Testing) ensureSyncGroup(err string) (wait func()) {
-	tt.mutex.Lock()
-	defer tt.mutex.Unlock()
-	if tt.syncAdd != nil {
-		return nil
-	}
-	sw := newSyncWait(tt, err)
-	tt.syncAdd = make(chan bool)
-	go syncGroup(sw.c, tt.syncAdd, tt.ee.synced)
-	return sw.f
 }
 
 func (tt *Testing) checkTermination() {
@@ -381,59 +350,61 @@ func (tt *Testing) checkTermination() {
 
 // syncGroup is send of in a go routing which waits for so many sync
 // events until a counter fed by add is zero.
-func syncGroup(waite chan struct{}, add chan bool, less chan bool) {
+func syncGroup(wait chan (chan bool), sync chan bool) {
 	n := 0
+	var current chan bool
 	for {
 		select {
-		case add := <-add:
-			if !add {
-				close(waite)
+		case wait := <-wait:
+			if wait == nil {
+				if current != nil {
+					close(current)
+				}
 				return
 			}
+			if current == nil {
+				current = wait
+				n = 1
+				continue
+			}
 			n++
-		case less := <-less:
-			n--
-			if !less || n == 0 {
-				close(waite)
+			close(wait)
+		case sync := <-sync:
+			if !sync {
+				if current != nil {
+					close(current)
+				}
 				return
+			}
+			n--
+			if n <= 0 {
+				current <- true
+				close(current)
+				current = nil
+				n = 0
 			}
 		}
 	}
 }
 
-type syncWait struct {
-	c chan struct{}
-	f func()
-}
-
-func newSyncWait(tt *Testing, err string) *syncWait {
-	c := make(chan struct{})
-	return &syncWait{c: c, f: syncClosure(tt, err, c)}
-}
-
-func syncClosure(tt *Testing, err string, c chan struct{}) func() {
+func syncClosure(tt *Testing, err string, done chan bool) func() {
 	return func() {
 		tt.t.Helper()
 		select {
 		case <-time.After(tt.Timeout):
 			tt.t.Fatal(err)
-			close(tt.syncAdd)
-		case <-c:
+		case done := <-done:
+			if !done {
+				return
+			}
+			tt.checkTermination()
 		}
-		tt.mutex.Lock()
-		defer tt.mutex.Unlock()
-		tt.syncAdd = nil
 	}
 }
 
 func (tt *Testing) beforeFinalize() {
-	tt.mutex.Lock()
-	defer tt.mutex.Unlock()
 	tt.terminated = true
 	tt.LastScreen = tt.Screen()
-	if tt.syncAdd != nil {
-		close(tt.syncAdd)
-	}
 }
 
 // String provides a string representation of the current screen content.

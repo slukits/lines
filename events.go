@@ -264,7 +264,6 @@ func (ee *Events) Update(
 	if wait != nil {
 		ee.t.t.Helper()
 		wait()
-		ee.t.checkTermination()
 	}
 	return nil
 }
@@ -315,7 +314,6 @@ func (ee *Events) MoveFocus(cmp Componenter) error {
 	if wait != nil {
 		ee.t.t.Helper()
 		wait()
-		ee.t.checkTermination()
 	}
 	return nil
 }
@@ -357,7 +355,6 @@ func (ee *Events) UpdateRunes(cmp Componenter) error {
 	if wait != nil {
 		ee.t.t.Helper()
 		wait()
-		ee.t.checkTermination()
 	}
 	return nil
 }
@@ -397,7 +394,6 @@ func (ee *Events) UpdateKeys(cmp Componenter) error {
 	if wait != nil {
 		ee.t.t.Helper()
 		wait()
-		ee.t.checkTermination()
 	}
 	return nil
 }
