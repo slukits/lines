@@ -66,7 +66,7 @@ type cmpWriter interface {
 // Write writes to the screen area of the component having given
 // environment.
 func (e *Env) Write(bb []byte) (int, error) {
-	return e.cmp.(cmpWriter).write(bb, 0, nil)
+	return e.cmp.(cmpWriter).write(bb, -1, nil)
 }
 
 // Fmt sets the next write's formattings like centered.

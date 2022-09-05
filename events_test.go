@@ -80,16 +80,11 @@ type updLstCmpFX struct {
 	reported bool
 }
 
-func (c *updLstCmpFX) OnInit(e *Env) {
-	e.EE.Update(c, nil, func(e *Env) {
-		c.reported = c == e.Evt.(*UpdateEvent).cmp
-	})
-}
-
 func (s *events) Reports_update_to_provided_listener(t *T) {
 	fx := &updLstCmpFX{}
-	ee, _ := Test(t.GoT(), fx, 2)
+	ee, _ := Test(t.GoT(), fx, 1)
 	ee.Listen()
+	ee.Update(fx, nil, func(_ *Env) { fx.reported = true })
 	t.True(fx.reported)
 	t.False(ee.IsListening())
 }
@@ -99,14 +94,13 @@ type updCmpFX struct {
 	reported bool
 }
 
-func (c *updCmpFX) OnInit(e *Env) { e.EE.Update(c, nil, nil) }
-
 func (c *updCmpFX) OnUpdate(e *Env) { c.reported = true }
 
 func (s *events) Reports_update_without_listener_to_component(t *T) {
 	fx := &updCmpFX{}
-	ee, _ := Test(t.GoT(), fx, 2)
+	ee, _ := Test(t.GoT(), fx, 1)
 	ee.Listen()
+	ee.Update(fx, nil, nil)
 	t.True(fx.reported)
 	t.False(ee.IsListening())
 }

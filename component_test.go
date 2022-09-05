@@ -20,7 +20,7 @@ func (s *_component) SetUp(t *T) { t.Parallel() }
 
 func (s *_component) Access_panics_outside_event_processing(t *T) {
 	cmp := &cmpFX{}
-	ee, _ := Test(t.GoT(), cmp, -1)
+	ee, _ := Test(t.GoT(), cmp, 0)
 	defer ee.QuitListening()
 	t.Panics(func() { cmp.Dim().SetHeight(20) })
 }
@@ -83,7 +83,7 @@ func (s *_component) Blanks_a_reset_line(t *T) {
 	t.Eq("first \nsecond", tt.Screen().String())
 
 	ee.Update(cmp, nil, func(e *Env) {
-		cmp.Reset(-1) // no-op, coverage
+		cmp.Reset(-2) // no-op, coverage
 		cmp.Reset(0)
 	})
 
@@ -240,6 +240,67 @@ func (s *_component) Scrolls_up_by_90_percent_height(t *T) {
 	ee.Update(fx, nil, func(e *Env) { fx.Scroll.Up() })
 	t.Eq(strings.Join(exp, "\n"), tt.LastScreen.String())
 }
+
+func (s *_component) Updates(t *T) {
+	cmp := &uiCmpFX{init: func(c *uiCmpFX, e *Env) {
+		fmt.Fprint(e, "initial value")
+	}}
+	ee, tt := Test(t.GoT(), cmp, 0)
+	ee.Listen()
+	defer ee.QuitListening()
+	tt.FireResize(13, 7)
+	str := strings.TrimSpace(tt.String())
+	t.Eq("initial value", str)
+	linesUpdate := map[int]string{
+		0: "line 00",
+		1: "line 01",
+		2: "line 02",
+		3: "line 03",
+		4: "line 04",
+	}
+	if err := ee.Update(cmp, linesUpdate, nil); err != nil {
+		t.Fatalf("gounit: view: update: lines: %v", err)
+	}
+	str = strings.TrimSpace(tt.String())
+	exp := make([]string, 5)
+	for i, v := range linesUpdate {
+		exp[i] = fmt.Sprintf("%s      ", v)
+	}
+	t.Eq(strings.TrimSpace(strings.Join(exp, "\n")), str)
+}
+
+type uiCmpFX struct {
+	Component
+	init func(c *uiCmpFX, e *Env)
+}
+
+func (c *uiCmpFX) OnInit(e *Env) {
+	if c.init == nil {
+		return
+	}
+	c.init(c, e)
+}
+
+func (c *uiCmpFX) OnUpdate(e *Env) {
+	data := e.Evt.(*UpdateEvent).Data.(map[int]string)
+	for idx, content := range data {
+		fmt.Fprint(e.LL(idx), content)
+	}
+	for i := 0; i < c.Len(); i++ {
+		if _, ok := data[i]; ok {
+			continue
+		}
+		c.Reset(i)
+	}
+	// fmt.Println("dbg: onupdate: wrote update")
+}
+
+type dbg struct{ Suite }
+
+func (s *dbg) Dbg(t *T) {
+}
+
+func TestDBG(t *testing.T) { Run(&dbg{}, t) }
 
 func TestComponent(t *testing.T) {
 	t.Parallel()

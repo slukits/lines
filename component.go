@@ -193,9 +193,17 @@ func (c *component) Dim() *lyt.Dim { return c.dim }
 // Reset blanks out the content of the line with given index the next
 // time it is printed to the screen.
 func (c *component) Reset(idx int) {
-	if idx < 0 || idx >= c.Len() {
+	if idx < -1 || idx >= c.Len() {
 		return
 	}
+
+	if idx == -1 {
+		for _, l := range *c.ll {
+			l.set("")
+		}
+		return
+	}
+
 	(*c.ll)[idx].set("")
 }
 
@@ -268,12 +276,16 @@ func (c *component) setFirst(f int) {
 	c.dirty = true
 }
 
-func (c *component) write(bb []byte, at int, fmt *llFmt) (int, error) {
+func (c *component) write(bb []byte, at int, f *llFmt) (int, error) {
 	switch {
 	case c.mod&(Appending|Tailing) != 0:
-		c.ll.append(fmt, bytes.Split(bb, []byte("\n"))...)
+		c.ll.append(f, bytes.Split(bb, []byte("\n"))...)
 	default:
-		c.ll.replaceAt(at, fmt, bytes.Split(bb, []byte("\n"))...)
+		if at == -1 {
+			c.Reset(at)
+			at = 0
+		}
+		c.ll.replaceAt(at, f, bytes.Split(bb, []byte("\n"))...)
 	}
 	return len(bb), nil
 }

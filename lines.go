@@ -8,7 +8,9 @@
 
 package lines
 
-import "github.com/gdamore/tcell/v2"
+import (
+	"github.com/gdamore/tcell/v2"
+)
 
 type lines []*line
 
@@ -49,14 +51,6 @@ func (ll *lines) replaceAt(idx int, fmt *llFmt, cc ...[]byte) {
 			(*ll)[i].fmt = fmt.mask
 		}
 		j++
-	}
-	if max < len(*ll) {
-		for i := max; i < len(*ll); i++ {
-			(*ll)[i].set("")
-			(*ll)[i].ss = nil
-			(*ll)[i].fmt = 0
-		}
-		return
 	}
 	ll.append(fmt, cc[j:]...)
 }
@@ -110,6 +104,7 @@ type line struct {
 
 // Set updates the content of a line.
 func (l *line) set(content string) *line {
+	// fmt.Printf("dbg: line: setting content: %s\n", content)
 	if content == l.content {
 		return l
 	}
@@ -162,6 +157,7 @@ func (l *line) setLonger(
 	x, y, width int, rw runeWriter, sty tcell.Style,
 ) {
 
+	// fmt.Printf("dbg: longer: set runes: %s\n", l.content)
 	for i, r := range l.content {
 		if i == width {
 			break

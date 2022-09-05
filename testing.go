@@ -194,6 +194,7 @@ func (tt *Testing) FireResize(width, height int) *Events {
 // rune-triggered key-events.  Is associated Events instance not
 // listening it is started before the event is fired.
 func (tt *Testing) FireRune(r rune) *Events {
+	tt.t.Helper()
 	if !tt.ee.IsListening() {
 		tt.listen()
 	}
@@ -442,6 +443,7 @@ func (tt *Testing) beforeFinalize() {
 	}
 }
 
+// String provides a string representation of the current screen content.
 func (tt *Testing) String() string {
 	b, w, _ := tt.lib.GetContents()
 	bld := &strings.Builder{}
