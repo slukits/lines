@@ -138,7 +138,6 @@ func (tt *Testing) listen() *Events {
 	}
 	tt.ee.setListening()
 	go tt.ee.listen()
-	// fmt.Println("register: listen")
 	wait := tt.registerEventSync("test: listen: sync timed out")
 	err := tt.lib.PostEvent(tcell.NewEventResize(tt.lib.Size()))
 	if err != nil { // TODO: coverage
@@ -176,7 +175,6 @@ func (tt *Testing) FireResize(width, height int) *Events {
 		height = h
 	}
 	tt.lib.SetSize(width, height)
-	// fmt.Println("register: resize")
 	wait := tt.registerEventSync("test: set number of lines: sync timed out")
 	err := tt.lib.PostEvent(tcell.NewEventResize(width, height))
 	if err != nil {
@@ -198,7 +196,6 @@ func (tt *Testing) FireRune(r rune) *Events {
 	if !tt.ee.IsListening() {
 		tt.listen()
 	}
-	// fmt.Println("register: fire rune")
 	wait := tt.registerEventSync("test: fire rune: sync timed out")
 	tt.lib.InjectKey(tcell.KeyRune, r, tcell.ModNone)
 	if wait != nil {
@@ -216,7 +213,6 @@ func (tt *Testing) FireKey(k tcell.Key, m ...tcell.ModMask) *Events {
 	if !tt.ee.IsListening() {
 		tt.listen()
 	}
-	// fmt.Println("register: fire key")
 	wait := tt.registerEventSync("test: fire key: sync timed out")
 	if len(m) == 0 {
 		tt.lib.InjectKey(k, 0, tcell.ModNone)
@@ -243,11 +239,9 @@ func (tt *Testing) FireClick(x, y int) *Events {
 	if x < 0 || y < 0 || x >= width || y >= height {
 		return tt.ee
 	}
-	// fmt.Println("register: fire click")
 	wait := tt.registerEventSync("test: fire click: sync timed out")
 	tt.lib.InjectMouse(x, y, tcell.ButtonPrimary, tcell.ModNone)
 	if wait != nil {
-		// fmt.Println("wait for mouse")
 		wait()
 		tt.checkTermination()
 	}
@@ -268,7 +262,6 @@ func (tt *Testing) FireContext(x, y int) *Events {
 	if x < 0 || y < 0 || x >= width || y >= height {
 		return tt.ee
 	}
-	// fmt.Println("register: fire context")
 	wait := tt.registerEventSync("test: fire click: sync timed out")
 	tt.lib.InjectMouse(x, y, tcell.ButtonSecondary, tcell.ModNone)
 	if wait != nil {
@@ -293,7 +286,6 @@ func (tt *Testing) FireMouse(
 	if x < 0 || y < 0 || x >= width || y >= height {
 		return tt.ee
 	}
-	// fmt.Println("register: fire mouse")
 	wait := tt.registerEventSync("test: fire mouse: sync timed out")
 	tt.lib.InjectMouse(x, y, bm, mm)
 	if wait != nil {
@@ -391,19 +383,15 @@ func syncGroup(waite chan struct{}, add chan bool, less chan bool) {
 		case add := <-add:
 			if !add {
 				close(waite)
-				// fmt.Println("dbg: add: closed")
 				return
 			}
 			n++
-			// fmt.Printf("dbg: added: %d\n", n)
 		case less := <-less:
 			if !less || n == 0 {
 				close(waite)
-				// fmt.Println("dbg: less: closed")
 				return
 			}
 			n--
-			// fmt.Printf("dbg: lessened: %d\n", n)
 		}
 	}
 }
@@ -425,7 +413,6 @@ func syncClosure(tt *Testing, err string, c chan struct{}) func() {
 		case <-time.After(tt.Timeout):
 			tt.t.Fatal(err)
 		case <-c:
-			// fmt.Println("dbg: stopped waiting")
 			tt.mutex.Lock()
 			defer tt.mutex.Unlock()
 			tt.syncAdd = nil

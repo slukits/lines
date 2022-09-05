@@ -104,7 +104,6 @@ type line struct {
 
 // Set updates the content of a line.
 func (l *line) set(content string) *line {
-	// fmt.Printf("dbg: line: setting content: %s\n", content)
 	if content == l.content {
 		return l
 	}
@@ -156,8 +155,6 @@ func (l *line) setShorter(
 func (l *line) setLonger(
 	x, y, width int, rw runeWriter, sty tcell.Style,
 ) {
-
-	// fmt.Printf("dbg: longer: set runes: %s\n", l.content)
 	for i, r := range l.content {
 		if i == width {
 			break

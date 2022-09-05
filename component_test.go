@@ -292,7 +292,6 @@ func (c *uiCmpFX) OnUpdate(e *Env) {
 		}
 		c.Reset(i)
 	}
-	// fmt.Println("dbg: onupdate: wrote update")
 }
 
 type dbg struct{ Suite }

@@ -41,8 +41,9 @@ type Events struct {
 	// t if non-nil events is in testing-mode.
 	t *Testing
 
-	// synced sends a message after a the screen synchronization
-	// following a reported event.
+	// synced sends a message at the end of a processed event.  The
+	// client (usually a Testing instance) setting up this channel is
+	// responsible for draining this channel.
 	synced chan bool
 }
 
@@ -150,11 +151,6 @@ func (ee *Events) listen() {
 	for {
 		ev := ee.scr.lib.PollEvent()
 
-		select {
-		case <-ee.synced:
-		default:
-		}
-
 		switch ev := ev.(type) {
 		case nil: // event-loop ended
 			return
@@ -163,18 +159,15 @@ func (ee *Events) listen() {
 			ee.scr.setWidth(width).setHeight(height)
 			reportInit(ee, ee.scr)
 			ee.scr.hardSync(ee)
-			ee.synced <- true
 		default:
-			// if _, ok := ev.(*quitEvent); ok {
-			// 	fmt.Println("dbg: QUIT reported")
-			// }
 			if quit := report(ev, ee, ee.scr); quit {
-				// ee.stopPolling()
 				ee.quitListening()
 				return
 			}
 			reportInit(ee, ee.scr)
 			ee.scr.softSync(ee)
+		}
+		if ee.synced != nil {
 			ee.synced <- true
 		}
 	}
@@ -195,7 +188,6 @@ func (ee *Events) QuitListening() {
 	if ee.isListening {
 		var wait func()
 		if ee.t != nil {
-			// fmt.Println("register: quit listening")
 			wait = ee.t.registerEventSync(
 				"test: quit listening: sync timed out")
 		}
@@ -223,7 +215,9 @@ func (ee *Events) quitListening() {
 		ee.t.beforeFinalize()
 	}
 	ee.scr.lib.Fini()
-	close(ee.synced)
+	if ee.synced != nil {
+		close(ee.synced)
+	}
 }
 
 type quitEvent struct {
@@ -262,7 +256,6 @@ func (ee *Events) Update(
 	}
 	var wait func()
 	if ee.t != nil {
-		// fmt.Println("register: update")
 		wait = ee.t.registerEventSync("test: update: sync timed out")
 	}
 	if err := ee.scr.lib.PostEvent(evt); err != nil {
@@ -270,7 +263,6 @@ func (ee *Events) Update(
 	}
 	if wait != nil {
 		ee.t.t.Helper()
-		// fmt.Println("wait for update")
 		wait()
 		ee.t.checkTermination()
 	}
@@ -315,7 +307,6 @@ func (ee *Events) MoveFocus(cmp Componenter) error {
 	}
 	var wait func()
 	if ee.t != nil {
-		// fmt.Println("register: move focus")
 		wait = ee.t.registerEventSync("test: move-focus: sync timed out")
 	}
 	if err := ee.scr.lib.PostEvent(evt); err != nil {
@@ -358,7 +349,6 @@ func (ee *Events) UpdateRunes(cmp Componenter) error {
 	}
 	var wait func()
 	if ee.t != nil {
-		// fmt.Println("register: update runes")
 		wait = ee.t.registerEventSync("test: update-keys: sync timed out")
 	}
 	if err := ee.scr.lib.PostEvent(evt); err != nil {
@@ -399,7 +389,6 @@ func (ee *Events) UpdateKeys(cmp Componenter) error {
 	}
 	var wait func()
 	if ee.t != nil {
-		// fmt.Println("register: update keys")
 		wait = ee.t.registerEventSync("test: update-keys: sync timed out")
 	}
 	if err := ee.scr.lib.PostEvent(evt); err != nil {
