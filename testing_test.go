@@ -6,6 +6,7 @@ package lines
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
@@ -101,18 +102,6 @@ func (s *_Testing) Starts_listening_on_a_fired_component_click(t *T) {
 	t.False(ee.IsListening())
 	t.True(tt.FireComponentClick(fx, 0, 0).IsListening())
 }
-
-type dbg struct{ Suite }
-
-func (s *dbg) Dbg(t *T) {
-	fx := &clickFX{}
-	ee, tt := Test(t.GoT(), fx, 0) // listen for ever
-	defer ee.QuitListening()
-	t.False(ee.IsListening())
-	t.True(tt.FireComponentClick(fx, 0, 0).IsListening())
-}
-
-func TestDBG(t *testing.T) { Run(&dbg{}, t) }
 
 func (s *_Testing) Counts_down_two_on_reported_component_click(t *T) {
 	fx := &clickFX{}
@@ -224,6 +213,30 @@ func (s *_Testing) Provides_trimmed_screen(t *T) {
 		"   bottom   "
 
 	t.Eq(exp, tt.Screen().String())
+}
+
+func (s *_Testing) Provides_string_with_screen_content(t *T) {
+	ee, tt := Test(t.GoT(), &icmpFX{init: func(c *icmpFX, e *Env) {
+		for i := 0; i < 20; i++ {
+			if i < 10 {
+				fmt.Fprintf(e.LL(i), "line 0%d", i)
+				continue
+			}
+			fmt.Fprintf(e.LL(i), "line %d", i)
+		}
+	}}, 0)
+	tt.FireResize(7, 20)
+	defer ee.QuitListening()
+
+	exp := []string{}
+	for i := 0; i < 20; i++ {
+		if i < 10 {
+			exp = append(exp, fmt.Sprintf("line 0%d", i))
+			continue
+		}
+		exp = append(exp, fmt.Sprintf("line %d", i))
+	}
+	t.Eq(strings.Join(exp, "\n"), tt.String())
 }
 
 func (s *_Testing) Provides_line_s_cell_styles(t *T) {

@@ -444,22 +444,14 @@ func (tt *Testing) beforeFinalize() {
 
 func (tt *Testing) String() string {
 	b, w, _ := tt.lib.GetContents()
-	bld, j := &strings.Builder{}, 1
+	bld := &strings.Builder{}
 	for i, c := range b {
-		r := ' '
-		if len(c.Runes) > 0 {
-			r = c.Runes[0]
-		}
-		bld.WriteRune(r)
-		if (i+j)%w == 0 {
-			j++
-			if j == w {
-				j = 0
-			}
-			bld.WriteString("\n")
+		bld.WriteRune(c.Runes[0])
+		if (i+1)%w == 0 {
+			bld.WriteRune('\n')
 		}
 	}
-	return bld.String()
+	return bld.String()[:bld.Len()-1]
 }
 
 // Screen returns a trimmed cells matrix which may be stringified or
