@@ -239,6 +239,20 @@ func (s *_Testing) Provides_string_with_screen_content(t *T) {
 	t.Eq(strings.Join(exp, "\n"), tt.String())
 }
 
+func (s *_Testing) Report_screen_portion_of_component(t *T) {
+	exp := "123456\n223456\n323456\n423456\n523456\n623456"
+	fx := &icmpFX{init: func(c *icmpFX, e *Env) {
+		c.Dim().SetHeight(6).SetWidth(6)
+		fmt.Fprint(e, exp)
+	}}
+	ee, tt := Test(t.GoT(), fx, 0)
+	ee.Listen()
+	defer ee.QuitListening()
+
+	t.Eq(exp, tt.ScreenOf(fx).String())
+	t.Neq(exp, tt.FullScreen().String())
+}
+
 func (s *_Testing) Provides_line_s_cell_styles(t *T) {
 }
 

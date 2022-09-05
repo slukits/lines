@@ -435,7 +435,7 @@ func (tt *Testing) String() string {
 //
 // A cell is considered blank if its rune is ' ', '\t' or '\r'
 func (tt *Testing) Screen() TestScreen {
-	return tt.FullScreen().trimVertical().trimHorizontal()
+	return tt.FullScreen().TrimVertical().TrimHorizontal()
 }
 
 // FullScreen returns a matrix of test cells holding a copy of each
@@ -455,6 +455,31 @@ func (tt *Testing) FullScreen() TestScreen {
 		ts = append(ts, l)
 		start += w
 	}
+	return ts
+}
+
+// ScreenOf provides the screen-portion of given componenter.  The
+// returned TestScreen is nil if given componenter is not part of the
+// layout or off-screen.
+func (tt *Testing) ScreenOf(c Componenter) TestScreen {
+	if !c.hasLayoutWrapper() {
+		return nil
+	}
+	dim := c.layoutComponent().wrapped().Dim()
+	if dim.IsOffScreen() {
+		return nil
+	}
+
+	b, w, _ := tt.lib.GetContents()
+	ts := TestScreen{}
+	for i := dim.Y(); i < dim.Y()+dim.Height(); i++ {
+		l, start := TestLine{}, i*w
+		for _, c := range b[start : start+dim.Width()] {
+			l = append(l, testCell{r: c.Runes[0], sty: c.Style})
+		}
+		ts = append(ts, l)
+	}
+
 	return ts
 }
 
@@ -478,7 +503,18 @@ func (s TestScreen) String() string {
 	return b.String()[:b.Len()-1]
 }
 
-func (s TestScreen) trimVertical() TestScreen {
+func (s TestScreen) Width() int {
+	if len(s) == 0 {
+		return 0
+	}
+	return len(s[0])
+}
+
+func (s TestScreen) Height() int {
+	return len(s)
+}
+
+func (s TestScreen) TrimVertical() TestScreen {
 	if len(s) == 0 {
 		return s
 	}
@@ -504,7 +540,7 @@ func (s TestScreen) trimVertical() TestScreen {
 	return s[blankAtBeginning : len(s)-blankAtEnd]
 }
 
-func (s TestScreen) trimHorizontal() TestScreen {
+func (s TestScreen) TrimHorizontal() TestScreen {
 	if len(s) == 0 {
 		return s
 	}
