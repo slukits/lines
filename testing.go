@@ -442,6 +442,25 @@ func (tt *Testing) beforeFinalize() {
 	}
 }
 
+func (tt *Testing) String() {
+	b, w, _ := tt.lib.GetContents()
+	bld, j := strings.Builder{}, 1
+	for i, c := range b {
+		r := ' '
+		if len(c.Runes) > 0 {
+			r = c.Runes[0]
+		}
+		bld.WriteRune(r)
+		if (i+j)%w == 0 {
+			j++
+			if j == w {
+				j = 0
+			}
+			bld.WriteString("\n")
+		}
+	}
+}
+
 // Screen returns a trimmed cells matrix which may be stringified or
 // investigated for expected styling.  The screen content is trimmed to
 // the smallest possible rectangle containing all non blank cells:
