@@ -350,10 +350,15 @@ func isInside(dim *lyt.Dim, x, y int) (ox, oy int, ok bool) {
 }
 
 func (tt *Testing) registerEventSync(err string) (wait func()) {
+	wait = tt.ensureSyncGroup(err)
+	tt.syncAdd <- true
+	return wait
+}
+
+func (tt *Testing) ensureSyncGroup(err string) (wait func()) {
 	tt.mutex.Lock()
 	defer tt.mutex.Unlock()
 	if tt.syncAdd != nil {
-		tt.syncAdd <- true
 		return nil
 	}
 	sw := newSyncWait(tt, err)
@@ -387,11 +392,11 @@ func syncGroup(waite chan struct{}, add chan bool, less chan bool) {
 			}
 			n++
 		case less := <-less:
+			n--
 			if !less || n == 0 {
 				close(waite)
 				return
 			}
-			n--
 		}
 	}
 }
@@ -412,11 +417,12 @@ func syncClosure(tt *Testing, err string, c chan struct{}) func() {
 		select {
 		case <-time.After(tt.Timeout):
 			tt.t.Fatal(err)
+			close(tt.syncAdd)
 		case <-c:
-			tt.mutex.Lock()
-			defer tt.mutex.Unlock()
-			tt.syncAdd = nil
 		}
+		tt.mutex.Lock()
+		defer tt.mutex.Unlock()
+		tt.syncAdd = nil
 	}
 }
 
