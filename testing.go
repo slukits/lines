@@ -442,9 +442,9 @@ func (tt *Testing) beforeFinalize() {
 	}
 }
 
-func (tt *Testing) String() {
+func (tt *Testing) String() string {
 	b, w, _ := tt.lib.GetContents()
-	bld, j := strings.Builder{}, 1
+	bld, j := &strings.Builder{}, 1
 	for i, c := range b {
 		r := ' '
 		if len(c.Runes) > 0 {
@@ -459,6 +459,7 @@ func (tt *Testing) String() {
 			bld.WriteString("\n")
 		}
 	}
+	return bld.String()
 }
 
 // Screen returns a trimmed cells matrix which may be stringified or
