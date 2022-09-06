@@ -570,6 +570,15 @@ type testCell struct {
 	sty tcell.Style
 }
 
+// String returns a test line's string representation.
+func (l TestLine) String() string {
+	b := strings.Builder{}
+	for _, c := range l {
+		b.WriteRune(c.r)
+	}
+	return b.String()
+}
+
 const blanks = " \r\t"
 
 // Styles returns a test screen's test line's styles to validate a test
