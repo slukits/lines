@@ -201,15 +201,12 @@ func (ee *Events) QuitListening() {
 	ee.quitListening()
 }
 
-func (ee *Events) stopPolling() {
-	ee.mutex.Lock()
-	defer ee.mutex.Unlock()
-	ee.isListening = false
-}
-
 func (ee *Events) quitListening() {
 	ee.mutex.Lock()
 	defer ee.mutex.Unlock()
+	if !ee.isListening {
+		return
+	}
 	ee.isListening = false
 	if ee.t != nil {
 		ee.t.beforeFinalize()
