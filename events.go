@@ -55,11 +55,9 @@ type Events struct {
 // without any quit bindings.
 func New(cmp Componenter) *Events {
 	ee := Events{
-		scr:    newScreen(cmp),
-		mutex:  &sync.Mutex{},
-		synced: make(chan bool, 1),
+		scr:   newScreen(cmp),
+		mutex: &sync.Mutex{},
 	}
-	ee.pollEvent = ee.scr.lib.PollEvent
 	ee.postEvent = ee.scr.lib.PostEvent
 	return &ee
 }
