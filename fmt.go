@@ -96,7 +96,7 @@ func (w *BGWriter) FG(color tcell.Color) *BGWriter {
 	return w
 }
 
-// BG sets the next write's foreground color.
+// BG sets the next write's background color.
 func (w *BGWriter) BG(color tcell.Color) *BGWriter {
 	w.fmt.sty = w.fmt.sty.Background(color)
 	return w

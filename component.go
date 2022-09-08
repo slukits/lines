@@ -186,6 +186,10 @@ func (c *component) IsDirty() bool {
 	return c.ll.IsDirty() || c.dirty
 }
 
+func (c *component) SetDirty() {
+	c.dirty = true
+}
+
 // Dim provides a components layout dimensions and features to adapt
 // them.
 func (c *component) Dim() *lyt.Dim { return c.dim }
