@@ -110,9 +110,9 @@ type stacked struct{ Suite }
 func (s *stacked) SetUp(t *T) { t.Parallel() }
 
 func (s *stacked) Fails_if_it_has_fixed_dimer_with_zero_height(t *T) {
-	fx := &Manager{sf.New(df.Of(&Dim{width: 80, height: 25}))}
+	fx := &Manager{Root: sf.New(df.Of(&Dim{width: 80, height: 25}))}
 	t.FatalOn(fx.Reflow(nil))
-	fx = &Manager{sf.New(df.Of(&Dim{width: 80, height: 0}))}
+	fx = &Manager{Root: sf.New(df.Of(&Dim{width: 80, height: 0}))}
 	t.ErrIs(fx.Reflow(nil), ErrDim)
 }
 

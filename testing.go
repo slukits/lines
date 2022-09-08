@@ -458,9 +458,9 @@ func (tt *Testing) FullScreen() TestScreen {
 	return ts
 }
 
-// ScreenOf provides the screen-portion of given componenter.  The
-// returned TestScreen is nil if given componenter is not part of the
-// layout or off-screen.
+// ScreenOf provides the screen-portion of given componenter, i.e.
+// including margins and without clippings.  The returned TestScreen is
+// nil if given componenter is not part of the layout or off-screen.
 func (tt *Testing) ScreenOf(c Componenter) TestScreen {
 	if !c.hasLayoutWrapper() {
 		return nil
@@ -472,15 +472,20 @@ func (tt *Testing) ScreenOf(c Componenter) TestScreen {
 
 	b, w, _ := tt.lib.GetContents()
 	ts := TestScreen{}
-	for i := dim.Y(); i < dim.Y()+dim.Height(); i++ {
+	_, y, width, height := dim.Rect()
+	for i := y; i < y+height; i++ {
 		l, start := TestLine{}, i*w
-		for _, c := range b[start : start+dim.Width()] {
+		for _, c := range b[start : start+width] {
 			l = append(l, testCell{r: c.Runes[0], sty: c.Style})
 		}
 		ts = append(ts, l)
 	}
 
 	return ts
+}
+
+func (tt *Testing) Trim(ts TestScreen) TestScreen {
+	return ts.TrimVertical().TrimHorizontal()
 }
 
 // TestScreen is a trimmed convenience representation of a tcell

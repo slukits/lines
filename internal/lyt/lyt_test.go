@@ -122,12 +122,24 @@ var mf = &managerFactory{}
 
 // New provides a Manager with 80x25-Root.
 func (mf *managerFactory) New() *Manager {
-	return &Manager{df.Screen()}
+	return &Manager{Root: df.Screen()}
 }
 
 // Of provides a Manager with given Dimer as root.
 func (mf *managerFactory) Of(d Dimer) *Manager {
-	return &Manager{d}
+	return &Manager{Root: d}
+}
+
+func (mf *managerFactory) ScreenOf(d Dimer) *Manager {
+	return &Manager{Width: 80, Height: 25, Root: d}
+}
+
+func (mf *managerFactory) WHOf(width, height int, d Dimer) *Manager {
+	return &Manager{Width: width, Height: height, Root: d}
+}
+
+func (mf *managerFactory) WHFilling(width, height int) *Manager {
+	return &Manager{Width: width, Height: height, Root: df.FillingOne()}
 }
 
 type manager struct{ Suite }
@@ -149,6 +161,52 @@ func (s *manager) Operations_fail_if_root_s_height_not_positive(t *T) {
 func (s *manager) Operations_fail_if_root_s_width_not_positive(t *T) {
 	m := mf.Of(df.ScreenW(0))
 	t.ErrIs(m.Reflow(nil), ErrLyt)
+}
+
+func (s *manager) Centers_vertically_fixed_height_root(t *T) {
+	m := mf.ScreenOf(df.FillingFixed(1, 15))
+	top, _, bottom, _ := m.Root.Dim().Margin()
+	t.True(top == 0 && top == bottom)
+
+	t.FatalOn(m.Reflow(nil))
+
+	top, _, bottom, _ = m.Root.Dim().Margin()
+	t.Eq(5, top)
+	t.Eq(5, bottom)
+}
+
+func (s *manager) Centers_horizontally_fixed_width_root(t *T) {
+	m := mf.ScreenOf(df.FixedFilling(40, 1))
+	_, right, _, left := m.Root.Dim().Margin()
+	t.True(right == 0 && left == right)
+
+	t.FatalOn(m.Reflow(nil))
+
+	_, right, _, left = m.Root.Dim().Margin()
+	t.Eq(20, right)
+	t.Eq(20, left)
+}
+
+func (s *manager) Makes_root_without_size_filling(t *T) {
+	m := mf.ScreenOf(&dimerFixture{dim: &Dim{}})
+	t.False(m.Root.Dim().IsFillingHeight())
+	t.False(m.Root.Dim().IsFillingWidth())
+
+	t.FatalOn(m.Reflow(nil))
+
+	t.True(m.Root.Dim().IsFillingHeight())
+	t.True(m.Root.Dim().IsFillingWidth())
+}
+
+func (s *manager) Assigns_its_width_and_height_to_root(t *T) {
+	m := mf.ScreenOf(&dimerFixture{dim: &Dim{}})
+	t.True(m.Root.Dim().Width() == 0 &&
+		m.Root.Dim().Width() == m.Root.Dim().Height())
+
+	t.FatalOn(m.Reflow(nil))
+
+	t.Eq(m.Width, m.Root.Dim().Width())
+	t.Eq(m.Height, m.Root.Dim().Height())
 }
 
 func (s *manager) Accounts_for_clipping_checking_consistency(t *T) {
@@ -227,13 +285,6 @@ func (s *manager) Updates_printable_height_after_update(t *T) {
 	t.Eq(3, h1)
 }
 
-func TestManager(t *testing.T) {
-	t.Parallel()
-	Run(&manager{}, t)
-}
-
-func (s *manager) Reflows_layout_with_a_set_height(t *T) {}
-
 func (s *manager) Locates_a_dimer_in_layout(t *T) {
 	exp := df.Fixed()
 	fx := sf.New(sf.Filling(df.Fixed(), sf.Filling(
@@ -282,4 +333,9 @@ func (s *manager) Recursively_layouts_stacked_dimer(t *T) {
 	t.FatalOn((&Manager{Root: fx}).Reflow(nil))
 	t.True(fx.HasConsistentLayout())
 	t.True(fx.dd[1].(*stackerFX).HasConsistentLayout())
+}
+
+func TestManager(t *testing.T) {
+	t.Parallel()
+	Run(&manager{}, t)
 }

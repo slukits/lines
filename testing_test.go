@@ -249,9 +249,10 @@ func (s *_Testing) Report_screen_portion_of_component(t *T) {
 	ee.Listen()
 	defer ee.QuitListening()
 
-	t.Eq(exp, tt.ScreenOf(fx).String())
+	ts := tt.Trim(tt.ScreenOf(fx))
+	t.Eq(exp, ts.String())
 	t.Neq(exp, tt.FullScreen().String())
-	t.Eq("123456", tt.ScreenOf(fx)[0].String())
+	t.Eq("123456", ts[0].String())
 }
 
 func (s *_Testing) Provides_line_s_cell_styles(t *T) {

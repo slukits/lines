@@ -254,7 +254,7 @@ func (c *component) sync(rw runeWriter) {
 
 // clear fills the receiving component's printable area with spaces.
 func (c *component) clear(rw runeWriter) {
-	sx, sy, sw, sh := c.dim.Area()
+	sx, sy, sw, sh := c.dim.Rect()
 	for y := sy; y < sh; y++ {
 		for x := sx; x < sw; x++ {
 			rw.SetContent(x, y, ' ', nil, c.fmt.sty)

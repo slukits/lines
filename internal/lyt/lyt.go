@@ -57,27 +57,39 @@ var ErrLyt = errors.New("lty: ")
 // Dim.IsOffScreen).  Dimers which do not fir their assigned are receive
 // a margin.
 type Manager struct {
-	Root Dimer
+	Width, Height int
+	width, height int
+	Root          Dimer
 }
 
 func (m *Manager) validate() error {
 	if m.Root == nil {
 		return fmt.Errorf("%w%s", ErrLyt, "root must not be nil")
 	}
-	if m.Root.Dim().height <= 0 {
-		return fmt.Errorf(
-			"%w%s", ErrLyt, "root's height must be positive")
+	if m.Height <= 0 && m.Root.Dim().height <= 0 {
+		return fmt.Errorf("%w%s", ErrLyt,
+			"manager's or root's height must be positive")
 	}
-	if m.Root.Dim().width <= 0 {
-		return fmt.Errorf(
-			"%w%s", ErrLyt, "root's width must be positive")
+	if m.Width <= 0 && m.Root.Dim().width <= 0 {
+		return fmt.Errorf("%w%s", ErrLyt,
+			"manager's or root's width must be positive")
 	}
+	if m.Height == 0 {
+		m.Height = m.Root.Dim().height
+	}
+	if m.Width == 0 {
+		m.Width = m.Root.Dim().width
+	}
+
 	return nil
 }
 
 // IsDirty returns true iff one of the layouted components has been
 // flagged as dirty.
 func (m *Manager) IsDirty() (dirty bool) {
+	if m.height != m.Height || m.width != m.Width {
+		return true
+	}
 	m.ForDimer(nil, func(d Dimer) (stop bool) {
 		if !d.Dim().IsDirty() && !d.Dim().IsUpdated() {
 			return false
@@ -170,7 +182,7 @@ func (m *Manager) Reflow(dirty func(Dimer)) (err error) {
 
 	// layout all containers.
 	forContainer(
-		m.Root,
+		m.layoutedRoot(),
 		func(s Stacker) (stop bool) {
 			if err = layoutStacker(s); err != nil {
 				return true
@@ -209,6 +221,50 @@ func (m *Manager) Reflow(dirty func(Dimer)) (err error) {
 	})
 
 	return nil
+}
+
+func (m *Manager) layoutedRoot() Dimer {
+	if m.width == m.Width && m.height == m.Height {
+		return m.Root
+	}
+	m.width, m.height = m.Width, m.Height
+	if m.Root.Dim().width == 0 {
+		m.Root.Dim().fillsWidth = 1
+	}
+	if m.Root.Dim().height == 0 {
+		m.Root.Dim().fillsHeight = 1
+	}
+	if m.Root.Dim().fillsWidth > 0 {
+		if m.Root.Dim().fillsWidth > m.Width {
+			m.Root.Dim().clipWidth = m.Root.Dim().fillsWidth - m.Width
+		} else {
+			m.Root.Dim().width = m.Width
+		}
+	} else {
+		if m.Root.Dim().width > m.Width {
+			m.Root.Dim().clipWidth = m.Root.Dim().width - m.Width
+		} else {
+			ml := (m.Width - m.Root.Dim().width) / 2
+			m.Root.Dim().mrgLeft = ml
+			m.Root.Dim().mrgRight = (m.Width - m.Root.Dim().width) - ml
+		}
+	}
+	if m.Root.Dim().fillsHeight > 0 {
+		if m.Root.Dim().fillsHeight > m.Height {
+			m.Root.Dim().clipHeight = m.Root.Dim().fillsHeight - m.Height
+		} else {
+			m.Root.Dim().height = m.Height
+		}
+	} else {
+		if m.Root.Dim().height > m.Height {
+			m.Root.Dim().clipHeight = m.Root.Dim().height - m.Height
+		} else {
+			mt := (m.Height - m.Root.Dim().height) / 2
+			m.Root.Dim().mrgTop = mt
+			m.Root.Dim().mrgBottom = (m.Height - m.Root.Dim().height) - mt
+		}
+	}
+	return m.Root
 }
 
 // Locate returns a path of Stacker and Chainer whose last Stacker or

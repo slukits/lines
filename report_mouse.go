@@ -71,6 +71,9 @@ func reportMouse(cntx *rprContext) {
 	if err != nil {
 		return
 	}
+	if len(path) == 0 {
+		return
+	}
 	lytCmp := path[len(path)-1].(layoutComponenter)
 
 	if lytCmp != cntx.scr.focus {

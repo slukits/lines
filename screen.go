@@ -102,12 +102,12 @@ func (s *screen) root() *component {
 }
 
 func (s *screen) setWidth(w int) *screen {
-	s.lyt.Root.Dim().SetWidth(w)
+	s.lyt.Width = w
 	return s
 }
 
 func (s *screen) setHeight(h int) *screen {
-	s.lyt.Root.Dim().SetHeight(h)
+	s.lyt.Height = h
 	return s
 }
 

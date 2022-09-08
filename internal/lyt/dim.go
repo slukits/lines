@@ -101,17 +101,17 @@ func (d *Dim) Height() int { return d.height }
 // fillers the means to control their filling width.  E.g. an initial
 // layout of a Chainer's Dimers might be:
 //
-//     +------------+------------+
-//     |     d      |      d'    |
-//     +------------+------------+
+//	+------------+------------+
+//	|     d      |      d'    |
+//	+------------+------------+
 //
 // whereas d and d' are width-fillers having the available width evenly
 // distributed.  Calling now d.Dim().UpdateWidth(2) followed by
 // m.Reflow() will result in
 //
-//     +--------------+----------+
-//     |       d      |    d'    |
-//     +--------------+----------+
+//	+--------------+----------+
+//	|       d      |    d'    |
+//	+--------------+----------+
 //
 // UpdateWidth calls resulting in a none positive width are ignored.
 func (d *Dim) UpdateWidth(delta int) *Dim {
@@ -134,17 +134,17 @@ func (d *Dim) UpdateWidth(delta int) *Dim {
 // fillers the means to control their filling height.  E.g. an initial
 // layout of a Stacker's Dimers might be the left layout:
 //
-//     +------------+                           +------------+
-//     |            |                           |            |
-//     |     d      |                           |     d      |
-//     |            |                           |            |
-//     |            |                           |            |
-//     +------------+                           |            |
-//     |            |                           |            |
-//     |     d'     |                           +------------+
-//     |            |                           |            |
-//     |            |                           |     d'     |
-//     +------------+                           +------------+
+//	+------------+                           +------------+
+//	|            |                           |            |
+//	|     d      |                           |     d      |
+//	|            |                           |            |
+//	|            |                           |            |
+//	+------------+                           |            |
+//	|            |                           |            |
+//	|     d'     |                           +------------+
+//	|            |                           |            |
+//	|            |                           |     d'     |
+//	+------------+                           +------------+
 //
 // whereas d and d' are height-fillers having the available height
 // evenly distributed.  Calling now d.Dim().UpdateHeight(2) followed by
@@ -281,15 +281,54 @@ func (d *Dim) clearUpdate() {
 	}
 }
 
-// Area provides a Dimer's available area in a layout, i.e. without
-// clippings.
+// Area provides a Dimer's writable area in a layout, i.e. without
+// clippings and margins.
 func (d *Dim) Area() (x, y, width, height int) {
+	if d.IsOffScreen() {
+		return 0, 0, 0, 0
+	}
 	width, height = d.width, d.height
 	if d.clipWidth > 0 {
 		width -= d.clipWidth
 	}
 	if d.clipHeight > 0 {
 		height -= d.clipHeight
+	}
+	x, y = d.x, d.y
+	if d.mrgLeft != 0 {
+		x += d.mrgLeft
+	}
+	if d.mrgTop != 0 {
+		y += d.mrgTop
+	}
+	return x, y, width, height
+}
+
+// Rect provides a Dimer's screen area in the layout, i.e. with margins and
+// without clippings.
+func (d *Dim) Rect() (x, y, width, height int) {
+	if d.IsOffScreen() {
+		return 0, 0, 0, 0
+	}
+	mt, mr, mb, ml := d.Margin()
+	if mt == 0 && mr == 0 && mb == 0 && ml == 0 {
+		return d.Area()
+	}
+	width = d.width
+	if mr == 0 && ml == 0 {
+		if d.clipWidth > 0 {
+			width -= d.clipWidth
+		}
+	} else {
+		width += ml + mr
+	}
+	height = d.height
+	if mt == 0 && mb == 0 {
+		if d.clipHeight > 0 {
+			height -= d.clipHeight
+		}
+	} else {
+		height += mt + mb
 	}
 	return d.x, d.y, width, height
 }

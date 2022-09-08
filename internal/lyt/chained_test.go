@@ -89,9 +89,9 @@ type chained struct{ Suite }
 func (s *chained) SetUp(t *T) { t.Parallel() }
 
 func (s *chained) Fails_if_it_has_fixed_dimer_with_zero_width(t *T) {
-	fx := &Manager{cf.New(df.Of(&Dim{width: 80, height: 25}))}
+	fx := &Manager{Root: cf.New(df.Of(&Dim{width: 80, height: 25}))}
 	t.FatalOn(fx.Reflow(nil))
-	fx = &Manager{cf.New(df.Of(&Dim{width: 0, height: 25}))}
+	fx = &Manager{Root: cf.New(df.Of(&Dim{width: 0, height: 25}))}
 	t.ErrIs(fx.Reflow(nil), ErrDim)
 }
 
@@ -115,7 +115,6 @@ var fxWF4 = func() *chainerFX {
 
 func (s *chained) With_width_filler_consume_all_width(t *T) {
 	for _, fx := range []*chainerFX{fxWF1(), fxWF2(), fxWF3(), fxWF4()} {
-		// TODO: fails if -race and -count=10
 		t.True(fx.Width() > fx.SumLayoutWidths())
 		t.FatalOn((&Manager{Root: fx}).Reflow(nil))
 		t.Eq(fx.Width(), fx.SumLayoutWidths())
@@ -135,7 +134,7 @@ func (s *chained) With_width_filler_have_no_margins_at_fixed(t *T) {
 	}
 }
 
-func (s *chained) With_underflowing_width_have_tb_margins(t *T) {
+func (s *chained) With_underflowing_width_have_rl_margins(t *T) {
 	// single margin (fx1), distributed margins (fx2), exact fit (fx3)
 	fx1, fx2 := cf.New(df.Fixed()), cf.New(df.Fixed(), df.Fixed())
 	fx3 := cf.New(df.Fixed(), df.Fixed(), df.FixedW(40))
@@ -150,6 +149,28 @@ func (s *chained) With_underflowing_width_have_tb_margins(t *T) {
 			t.Eq(exp[i][j][1], mr)
 		}
 	}
+}
+
+func (s *chained) distributes_margins_evenly_if_underflowing(t *T) {
+	chn := cf.New(df.FixedFilling(15, 1), df.FixedFilling(10, 1),
+		df.FixedFilling(15, 1))
+	mf.ScreenOf(chn)
+	count := 0
+	chn.ForChained(func(d Dimer) (stop bool) {
+		switch count {
+		case 0:
+			t.Eq(10, d.Dim().mrgLeft)
+			t.Eq(5, d.Dim().mrgRight)
+		case 2:
+			t.Eq(5, d.Dim().mrgLeft)
+			t.Eq(10, d.Dim().mrgRight)
+		default:
+			t.Eq(5, d.Dim().mrgLeft)
+			t.Eq(5, d.Dim().mrgRight)
+		}
+		count++
+		return
+	})
 }
 
 func (s *chained) With_underflowing_width_consume_all_width(t *T) {
