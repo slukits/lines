@@ -331,8 +331,7 @@ func (m *Manager) LocateAt(x, y int) (path []Dimer, err error) {
 	if err := m.validate(); err != nil {
 		return nil, err // TODO: coverage
 	}
-	if x < 0 || y < 0 || x >= m.Root.Dim().width ||
-		y >= m.Root.Dim().height {
+	if x < 0 || y < 0 || x >= m.Width || y >= m.Height {
 		return nil, nil // TODO: coverage
 	}
 	last, path := m.Root, []Dimer{}
@@ -352,9 +351,8 @@ func (m *Manager) LocateAt(x, y int) (path []Dimer, err error) {
 			break
 		}
 		forDD(func(d Dimer) (stop bool) {
-			if d.Dim().y <= y && d.Dim().x <= x &&
-				d.Dim().width+d.Dim().x > x &&
-				d.Dim().height+d.Dim().y > y {
+			dx, dy, dw, dh := d.Dim().Rect()
+			if dy <= y && dx <= x && dw+dx > x && dh+dy > y {
 				last = d
 				return true
 			}
