@@ -181,14 +181,11 @@ func (s *screen) softSync(ee *Events) {
 func (s *screen) syncReLayout(ee *Events, cb func(Componenter)) {
 	if s.lyt.IsDirty() {
 		reported := false
+		cntx := &rprContext{ee: ee, scr: s}
 		s.lyt.Reflow(func(d lyt.Dimer) {
 			cmp := d.(layoutComponenter).userComponent()
 			if lyt, ok := cmp.(Layouter); ok {
-				cmp.enable()
-				env := &Env{cmp: cmp, EE: ee, Evt: nil}
-				lyt.OnLayout(env)
-				env.reset()
-				cmp.disable()
+				callback(cmp, cntx, lyt.OnLayout)
 				if !reported {
 					reported = true
 				}
