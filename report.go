@@ -81,11 +81,7 @@ func reportInit(ee *Events, scr *screen) {
 		}
 
 		if ic, ok := cmp.(Initer); ok {
-			env := &Env{cmp: cmp, EE: ee, Evt: nil}
-			cmp.enable()
-			ic.OnInit(env)
-			cmp.disable()
-			env.reset()
+			callback(cmp, cntx, ic.OnInit)
 			if !reportedInit {
 				reportedInit = true
 			}
@@ -238,7 +234,9 @@ func callback(
 	cmp.disable()
 	env.reset()
 
-	reportReported(cntx.ee)
+	if cntx.evt != nil {
+		reportReported(cntx.ee)
+	}
 	return env.flags
 }
 
