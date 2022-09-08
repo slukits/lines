@@ -80,6 +80,7 @@ func (c *Component) initialize(
 		fmt:     llFmt{sty: tcell.StyleDefault},
 		userCmp: userComponent,
 		mod:     Overwriting,
+		dirty:   true,
 	}
 	c.FF = &Features{c: c}
 	c.Scroll = &Scroller{c: c}
