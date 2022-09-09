@@ -187,6 +187,9 @@ func (c *component) IsDirty() bool {
 	return c.ll.IsDirty() || c.dirty
 }
 
+// SetDirty flags a component as dirty having the effect that at the
+// next syncing the component's screen area is cleared before it is
+// written to.
 func (c *component) SetDirty() {
 	c.dirty = true
 }
@@ -235,6 +238,9 @@ func (c *component) ensureFeatures() {
 // content is written to the screen.
 func (c *component) hardSync(rw runeWriter) {
 	c.clear(rw)
+	if c.dirty {
+		c.dirty = false
+	}
 	c.sync(rw)
 }
 
@@ -260,8 +266,8 @@ func (c *component) sync(rw runeWriter) {
 // clear fills the receiving component's printable area with spaces.
 func (c *component) clear(rw runeWriter) {
 	sx, sy, sw, sh := c.dim.Rect()
-	for y := sy; y < sh; y++ {
-		for x := sx; x < sw; x++ {
+	for y := sy; y < sy+sh; y++ {
+		for x := sx; x < sx+sw; x++ {
 			rw.SetContent(x, y, ' ', nil, c.fmt.sty)
 		}
 	}

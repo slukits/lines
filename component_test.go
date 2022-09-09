@@ -294,9 +294,68 @@ func (c *uiCmpFX) OnUpdate(e *Env) {
 	}
 }
 
+type fillerFX struct{ Component }
+
+type rplStackFX struct {
+	Component
+	Stacking
+	long  string
+	short string
+}
+
+func (c *rplStackFX) OnInit(_ *Env) {
+	c.CC = []Componenter{&fillerFX{}, &icmpFX{
+		init: func(ic *icmpFX, e *Env) {
+			ic.Dim().SetHeight(1)
+			fmt.Fprint(e, c.long)
+		}}}
+}
+
+func (c *rplStackFX) OnUpdate(e *Env) {
+	cmp := e.Evt.(*UpdateEvent).Data.(Componenter)
+	c.CC[1] = cmp
+}
+
+func (s *_component) Is_replaceable(t *T) {
+	fx := &rplStackFX{
+		long:  "a rather long long long line",
+		short: "a short line",
+	}
+	ee, tt := Test(t.GoT(), fx, 0)
+	ee.Listen()
+	defer ee.QuitListening()
+	t.Eq(fx.long, tt.Trim(tt.ScreenOf(fx)).String())
+
+	ee.Update(fx, &icmpFX{
+		init: func(ic *icmpFX, e *Env) {
+			ic.Dim().SetHeight(1)
+			fmt.Fprint(e, fx.short)
+		}}, nil)
+
+	str := tt.Trim(tt.ScreenOf(fx)).String()
+	t.Eq(fx.short, str)
+}
+
 type dbg struct{ Suite }
 
 func (s *dbg) Dbg(t *T) {
+	fx := &rplStackFX{
+		long:  "a rather long long long line",
+		short: "a short line",
+	}
+	ee, tt := Test(t.GoT(), fx, 0)
+	ee.Listen()
+	defer ee.QuitListening()
+	t.Eq(fx.long, tt.Trim(tt.ScreenOf(fx)).String())
+
+	ee.Update(fx, &icmpFX{
+		init: func(ic *icmpFX, e *Env) {
+			ic.Dim().SetHeight(1)
+			fmt.Fprint(e, fx.short)
+		}}, nil)
+
+	str := tt.Trim(tt.ScreenOf(fx)).String()
+	t.Eq(fx.short, str)
 }
 
 func TestDBG(t *testing.T) { Run(&dbg{}, t) }
