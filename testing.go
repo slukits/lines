@@ -476,6 +476,10 @@ func (tt *Testing) ScreenOf(c Componenter) TestScreen {
 	for i := y; i < y+height; i++ {
 		l, start := TestLine{}, i*w
 		for _, c := range b[start : start+width] {
+			if len(c.Runes) == 0 {
+				l = append(l, testCell{r: ' ', sty: c.Style})
+				continue
+			}
 			l = append(l, testCell{r: c.Runes[0], sty: c.Style})
 		}
 		ts = append(ts, l)
