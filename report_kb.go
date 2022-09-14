@@ -134,14 +134,19 @@ func keyCurry(
 
 func execFeature(cntx *rprContext, evt *tcell.EventKey) {
 	usr := cntx.scr.focus.userComponent()
-	f := usr.layoutComponent().wrapped().ff.keyFeature(
-		evt.Key(), evt.Modifiers())
+	var f FeatureMask
+	if evt.Key() == tcell.KeyRune {
+		f = usr.layoutComponent().wrapped().ff.runeFeature(evt.Rune())
+	} else {
+		f = usr.layoutComponent().wrapped().ff.keyFeature(
+			evt.Key(), evt.Modifiers())
+	}
 	if f == NoFeature {
 		return
 	}
 	usr.enable()
 	defer usr.disable()
-	execute(usr, f)
+	execute(cntx, usr, f)
 }
 
 func reportOnKey(
@@ -174,6 +179,7 @@ func reportRune(cntx *rprContext) (quit bool) {
 	if sb {
 		return false
 	}
+	execFeature(cntx, evt)
 	if !cntx.scr.root().ff.runeQuits(evt.Rune()) {
 		return false
 	}

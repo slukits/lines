@@ -22,11 +22,12 @@ const LineFiller = string(rune(29))
 type lines []*line
 
 // append given content lines to current content
-func (ll *lines) append(fmt *llFmt, cc ...[]byte) {
+func (ll *lines) append(ff LineFlags, fmt *llFmt, cc ...[]byte) {
 	for _, c := range cc {
 		l := &line{
 			content: string(c),
 			dirty:   true,
+			ff:      ff,
 		}
 		if fmt != nil {
 			l.ss = lineStyles{Range{0, len(c)}: fmt.sty}
@@ -38,7 +39,9 @@ func (ll *lines) append(fmt *llFmt, cc ...[]byte) {
 
 // replaceAt replaces starting at given index the following lines with
 // given content lines.  replaceAt is a no-op if idx < 0 or len(cc) == 0
-func (ll *lines) replaceAt(idx int, fmt *llFmt, cc ...[]byte) {
+func (ll *lines) replaceAt(
+	idx int, ff LineFlags, fmt *llFmt, cc ...[]byte,
+) {
 	if idx < 0 || len(cc) == 0 {
 		return
 	}
@@ -51,6 +54,7 @@ func (ll *lines) replaceAt(idx int, fmt *llFmt, cc ...[]byte) {
 	}
 	for i := idx; i < max; i++ {
 		(*ll)[i].set(string(cc[j]))
+		(*ll)[i].ff = ff
 		(*ll)[i].ss = nil
 		(*ll)[i].fmt = 0
 		if fmt != nil {
@@ -59,7 +63,7 @@ func (ll *lines) replaceAt(idx int, fmt *llFmt, cc ...[]byte) {
 		}
 		j++
 	}
-	ll.append(fmt, cc[j:]...)
+	ll.append(ff, fmt, cc[j:]...)
 }
 
 // IsDirty returns true if on of the lines is dirty.
@@ -107,6 +111,8 @@ type line struct {
 	fmt FmtMask
 
 	ss lineStyles
+
+	ff LineFlags
 }
 
 // Set updates the content of a line.
@@ -131,7 +137,7 @@ type runeWriter interface {
 func (l *line) sync(x, y, width int, rw runeWriter, fmt llFmt) {
 	l.dirty = false
 	if l.fmt&filled == filled {
-		sty := l.ss.of(0, fmt.sty)
+		sty := l.ss.of(0, fmt.sty, l.ff)
 		for i := x; i < x+width; i++ {
 			rw.SetContent(i, y, ' ', nil, sty)
 		}
@@ -153,7 +159,7 @@ func (l *line) toScreen(
 		if i == width {
 			break
 		}
-		rw.SetContent(x+i, y, r, nil, l.ss.of(i, sty))
+		rw.SetContent(x+i, y, r, nil, l.ss.of(i, sty, l.ff))
 	}
 
 	if forScrLen > width {
@@ -165,7 +171,7 @@ func (l *line) toScreen(
 			break
 		}
 		rw.SetContent(
-			x+forScrLen+i, y, ' ', nil, l.ss.of(forScrLen+i, sty))
+			x+forScrLen+i, y, ' ', nil, l.ss.of(forScrLen+i, sty, l.ff))
 	}
 }
 
@@ -205,7 +211,14 @@ type lineStyles map[Range]tcell.Style
 // defined relative to a lines origin; i.e. the first cell's style is
 //
 //	s.of(0, dflt)
-func (s lineStyles) of(cell int, dflt tcell.Style) tcell.Style {
+func (s lineStyles) of(
+	cell int, dflt tcell.Style, ff LineFlags,
+) tcell.Style {
+
+	if ff&Highlighted == Highlighted {
+		fg, bg, _ := dflt.Decompose()
+		dflt = dflt.Foreground(bg).Background(fg)
+	}
 	if s == nil {
 		return dflt
 	}
@@ -213,7 +226,22 @@ func (s lineStyles) of(cell int, dflt tcell.Style) tcell.Style {
 		if !r.Contains(cell) {
 			continue
 		}
+		if ff&Highlighted == Highlighted {
+			return s.highlighted(s[r])
+		}
 		return s[r]
 	}
 	return dflt
 }
+
+func (s lineStyles) highlighted(sty tcell.Style) tcell.Style {
+	fg, bg, _ := sty.Decompose()
+	return sty.Foreground(bg).Background(fg)
+}
+
+type LineFlags uint
+
+const (
+	NotSelectable LineFlags = 1 << iota
+	Highlighted
+)

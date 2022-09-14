@@ -216,6 +216,15 @@ func sizeClosure(scr tcell.Screen) func() (int, int) {
 	return func() (int, int) { return scr.Size() }
 }
 
+func cbEnv(cntx *rprContext, cmp Componenter) *Env {
+	return &Env{
+		cmp:  cmp,
+		EE:   cntx.ee,
+		Evt:  cntx.evt,
+		size: sizeClosure(cntx.scr.lib),
+	}
+}
+
 func callback(
 	cmp Componenter, cntx *rprContext, cb func(*Env),
 ) (flags envMask) {
@@ -226,8 +235,7 @@ func callback(
 	if !cmp.hasLayoutWrapper() {
 		return
 	}
-	env := &Env{cmp: cmp, EE: cntx.ee, Evt: cntx.evt,
-		size: sizeClosure(cntx.scr.lib)}
+	env := cbEnv(cntx, cmp)
 
 	cmp.enable()
 	cb(env)

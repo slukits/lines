@@ -53,20 +53,21 @@ type Env struct {
 	EE *Events
 
 	// Evt is the tcell-event triggering the creation of a receiving
-	// environment to report it back to a registered listener.
+	// environment to report it back to a registered listener.  NOTE Evt
+	// can be nil especially for programmatically generated events.
 	Evt tcell.Event
 
 	flags envMask
 }
 
 type cmpWriter interface {
-	write(lines []byte, at int, fmt *llFmt) (int, error)
+	write(lines []byte, at int, ff LineFlags, fmt *llFmt) (int, error)
 }
 
 // Write writes to the screen area of the component having given
 // environment.
 func (e *Env) Write(bb []byte) (int, error) {
-	return e.cmp.(cmpWriter).write(bb, -1, nil)
+	return e.cmp.(cmpWriter).write(bb, -1, 0, nil)
 }
 
 // Fmt sets the next write's formattings like centered.
@@ -94,8 +95,12 @@ func (e *Env) BG(color tcell.Color) *BGWriter {
 
 // LL returns a writer which writes to the line and its following lines
 // at given index.
-func (e *Env) LL(idx int) *locWriter {
-	return &locWriter{at: idx, cmp: e.cmp.(cmpWriter)}
+func (e *Env) LL(idx int, ff ...LineFlags) *locWriter {
+	_ff := LineFlags(0)
+	for _, f := range ff {
+		_ff |= f
+	}
+	return &locWriter{at: idx, ff: _ff, cmp: e.cmp.(cmpWriter)}
 }
 
 // Focused returns the currently focused component.  Please remember to

@@ -26,6 +26,10 @@ type Component struct {
 	// Scroll provides a component's API for scrolling.
 	Scroll *Scroller
 
+	// Highlight provides a component's line highlighting and line
+	// selection API.
+	Highlight *Highlighter
+
 	// component provides properties/features of an Component.  A
 	// Component can't do it directly if it should panic if it is used
 	// outside an event reporting callback.  layoutCmp wraps the actual
@@ -84,6 +88,7 @@ func (c *Component) initialize(
 	}
 	c.FF = &Features{c: c}
 	c.Scroll = &Scroller{c: c}
+	c.Highlight = &Highlighter{c: c, current: -1}
 	switch userComponent.(type) {
 	case Stacker:
 		c.layoutCmp = &stackingWrapper{component: inner}
@@ -96,10 +101,20 @@ func (c *Component) initialize(
 }
 
 // enable component for client usage.
-func (c *Component) enable() { c.component = c.layoutCmp.wrapped() }
+func (c *Component) enable() {
+	if c.component != nil {
+		return
+	}
+	c.component = c.layoutCmp.wrapped()
+}
 
 // disable component for client usage.
-func (c *Component) disable() { c.component = nil }
+func (c *Component) disable() {
+	if c.component == nil {
+		return
+	}
+	c.component = nil
+}
 
 // isInitialized returns true if embedded component-instance is wrapped
 // in a layout component and has been initialized.
@@ -136,6 +151,9 @@ type component struct {
 
 	// first holds the index of the first displayed line
 	first int
+
+	// slctd hold the index of the currently selected line
+	slctd int
 }
 
 // Mod sets how given components content is maintained.
@@ -287,16 +305,18 @@ func (c *component) setFirst(f int) {
 	c.dirty = true
 }
 
-func (c *component) write(bb []byte, at int, f *llFmt) (int, error) {
+func (c *component) write(
+	bb []byte, at int, ff LineFlags, f *llFmt,
+) (int, error) {
 	switch {
 	case c.mod&(Appending|Tailing) != 0:
-		c.ll.append(f, bytes.Split(bb, []byte("\n"))...)
+		c.ll.append(ff, f, bytes.Split(bb, []byte("\n"))...)
 	default:
 		if at == -1 {
 			c.Reset(at)
 			at = 0
 		}
-		c.ll.replaceAt(at, f, bytes.Split(bb, []byte("\n"))...)
+		c.ll.replaceAt(at, ff, f, bytes.Split(bb, []byte("\n"))...)
 	}
 	return len(bb), nil
 }

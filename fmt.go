@@ -70,14 +70,18 @@ func (w *FmtWriter) Attr(aa tcell.AttrMask) *FmtWriter {
 
 // LL returns a writer which writes to the line and its following lines
 // at given index.
-func (w *FmtWriter) LL(idx int) *locWriter {
-	return &locWriter{at: idx, cmp: w.cmp, fmt: w.fmt}
+func (w *FmtWriter) LL(idx int, ff ...LineFlags) *locWriter {
+	_ff := LineFlags(0)
+	for _, f := range ff {
+		_ff |= f
+	}
+	return &locWriter{at: idx, ff: _ff, cmp: w.cmp, fmt: w.fmt}
 }
 
 // Write to a components screen-portion made available by an Env
 // instance provided to a listener implementation.
 func (w *FmtWriter) Write(bb []byte) (int, error) {
-	return w.cmp.write(bb, 0, w.fmt)
+	return w.cmp.write(bb, 0, 0, w.fmt)
 }
 
 // BGWriter instances provide an API for styling and formatting the
@@ -133,12 +137,16 @@ func (w *BGWriter) Filled() *BGWriter {
 
 // LL returns a writer which writes to the line and its following lines
 // at given index.
-func (w *BGWriter) LL(idx int) *locWriter {
-	return &locWriter{at: idx, cmp: w.cmp, fmt: w.fmt}
+func (w *BGWriter) LL(idx int, ff ...LineFlags) *locWriter {
+	_ff := LineFlags(0)
+	for _, f := range ff {
+		_ff |= f
+	}
+	return &locWriter{at: idx, ff: _ff, cmp: w.cmp, fmt: w.fmt}
 }
 
 func (w *BGWriter) Write(bb []byte) (int, error) {
-	return w.cmp.write(bb, 0, w.fmt)
+	return w.cmp.write(bb, 0, 0, w.fmt)
 }
 
 // locWriter represents a location writer implementing the writer
@@ -148,10 +156,11 @@ func (w *BGWriter) Write(bb []byte) (int, error) {
 type locWriter struct {
 	fmt *llFmt
 	at  int
+	ff  LineFlags
 	cmp cmpWriter
 }
 
 // Write to a specific line an onward.
 func (w *locWriter) Write(bb []byte) (int, error) {
-	return w.cmp.write(bb, w.at, w.fmt)
+	return w.cmp.write(bb, w.at, w.ff, w.fmt)
 }
