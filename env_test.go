@@ -50,7 +50,7 @@ func (s *env) Provides_writer_for_the_nth_line(t *T) {
 	ee, tt := Test(t.GoT(), &envCmpFX{test: func(e *Env) {
 		fmt.Fprint(e.LL(0), "first line")
 		fmt.Fprint(e.LL(7), "eighth line")
-	}})
+	}}, 1)
 	ee.Listen()
 
 	sl := strings.Split(tt.LastScreen.String(), "\n")
@@ -85,7 +85,7 @@ func (s *env) Changes_fore_and_background_for_line_s_content(t *T) {
 			e.BG(tcell.ColorRed).FG(tcell.ColorWhite),
 			"text with read back- and white foreground",
 		)
-	}})
+	}}, 1)
 	ee.Listen()
 	ss := tt.LastScreen[0].Styles()
 	str := tt.LastScreen.String()
@@ -104,7 +104,7 @@ func (s *env) Changes_fore_and_background_for_whole_line(t *T) {
 			e.BG(tcell.ColorRed).Filled().FG(tcell.ColorWhite).LL(1),
 			"line with space",
 		)
-	}})
+	}}, 1)
 	ee.Listen()
 	ss := tt.LastScreen[1].Styles()
 	l := tt.LastScreen[1]
@@ -125,7 +125,7 @@ func (s *env) Changes_fore_and_background_for_partial_line(t *T) {
 			e.BG(tcell.ColorRed).Filled().FG(tcell.ColorWhite).LL(2),
 			"filled with space",
 		)
-	}})
+	}}, 1)
 	ee.Listen()
 
 	ss := tt.LastScreen[1].Styles()

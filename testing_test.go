@@ -18,7 +18,7 @@ type _Testing struct{ Suite }
 func (s *_Testing) SetUp(t *T) { t.Parallel() }
 
 func (s *_Testing) Starts_non_blocking_listening_with_listen_call(t *T) {
-	ee, _ := Test(t.GoT(), nil)
+	ee, _ := Test(t.GoT(), nil, 1)
 	t.False(ee.IsListening())
 	ee.Listen()
 	t.True(ee.IsListening())
@@ -27,7 +27,7 @@ func (s *_Testing) Starts_non_blocking_listening_with_listen_call(t *T) {
 }
 
 func (s *_Testing) Starts_listening_if_a_resize_is_fired(t *T) {
-	ee, tt := Test(t.GoT(), nil)
+	ee, tt := Test(t.GoT(), nil, 1)
 	defer ee.QuitListening()
 	t.False(ee.IsListening())
 	t.True(tt.FireResize(22, 42).IsListening())
@@ -97,7 +97,7 @@ func (c *clickFX) OnContext(_ *Env, rx, ry int) {
 
 func (s *_Testing) Starts_listening_on_a_fired_component_click(t *T) {
 	fx := &clickFX{}
-	ee, tt := Test(t.GoT(), fx, 0) // listen for ever
+	ee, tt := Test(t.GoT(), fx) // listen for ever
 	defer ee.QuitListening()
 	t.False(ee.IsListening())
 	t.True(tt.FireComponentClick(fx, 0, 0).IsListening())
@@ -145,7 +145,7 @@ func (s *_Testing) Ignores_component_click_if_coordinates_outside(t *T) {
 
 func (s *_Testing) Starts_listening_on_a_fired_component_context(t *T) {
 	fx := &clickFX{}
-	ee, tt := Test(t.GoT(), fx, 0)
+	ee, tt := Test(t.GoT(), fx)
 	defer ee.QuitListening()
 	t.False(ee.IsListening())
 	tt.FireComponentContext(fx, 0, 0)
@@ -245,7 +245,7 @@ func (s *_Testing) Report_screen_portion_of_component(t *T) {
 		c.Dim().SetHeight(6).SetWidth(6)
 		fmt.Fprint(e, exp)
 	}}
-	ee, tt := Test(t.GoT(), fx, 0)
+	ee, tt := Test(t.GoT(), fx)
 	ee.Listen()
 	defer ee.QuitListening()
 

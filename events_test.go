@@ -25,7 +25,7 @@ const expInit = "component-fixture initialized"
 func (c *initFX) OnInit(e *Env) { fmt.Fprint(e, expInit) }
 
 func (s *events) Initializes_initially_given_component(t *T) {
-	ee, tt := Test(t.GoT(), &initFX{})
+	ee, tt := Test(t.GoT(), &initFX{}, 1)
 	ee.Listen()
 	t.Eq(expInit, tt.LastScreen.String())
 }

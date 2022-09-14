@@ -32,7 +32,7 @@ func (s *_Features) SetUp(t *T) { t.Parallel() }
 
 func (s *_Features) Panic_outside_event_listener_callback(t *T) {
 	fx := &cmpFFX{test: func(*Features) {}}
-	ee, _ := Test(t.GoT(), fx)
+	ee, _ := Test(t.GoT(), fx, 1)
 	ee.Listen()
 	t.Panics(func() { fx.FF.Has(Quitable) })
 }
@@ -48,7 +48,7 @@ func (s *_Features) Has_by_default_only_quitable_registered(t *T) {
 		t.Eq(ff.All(), _ff)
 		t.Eq(Quitable, _ff)
 	}}
-	ee, _ := Test(t.GoT(), fx)
+	ee, _ := Test(t.GoT(), fx, 1)
 	ee.Listen()
 }
 
@@ -65,7 +65,7 @@ func (s *_Features) Ignores_deletion_of_default_quitable_keys(t *T) {
 		got = ff.KeysOf(Quitable)
 		t.True(exp.Equals(got))
 	}}
-	ee, _ := Test(t.GoT(), fx)
+	ee, _ := Test(t.GoT(), fx, 1)
 	ee.Listen()
 }
 
@@ -79,7 +79,7 @@ func (s *_Features) Deletes_user_added_quitable_keys(t *T) {
 		ff.Delete(Quitable)
 		t.True(exp.Equals(ff.KeysOf(Quitable)))
 	}}
-	ee, _ := Test(t.GoT(), fx)
+	ee, _ := Test(t.GoT(), fx, 1)
 	ee.Listen()
 }
 
@@ -89,7 +89,7 @@ func (s *_Features) Deletes_default_quitable_rune(t *T) {
 		ff.SetRunesOf(Quitable, false)
 		t.True(len(ff.RunesOf(Quitable)) == 0)
 	}}
-	ee, _ := Test(t.GoT(), fx)
+	ee, _ := Test(t.GoT(), fx, 1)
 	ee.Listen()
 }
 
@@ -102,7 +102,7 @@ func (s *_Features) Has_set_features(t *T) {
 		t.True(ff.Has(PreviousSelectable))
 		t.True(ff.Has(NextSelectable))
 	}}
-	ee, _ := Test(t.GoT(), fx)
+	ee, _ := Test(t.GoT(), fx, 1)
 	ee.Listen()
 }
 
@@ -117,7 +117,7 @@ func (s *_Features) Sets_defaults_bindings_of_feature(t *T) {
 		t.True(defaultBindings[PreviousSelectable].kk.Equals(
 			ff.KeysOf(PreviousSelectable)))
 	}}
-	ee, _ := Test(t.GoT(), fx)
+	ee, _ := Test(t.GoT(), fx, 1)
 	ee.Listen()
 }
 
@@ -127,7 +127,7 @@ func (s *_Features) Have_set_runes(t *T) {
 		t.True(ff.RunesOf(Focusable).Equals(
 			FeatureRunes{'n', 'm'}))
 	}}
-	ee, _ := Test(t.GoT(), fx)
+	ee, _ := Test(t.GoT(), fx, 1)
 	ee.Listen()
 }
 
@@ -138,7 +138,7 @@ func (s *_Features) Replaces_rune_bindings_with_set_runes(t *T) {
 		ff.SetRunesOf(Focusable, false, 'x')
 		t.True(ff.RunesOf(Focusable).Equals(FeatureRunes{'x'}))
 	}}
-	ee, _ := Test(t.GoT(), fx)
+	ee, _ := Test(t.GoT(), fx, 1)
 	ee.Listen()
 }
 
@@ -149,7 +149,7 @@ func (s *_Features) Have_set_keys(t *T) {
 		ff.SetKeysOf(Focusable, false, kk...)
 		t.True(ff.KeysOf(Focusable).Equals(kk))
 	}}
-	ee, _ := Test(t.GoT(), fx)
+	ee, _ := Test(t.GoT(), fx, 1)
 	ee.Listen()
 }
 
@@ -163,7 +163,7 @@ func (s *_Features) Replaces_key_bindings_with_set_keys(t *T) {
 		ff.SetKeysOf(Focusable, false, exp...)
 		t.True(ff.KeysOf(Focusable).Equals(exp))
 	}}
-	ee, _ := Test(t.GoT(), fx)
+	ee, _ := Test(t.GoT(), fx, 1)
 	ee.Listen()
 }
 
@@ -175,7 +175,7 @@ func (s *_Features) Have_set_buttons(t *T) {
 		ff.SetButtonsOf(Focusable, false, bb...)
 		t.True(ff.ButtonsOf(Focusable).Equals(bb))
 	}}
-	ee, _ := Test(t.GoT(), fx)
+	ee, _ := Test(t.GoT(), fx, 1)
 	ee.Listen()
 }
 
@@ -191,7 +191,7 @@ func (s *_Features) Replaces_button_bindings_with_set_buttons(t *T) {
 		ff.SetButtonsOf(Focusable, false, exp...)
 		t.True(ff.ButtonsOf(Focusable).Equals(exp))
 	}}
-	ee, _ := Test(t.GoT(), fx)
+	ee, _ := Test(t.GoT(), fx, 1)
 	ee.Listen()
 }
 
@@ -202,7 +202,7 @@ func (s *_Features) Have_recursively_defined_features(t *T) {
 		ff.SetButtonsOf(Focusable, true, bttFX...)
 		t.True(ff.Has(Focusable | _recursive))
 	}}
-	ee, _ := Test(t.GoT(), fx)
+	ee, _ := Test(t.GoT(), fx, 1)
 	ee.Listen()
 }
 
@@ -213,7 +213,7 @@ func (s *_Features) Reports_rune_bindings_of_recursive_feature(t *T) {
 		t.True(ff.RunesOf(Focusable | _recursive).Equals(exp))
 		t.True(ff.RunesOf(Focusable).Equals(exp))
 	}}
-	ee, _ := Test(t.GoT(), fx)
+	ee, _ := Test(t.GoT(), fx, 1)
 	ee.Listen()
 }
 
@@ -224,7 +224,7 @@ func (s *_Features) Reports_key_bindings_of_recursive_feature(t *T) {
 		t.True(ff.KeysOf(Focusable | _recursive).Equals(exp))
 		t.True(ff.KeysOf(Focusable).Equals(exp))
 	}}
-	ee, _ := Test(t.GoT(), fx)
+	ee, _ := Test(t.GoT(), fx, 1)
 	ee.Listen()
 }
 
@@ -236,7 +236,7 @@ func (s *_Features) Reports_button_bindings_of_recursive_feature(t *T) {
 		t.True(ff.ButtonsOf(Focusable | _recursive).Equals(exp))
 		t.True(ff.ButtonsOf(Focusable).Equals(exp))
 	}}
-	ee, _ := Test(t.GoT(), fx)
+	ee, _ := Test(t.GoT(), fx, 1)
 	ee.Listen()
 }
 
@@ -245,7 +245,7 @@ func (s *_Features) Ignore_setting_runes_for_comprised_features(t *T) {
 		ff.SetRunesOf(Selectable, false, 's')
 		t.False(ff.Has(Selectable))
 	}}
-	ee, _ := Test(t.GoT(), fx)
+	ee, _ := Test(t.GoT(), fx, 1)
 	ee.Listen()
 }
 
@@ -255,7 +255,7 @@ func (s *_Features) Ignore_setting_keys_for_comprised_features(t *T) {
 		ff.SetKeysOf(Selectable, false, keyFX...)
 		t.False(ff.Has(Selectable))
 	}}
-	ee, _ := Test(t.GoT(), fx)
+	ee, _ := Test(t.GoT(), fx, 1)
 	ee.Listen()
 }
 
@@ -266,7 +266,7 @@ func (s *_Features) Ignore_setting_buttons_for_comprised_features(t *T) {
 		ff.SetButtonsOf(Selectable, false, bttFX...)
 		t.False(ff.Has(Selectable))
 	}}
-	ee, _ := Test(t.GoT(), fx)
+	ee, _ := Test(t.GoT(), fx, 1)
 	ee.Listen()
 }
 

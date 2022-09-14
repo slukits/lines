@@ -224,7 +224,7 @@ lines comes with testing facilities:
 
     func TestComponentInitialization(t *T) {
         fx := &CmpFixture{ exp: "init-reported" }
-        ee, tt := lines.Test(t, fx)
+        ee, tt := lines.Test(t, fx, 1)
         ee.Listen()
         if fx.exp != tt.LastScreen.String() {
             t.Errorf("expected: '%s'; got '%s'", fx.exp,

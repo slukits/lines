@@ -20,14 +20,14 @@ func (s *_component) SetUp(t *T) { t.Parallel() }
 
 func (s *_component) Access_panics_outside_event_processing(t *T) {
 	cmp := &cmpFX{}
-	ee, _ := Test(t.GoT(), cmp, 0)
+	ee, _ := Test(t.GoT(), cmp)
 	defer ee.QuitListening()
 	t.Panics(func() { cmp.Dim().SetHeight(20) })
 }
 
 func (s *_component) Has_same_line_count_if_one_line_overwrite(t *T) {
 	cmp := &cmpFX{}
-	ee, tt := Test(t.GoT(), cmp)
+	ee, tt := Test(t.GoT(), cmp, 1)
 	ee.Update(cmp, nil, func(e *Env) {
 		cmp.Mod(Overwriting)
 		fmt.Fprint(e, "two\nlines")
@@ -42,7 +42,7 @@ func (s *_component) Has_same_line_count_if_one_line_overwrite(t *T) {
 
 func (s *_component) Has_a_line_more_after_appending_an_line(t *T) {
 	cmp := &cmpFX{}
-	ee, _ := Test(t.GoT(), cmp)
+	ee, _ := Test(t.GoT(), cmp, 1)
 	ee.Update(cmp, nil, func(e *Env) {
 		cmp.Mod(Appending)
 		fmt.Fprint(e, "two\nlines")
@@ -53,7 +53,7 @@ func (s *_component) Has_a_line_more_after_appending_an_line(t *T) {
 
 func (s *_component) Has_a_line_more_after_writing_to_tailing(t *T) {
 	cmp := &cmpFX{}
-	ee, _ := Test(t.GoT(), cmp)
+	ee, _ := Test(t.GoT(), cmp, 1)
 	ee.Update(cmp, nil, func(e *Env) {
 		cmp.Mod(Tailing)
 		fmt.Fprint(e, "two\nlines")
@@ -64,7 +64,7 @@ func (s *_component) Has_a_line_more_after_writing_to_tailing(t *T) {
 
 func (s *_component) Shows_last_line_clips_above_if_tailing(t *T) {
 	cmp := &cmpFX{}
-	ee, tt := Test(t.GoT(), cmp)
+	ee, tt := Test(t.GoT(), cmp, 1)
 	tt.FireResize(20, 2)
 	ee.Update(cmp, nil, func(e *Env) {
 		cmp.Mod(Tailing)
@@ -245,7 +245,7 @@ func (s *_component) Updates(t *T) {
 	cmp := &uiCmpFX{init: func(c *uiCmpFX, e *Env) {
 		fmt.Fprint(e, "initial value")
 	}}
-	ee, tt := Test(t.GoT(), cmp, 0)
+	ee, tt := Test(t.GoT(), cmp)
 	ee.Listen()
 	defer ee.QuitListening()
 	tt.FireResize(13, 7)
@@ -321,7 +321,7 @@ func (s *_component) Is_replaceable(t *T) {
 		long:  "a rather long long long line",
 		short: "a short line",
 	}
-	ee, tt := Test(t.GoT(), fx, 0)
+	ee, tt := Test(t.GoT(), fx)
 	ee.Listen()
 	defer ee.QuitListening()
 	t.Eq(fx.long, tt.Trim(tt.ScreenOf(fx)).String())

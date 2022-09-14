@@ -177,7 +177,7 @@ type KB struct{ Suite }
 
 func (s *KB) Key_listeners_are_registered(t *T) {
 	fx := &kbCmpFX{}
-	ee, _ := Test(t.GoT(), fx)
+	ee, _ := Test(t.GoT(), fx, 1)
 	t.False(fx.HasUpdatedKeyListener())
 	ee.Listen()
 	ee.QuitListening()
@@ -186,7 +186,7 @@ func (s *KB) Key_listeners_are_registered(t *T) {
 
 func (s *KB) Rune_listeners_are_registered(t *T) {
 	fx := &kbCmpFX{}
-	ee, _ := Test(t.GoT(), fx)
+	ee, _ := Test(t.GoT(), fx, 1)
 	t.False(fx.HasUpdatedRuneListener())
 	ee.Listen()
 	ee.QuitListening()

@@ -42,7 +42,9 @@ type Testing struct {
 	// Max is the number of reported events after which the
 	// event-loop of a register-fixture is terminated.  Max is
 	// decremented after each reported event.  I.e. events for which no
-	// listener is registered are not counted.
+	// listener is registered are not counted.  Max defaults to 0 which
+	// is interpreted as "listen for ever", i.e. the testing Events
+	// instance should be quite by Events.QuitListening.
 	Max int
 
 	// LastScreen provides the screen content right before quitting
@@ -96,10 +98,7 @@ func Test(t *testing.T, c Componenter, max ...int) (*Events, *Testing) {
 		syncWait: make(chan (chan bool)),
 	}
 	go syncGroup(ee.t.syncWait, ee.synced)
-	switch len(max) {
-	case 0:
-		ee.t.SetMax(1)
-	default:
+	if len(max) > 0 {
 		ee.t.SetMax(max[0])
 	}
 	return ee, ee.t
