@@ -9,8 +9,15 @@
 package lines
 
 import (
+	"strings"
+
 	"github.com/gdamore/tcell/v2"
 )
+
+// LineFiller can be used in component content-lines indicating that a
+// line l should fill up its whole width whereas its remaining empty
+// space is spread equally over filler found in l.
+const LineFiller = string(rune(29))
 
 type lines []*line
 
@@ -130,37 +137,66 @@ func (l *line) sync(x, y, width int, rw runeWriter, fmt llFmt) {
 		}
 		l.stale = ""
 	}
-	if len(l.content) >= len(l.stale) {
-		l.setLonger(x, y, width, rw, fmt.sty)
-	} else {
-		l.setShorter(x, y, width, rw, fmt.sty)
-	}
+	l.toScreen(x, y, width, rw, fmt.sty)
 	l.stale = ""
 }
 
-func (l *line) setShorter(
+func (l *line) toScreen(
 	x, y, width int, rw runeWriter, sty tcell.Style,
 ) {
 
-	base, add := len(l.content), len(l.stale)-len(l.content)
-	l.setLonger(x, y, width, rw, sty)
-	for i := 0; i < add; i++ {
-		if i == width {
-			break
-		}
-		rw.SetContent(x+base+i, y, ' ', nil, l.ss.of(base+i, sty))
-	}
-}
+	forScr := l.forScreen(width)
+	forScrLen := len(forScr)
+	diffStale := len(l.stale) - forScrLen
 
-func (l *line) setLonger(
-	x, y, width int, rw runeWriter, sty tcell.Style,
-) {
-	for i, r := range l.content {
+	for i, r := range forScr {
 		if i == width {
 			break
 		}
 		rw.SetContent(x+i, y, r, nil, l.ss.of(i, sty))
 	}
+
+	if forScrLen > width {
+		return
+	}
+
+	for i := 0; i < diffStale; i++ {
+		if forScrLen+i == width {
+			break
+		}
+		rw.SetContent(
+			x+forScrLen+i, y, ' ', nil, l.ss.of(forScrLen+i, sty))
+	}
+}
+
+func (l *line) forScreen(width int) string {
+
+	ff := strings.Split(l.content, LineFiller)
+	if len(ff) == 1 {
+		return l.content
+	}
+
+	blank := width - (len(l.content) - (len(ff) - 1)) // ignore filler
+	if blank <= len(ff)-1 {
+		return strings.Join(ff, " ")
+	}
+
+	dist := blank / (len(ff) - 1)
+	if (len(ff)-1)*dist == blank {
+		return strings.Join(ff, strings.Repeat(" ", dist))
+	}
+
+	b, fill := strings.Builder{}, strings.Repeat(" ", dist)
+	rest := blank % (len(ff) - 1)
+	for _, s := range ff {
+		b.WriteString(s + fill)
+		if rest > 0 {
+			b.WriteRune(' ')
+			rest--
+		}
+	}
+
+	return strings.TrimSpace(b.String())
 }
 
 type lineStyles map[Range]tcell.Style

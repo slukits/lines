@@ -336,29 +336,28 @@ func (s *_component) Is_replaceable(t *T) {
 	t.Eq(fx.short, str)
 }
 
-type dbg struct{ Suite }
-
-func (s *dbg) Dbg(t *T) {
-	fx := &rplStackFX{
-		long:  "a rather long long long line",
-		short: "a short line",
-	}
-	ee, tt := Test(t.GoT(), fx, 0)
+func (s *_component) Fills_line_at_unit_separators(t *T) {
+	fx := &icmpFX{init: func(c *icmpFX, e *Env) {
+		c.Dim().SetHeight(1).SetWidth(8)
+		fmt.Fprintf(e, "a%sb", LineFiller)
+	}}
+	ee, tt := Test(t.GoT(), fx, 3)
 	ee.Listen()
-	defer ee.QuitListening()
-	t.Eq(fx.long, tt.Trim(tt.ScreenOf(fx)).String())
 
-	ee.Update(fx, &icmpFX{
-		init: func(ic *icmpFX, e *Env) {
-			ic.Dim().SetHeight(1)
-			fmt.Fprint(e, fx.short)
-		}}, nil)
+	t.Eq("a      b", tt.Screen().String())
 
-	str := tt.Trim(tt.ScreenOf(fx)).String()
-	t.Eq(fx.short, str)
+	ee.Update(fx, nil, func(e *Env) {
+		fmt.Fprintf(e, "a%sb%[1]sc", LineFiller)
+	})
+
+	t.Eq("a   b  c", tt.Screen().String())
+
+	ee.Update(fx, nil, func(e *Env) {
+		fmt.Fprintf(e, "ab%scd%[1]sef%[1]sgh", LineFiller)
+	})
+
+	t.Eq("ab cd ef", tt.LastScreen.String())
 }
-
-func TestDBG(t *testing.T) { Run(&dbg{}, t) }
 
 func TestComponent(t *testing.T) {
 	t.Parallel()
