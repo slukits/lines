@@ -141,7 +141,6 @@ func (l *line) sync(x, y, width int, rw runeWriter, fmt llFmt) {
 		for i := x; i < x+width; i++ {
 			rw.SetContent(i, y, ' ', nil, sty)
 		}
-		l.fmt &^= filled
 		l.stale = ""
 	}
 	l.toScreen(x, y, width, rw, fmt.sty)
@@ -227,8 +226,7 @@ func (s lineStyles) of(
 ) tcell.Style {
 
 	if ff&Highlighted == Highlighted {
-		fg, bg, _ := dflt.Decompose()
-		dflt = dflt.Foreground(bg).Background(fg)
+		dflt = dflt.Reverse(true)
 	}
 	if s == nil {
 		return dflt
@@ -253,6 +251,6 @@ func (s lineStyles) highlighted(sty tcell.Style) tcell.Style {
 type LineFlags uint
 
 const (
-	NotSelectable LineFlags = 1 << iota
+	NotFocusable LineFlags = 1 << iota
 	Highlighted
 )

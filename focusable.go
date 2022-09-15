@@ -4,30 +4,29 @@
 
 package lines
 
-// A Highlighter instance is associated with each initialized
-// lines-component and provides the api for highlighting and selecting
-// lines in a component.
-type Highlighter struct {
+// A LineFocus instance is associated with each initialized
+// lines-component and provides the api for focusing component lines.
+type LineFocus struct {
 	c       *Component
 	current int
 }
 
 // Current returns the line-index of the currently highlighted line.
-func (s *Highlighter) Current() int {
+func (s *LineFocus) Current() int {
 	return s.current
 }
 
 // Next returns the index of the next (relative to Current) selectable
 // line l.  l is flagged as highlighted while the line highlighted
 // before is not highlighted anymore.
-func (s *Highlighter) Next() int {
+func (s *LineFocus) Next(highlighted bool) int {
 	if s.current+1 == len(*s.c.ll) {
-		s.Reset()
+		s.Reset(highlighted)
 		return s.current
 	}
 	old := s.current
 	for idx, l := range (*s.c.ll)[s.current+1:] {
-		if l.ff&NotSelectable == NotSelectable {
+		if l.ff&NotFocusable == NotFocusable {
 			continue
 		}
 		if s.current >= 0 {
@@ -38,21 +37,21 @@ func (s *Highlighter) Next() int {
 		break
 	}
 	if old == s.current {
-		s.Reset()
+		s.Reset(highlighted)
 		return s.current
 	}
 	s.c.Scroll.To(s.current)
 	return s.current
 }
 
-func (s *Highlighter) Previous() int {
+func (s *LineFocus) Previous(highlighted bool) int {
 	if s.current <= 0 {
-		s.Reset()
+		s.Reset(highlighted)
 		return s.current
 	}
 	old := s.current
 	for i := s.current - 1; i >= 0; i-- {
-		if (*s.c.ll)[i].ff&NotSelectable == NotSelectable {
+		if (*s.c.ll)[i].ff&NotFocusable == NotFocusable {
 			continue
 		}
 		if s.current >= 0 {
@@ -63,17 +62,18 @@ func (s *Highlighter) Previous() int {
 		break
 	}
 	if old == s.current {
-		s.Reset()
+		s.Reset(highlighted)
 		return s.current
 	}
 	s.c.Scroll.To(s.current)
 	return s.current
 }
 
-func (s *Highlighter) Reset() {
+func (s *LineFocus) Reset(highlighted bool) int {
 	if s.current == -1 {
-		return
+		return s.current
 	}
 	(*s.c.ll)[s.current].SwitchHighlighted()
 	s.current = -1
+	return s.current
 }

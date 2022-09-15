@@ -26,9 +26,9 @@ type Component struct {
 	// Scroll provides a component's API for scrolling.
 	Scroll *Scroller
 
-	// Highlight provides a component's line highlighting and line
+	// Focus provides a component's line highlighting and line
 	// selection API.
-	Highlight *Highlighter
+	Focus *LineFocus
 
 	// component provides properties/features of an Component.  A
 	// Component can't do it directly if it should panic if it is used
@@ -88,7 +88,7 @@ func (c *Component) initialize(
 	}
 	c.FF = &Features{c: c}
 	c.Scroll = &Scroller{c: c}
-	c.Highlight = &Highlighter{c: c, current: -1}
+	c.Focus = &LineFocus{c: c, current: -1}
 	switch userComponent.(type) {
 	case Stacker:
 		c.layoutCmp = &stackingWrapper{component: inner}

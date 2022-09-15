@@ -4,23 +4,30 @@
 
 /*
 Features are a convenient way to extend a components default behavior.
-A typical feature is comprised of more detailed features defined as
+A typical feature is comprised of elementary features defined as
 FeatureMask constants, e.g.:
 
     const (
         Quitable FeatureMask = 1 << iota
         // ...
-        previousLineSelectable // TODO: implement
-        nextLineSelectable // TODO: implement
-        lineSelectable // TODO: implement
-        linesDeselectable // TODO: implement
+        PreviousLineFocusable
+        NextLineFocusable
+        LineUnfocusable
         // ...
-        LinesSelectable = previousLineSelectable | nextLineSelectable |
-            lineSelectable | linesDeselectable
+        LinesFocusable = PreviousLineFocusable | NextLineFocusable |
+            LineUnfocusable
+        HighlightedFocusable = LinesFocusable | highlightedFocusable
+        // ...
     )
 
-Default key, rune and button bindings for each detail feature is defined
-in defaultBinding, e.g.:
+Most elementary features are public to allow modifying their key, rune
+or button bindings.  Elementary features which are not associated with
+any key, rune or button like highlightedFocusable are kept private.
+They represent usually a mere variation of existing features.  All
+elementary features need to be in "allFeatures"
+
+Default key, rune and button bindings for each elementary feature is
+defined in defaultBinding, e.g.:
 
     var defaultBindings = map[FeatureMask]*bindings{
         // ...
@@ -31,21 +38,26 @@ in defaultBinding, e.g.:
         // ...
     }
 
-A component's associated Features-instance is used to add a feature-set,
-e.g.:
+Elementary features not associated with any key, rune or button are
+bound to the zero-rune.  A component's associated Features-instance is
+used to add (comprised) features, e.g.:
 
     func (c *Cmp) OnInit(_ lines.Env) {
-        c.FF.Add(LinesSelectable)
+        c.FF.Add(Scrollable|LinesFocusable)
     }
 
 Finally the "execute" function is used by key, rune or button-reporter
-to dispatch the according operation implementing the feature, e.g.:
+to dispatch the according operation implementing the feature and
+reporting associated events if any, e.g.:
 
-    func execute(usr Componenter, f FeatureMask) {
+    func execute(cntx *rprContext, usr Componenter, f FeatureMask) {
         switch f {
         // ...
-        case nextLineSelectable:
-            usr.Select.Next()
+        case NextLineFocusable:
+            current := usr.Focus.Current()
+            if usr.Focus.Next() != current {
+                reportOnLineFocus(cntx, usr)
+            }
         // ...
         }
     }
@@ -66,7 +78,7 @@ import (
 //	type Cmp { lines.Component }
 //
 //	func (c *Cmp) OnInit(_ *lines.Env) {
-//		c.FF.Add(lines.LinesSelectable)
+//		c.FF.Add(lines.LinesFocusable)
 //	}
 //
 // adds the feature "selectable lines" to a component. I.e. if the
@@ -92,6 +104,23 @@ func (ff *Features) Add(f FeatureMask) {
 // flagged recursive, i.e. they apply as well for nested components.
 func (ff *Features) AddRecursive(f FeatureMask) {
 	ff.ensureInitialized().add(f, true)
+}
+
+func (ff *Features) OfKey(k tcell.Key, mm tcell.ModMask) FeatureMask {
+	ff.ensureInitialized()
+	return ff.c.ff.keyFeature(k, mm)
+}
+
+func (ff *Features) OfRune(r rune) FeatureMask {
+	ff.ensureInitialized()
+	return ff.c.ff.runeFeature(r)
+}
+
+func (ff *Features) OfButton(
+	b tcell.ButtonMask, mm tcell.ModMask,
+) FeatureMask {
+	ff.ensureInitialized()
+	return ff.c.ff.buttonFeature(b, mm)
 }
 
 // Has returns true if receiving component features have key, rune or
@@ -237,21 +266,24 @@ const (
 	// scrollable to the right (default right-key)
 	lineRightScrollable // TODO: implement
 
-	// previousLineSelectable lets the user highlight the previous
-	// selectable line. (default up-key and 'k')
-	previousLineSelectable // TODO: implement
+	// nextLineFocusable a component's previous focusable line can
+	// receive the focus. (default down-key and 'j')
+	PreviousLineFocusable // TODO: implement
 
-	// nextLineSelectable lets the user highlight the next selectable
-	// line. (default down-key and 'j')
-	nextLineSelectable // TODO: implement
+	// NextLineFocusable a component's next focusable line can receive
+	// the focus. (default down-key and 'j')
+	NextLineFocusable // TODO: implement
 
-	// lineSelectable lets the user select the component's line which
-	// is currently highlighted. (default enter)
-	lineSelectable // TODO: implement
+	// LineUnfocusable a component's set line-focus can be removed
+	// (default esc)
+	LineUnfocusable // TODO: implement
 
-	// linesDeselectable removes the line-selector of a component's
-	// lines (default esc)
-	linesDeselectable // TODO: implement
+	// highlightedFocusable highlights a component's focused line.
+	highlightedFocusable
+
+	// LineSelectable a component's focused line can be reported as
+	// selected (default enter)
+	LineSelectable // TODO: implement
 
 	// maximizable lets the user maximize a component, i.e. all siblings
 	// which are collapsed to either one line if parent is stacking or
@@ -290,10 +322,18 @@ const (
 	// scrollable by combining line-left- and line-right-scrollable.
 	lineScrollable = lineLeftScrollable | lineRightScrollable // TODO: implement
 
+	// LinesFocusable makes lines focusable, i.e. a line receiving the
+	// focus is reported; see OnLineFocus.
+	LinesFocusable = NextLineFocusable | PreviousLineFocusable |
+		LineUnfocusable
+
+	// HighlightedFocusable makes lines focusable whereas the focused
+	// line is highlighted.
+	HighlightedFocusable = LinesFocusable | highlightedFocusable
+
 	// LinesSelectable makes a component's lines selectable by combining
-	// previous-line- and next-line-selectable. // TODO: implement
-	LinesSelectable = previousLineSelectable | nextLineSelectable |
-		lineSelectable | linesDeselectable
+	// HighlightedFocusable and LineSelectable.
+	LinesSelectable = HighlightedFocusable | LineSelectable
 )
 
 // features provides information about keys/runes/buttons which are
@@ -782,11 +822,7 @@ var allButtons = []tcell.ButtonMask{
 // keyFeature maps a key to its associated feature or to NoEvent if not
 // registered.
 func (ff *features) keyFeature(k tcell.Key, m tcell.ModMask) FeatureMask {
-	if ff == nil || ff.keys == nil {
-		return NoFeature
-	}
-
-	if ff.keys[m] == nil {
+	if ff == nil || ff.keys == nil || ff.keys[m] == nil {
 		return NoFeature
 	}
 
@@ -799,7 +835,7 @@ func (ff *features) buttonFeature(
 	b tcell.ButtonMask, m tcell.ModMask,
 ) FeatureMask {
 
-	if ff.buttons[m] == nil {
+	if ff == nil || ff.buttons[m] == nil {
 		return NoFeature
 	}
 
@@ -815,16 +851,15 @@ func (ff *features) runeFeature(r rune) FeatureMask {
 	return ff.runes[r]
 }
 
-// allFeatures provides a slice of all the potentially internally
-// handled features
+// allFeatures provides a slice of all elementary features
 var allFeatures = []FeatureMask{
 	Quitable, Focusable,
 	UpScrollable, DownScrollable,
 	leftScrollable, rightScrollable,
 	lineLeftScrollable, lineRightScrollable,
 	PreviousSelectable, NextSelectable,
-	previousLineSelectable, nextLineSelectable,
-	lineSelectable, linesDeselectable,
+	PreviousLineFocusable, NextLineFocusable,
+	LineSelectable, LineUnfocusable, highlightedFocusable,
 	maximizable, editable,
 }
 
@@ -889,27 +924,26 @@ var defaultBindings = map[FeatureMask]*bindings{
 			Mod: tcell.ModNone,
 		}},
 	},
-	previousLineSelectable: {
+	PreviousLineFocusable: {
 		kk: FeatureKeys{{Key: tcell.KeyUp, Mod: tcell.ModNone}},
 		rr: FeatureRunes{'k'},
 	},
-	nextLineSelectable: {
+	NextLineFocusable: {
 		kk: FeatureKeys{{Key: tcell.KeyDown, Mod: tcell.ModNone}},
 		rr: FeatureRunes{'j'},
 	},
-	lineSelectable: {
+	LineSelectable: {
 		kk: FeatureKeys{{Key: tcell.KeyEnter, Mod: tcell.ModNone}},
 	},
-	linesDeselectable: {
+	LineUnfocusable: {
 		kk: FeatureKeys{{Key: tcell.KeyESC, Mod: tcell.ModNone}},
 	},
+	highlightedFocusable: {rr: FeatureRunes{rune(0)}},
 }
 
 type LineSelecter interface{ OnLineSelection(*Env, int) }
 
-func lsCurry(ls LineSelecter, idx int) func(*Env) {
-	return func(e *Env) { ls.OnLineSelection(e, idx) }
-}
+type LineFocuser interface{ OnLineFocus(*Env, int) }
 
 func execute(cntx *rprContext, usr Componenter, f FeatureMask) {
 	switch f {
@@ -917,19 +951,48 @@ func execute(cntx *rprContext, usr Componenter, f FeatureMask) {
 		usr.embedded().Scroll.Up()
 	case DownScrollable:
 		usr.embedded().Scroll.Down()
-	case nextLineSelectable:
-		usr.embedded().Highlight.Next()
-	case previousLineSelectable:
-		usr.embedded().Highlight.Previous()
-	case linesDeselectable:
-		usr.embedded().Highlight.Reset()
-	case lineSelectable:
+	case NextLineFocusable:
+		executeLineFocus(cntx, usr, usr.embedded().Focus.Next)
+	case PreviousLineFocusable:
+		executeLineFocus(cntx, usr, usr.embedded().Focus.Previous)
+	case LineUnfocusable:
+		executeLineFocus(cntx, usr, usr.embedded().Focus.Reset)
+	case LineSelectable:
 		reportSelectedLine(cntx, usr)
 	}
 }
 
+func executeLineFocus(
+	cntx *rprContext, usr Componenter, f func(bool) int,
+) {
+	current := usr.embedded().Focus.Current()
+	rf := usr.embedded().ff.runeFeature(rune(0))
+	highlighted := rf&highlightedFocusable == highlightedFocusable
+	if current == f(highlighted) {
+		return
+	}
+	reportLineFocus(cntx, usr)
+}
+
+func lfCurry(lf LineFocuser, idx int) func(*Env) {
+	return func(e *Env) { lf.OnLineFocus(e, idx) }
+}
+
+func reportLineFocus(cntx *rprContext, usr Componenter) {
+	lf, ok := usr.(LineFocuser)
+	if !ok {
+		return
+	}
+	callback(usr, cntx, lfCurry(
+		lf, usr.embedded().Focus.Current()))
+}
+
+func lsCurry(ls LineSelecter, idx int) func(*Env) {
+	return func(e *Env) { ls.OnLineSelection(e, idx) }
+}
+
 func reportSelectedLine(cntx *rprContext, usr Componenter) {
-	if usr.embedded().Highlight.Current() < 0 {
+	if usr.embedded().Focus.Current() < 0 {
 		return
 	}
 	ls, ok := usr.(LineSelecter)
@@ -937,5 +1000,5 @@ func reportSelectedLine(cntx *rprContext, usr Componenter) {
 		return
 	}
 	callback(usr, cntx, lsCurry(
-		ls, usr.embedded().Highlight.Current()))
+		ls, usr.embedded().Focus.Current()))
 }
