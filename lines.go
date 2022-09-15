@@ -141,10 +141,21 @@ func (l *line) sync(x, y, width int, rw runeWriter, fmt llFmt) {
 		for i := x; i < x+width; i++ {
 			rw.SetContent(i, y, ' ', nil, sty)
 		}
+		l.fmt &^= filled
 		l.stale = ""
 	}
 	l.toScreen(x, y, width, rw, fmt.sty)
 	l.stale = ""
+}
+
+func (l *line) SwitchHighlighted() {
+	if l.ff&Highlighted == Highlighted {
+		l.ff &^= Highlighted
+	} else {
+		l.ff |= Highlighted
+	}
+	l.dirty = true
+	l.fmt |= filled
 }
 
 func (l *line) toScreen(

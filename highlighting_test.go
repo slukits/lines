@@ -223,16 +223,34 @@ func (s *LineHighlight) Scrolls_to_previous_highlighted_line(t *T) {
 		fmt.Fprint(e.LL(5), "line 6")
 		fmt.Fprint(e.LL(6), "line 7")
 	}, 5)
-	tt.FireKey(tcell.KeyDown, tcell.ModNone)
-	tt.FireKey(tcell.KeyDown, tcell.ModNone)
+	tt.FireKey(tcell.KeyDown)
+	tt.FireKey(tcell.KeyDown)
 	ee.Update(fx, nil, func(e *Env) {
 		t.Eq("line 5\nline 6", tt.Screen().String())
 	})
 
-	tt.FireKey(tcell.KeyUp, tcell.ModNone)
+	tt.FireKey(tcell.KeyUp)
 	ee.Update(fx, nil, func(e *Env) {
 		t.Eq("line 2\nline 3", tt.Screen().String())
 	})
+}
+
+func (s *LineHighlight) Changes_back_and_foreground_color(t *T) {
+	_, tt, _ := s.iFX(t, func(c *icmpFX, e *Env) {
+		c.FF.Add(LinesSelectable)
+		c.dim.SetHeight(2)
+		fmt.Fprint(e.LL(0, NotSelectable), "line 1")
+		fmt.Fprint(e.LL(1), "line 2")
+	}, 2)
+	scr := tt.Screen()
+	l1, l2 := scr[0], scr[1]
+	t.Eq(l1.Styles().Of(0).BG(), l2.Styles().Of(0).BG())
+	t.Eq(l1.Styles().Of(0).FG(), l2.Styles().Of(0).FG())
+
+	tt.FireKey(tcell.KeyDown)
+
+	t.Eq(l1.Styles().Of(0).BG(), l2.Styles().Of(0).FG())
+	t.Eq(l1.Styles().Of(0).FG(), l2.Styles().Of(0).BG())
 }
 
 func TestLineHighlight(t *testing.T) {

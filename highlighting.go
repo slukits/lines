@@ -31,9 +31,9 @@ func (s *Highlighter) Next() int {
 			continue
 		}
 		if s.current >= 0 {
-			(*s.c.ll)[s.current].ff &^= Highlighted
+			(*s.c.ll)[s.current].SwitchHighlighted()
 		}
-		l.ff |= Highlighted
+		l.SwitchHighlighted()
 		s.current = s.current + 1 + idx
 		break
 	}
@@ -56,9 +56,9 @@ func (s *Highlighter) Previous() int {
 			continue
 		}
 		if s.current >= 0 {
-			(*s.c.ll)[s.current].ff &^= Highlighted
+			(*s.c.ll)[s.current].SwitchHighlighted()
 		}
-		(*s.c.ll)[i].ff |= Highlighted
+		(*s.c.ll)[i].SwitchHighlighted()
 		s.current = i
 		break
 	}
@@ -74,6 +74,6 @@ func (s *Highlighter) Reset() {
 	if s.current == -1 {
 		return
 	}
-	(*s.c.ll)[s.current].ff &^= Highlighted
+	(*s.c.ll)[s.current].SwitchHighlighted()
 	s.current = -1
 }

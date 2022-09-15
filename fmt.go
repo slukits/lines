@@ -17,16 +17,6 @@ const (
 	// filled indicates to fill the whole line with a set background
 	// color instead only the non-blank cells.
 	filled
-
-	// TODO: implement as "Filled"
-	// ffilled writes the strings of following write intersected by
-	// filling strings, e.g.:
-	//
-	// 	fmt.Fprint(e.Fmt(lines.ffilled), "_", "left", "middle", "right")
-	//
-	// will print "left__________middle__________right" whereas left
-	// is at the line's start while right is at the end of the line.
-	ffilled
 )
 
 // llFmt represents a lines (ll) formatting (fmt) properties for a

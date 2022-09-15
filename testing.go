@@ -712,3 +712,7 @@ func (s TestStyle) HasBG(color tcell.Color) bool {
 func (s TestStyle) HasFG(color tcell.Color) bool {
 	return s.fg == color
 }
+
+func (s TestStyle) BG() tcell.Color { return s.bg }
+
+func (s TestStyle) FG() tcell.Color { return s.fg }
