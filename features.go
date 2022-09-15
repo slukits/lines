@@ -237,18 +237,16 @@ const (
 	// scrollable to the right (default right-key)
 	lineRightScrollable // TODO: implement
 
-	// previousLineSelectable lets the user move the line-selector of a
-	// component's lines to the previous selectable line. (default
-	// up-key and 'k')
+	// previousLineSelectable lets the user highlight the previous
+	// selectable line. (default up-key and 'k')
 	previousLineSelectable // TODO: implement
 
-	// nextLineSelectable lets the user move the line-selector of a
-	// component's lines to the next selectable line. (default down-key
-	// and 'j')
+	// nextLineSelectable lets the user highlight the next selectable
+	// line. (default down-key and 'j')
 	nextLineSelectable // TODO: implement
 
 	// lineSelectable lets the user select the component's line which
-	// has the line-selector currently set. (default enter)
+	// is currently highlighted. (default enter)
 	lineSelectable // TODO: implement
 
 	// linesDeselectable removes the line-selector of a component's
@@ -292,9 +290,9 @@ const (
 	// scrollable by combining line-left- and line-right-scrollable.
 	lineScrollable = lineLeftScrollable | lineRightScrollable // TODO: implement
 
-	// linesSelectable makes a component's lines selectable by combining
+	// LinesSelectable makes a component's lines selectable by combining
 	// previous-line- and next-line-selectable. // TODO: implement
-	linesSelectable = previousLineSelectable | nextLineSelectable |
+	LinesSelectable = previousLineSelectable | nextLineSelectable |
 		lineSelectable | linesDeselectable
 )
 
@@ -926,14 +924,18 @@ func execute(cntx *rprContext, usr Componenter, f FeatureMask) {
 	case linesDeselectable:
 		usr.embedded().Highlight.Reset()
 	case lineSelectable:
-		if usr.embedded().Highlight.Current() < 0 {
-			return
-		}
-		ls, ok := usr.(LineSelecter)
-		if !ok {
-			return
-		}
-		callback(usr, cntx, lsCurry(
-			ls, usr.embedded().Highlight.Current()))
+		reportSelectedLine(cntx, usr)
 	}
+}
+
+func reportSelectedLine(cntx *rprContext, usr Componenter) {
+	if usr.embedded().Highlight.Current() < 0 {
+		return
+	}
+	ls, ok := usr.(LineSelecter)
+	if !ok {
+		return
+	}
+	callback(usr, cntx, lsCurry(
+		ls, usr.embedded().Highlight.Current()))
 }

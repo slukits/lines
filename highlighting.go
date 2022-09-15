@@ -41,6 +41,7 @@ func (s *Highlighter) Next() int {
 		s.Reset()
 		return s.current
 	}
+	s.c.Scroll.To(s.current)
 	return s.current
 }
 
@@ -65,6 +66,7 @@ func (s *Highlighter) Previous() int {
 		s.Reset()
 		return s.current
 	}
+	s.c.Scroll.To(s.current)
 	return s.current
 }
 

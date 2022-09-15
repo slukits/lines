@@ -19,6 +19,9 @@ func (s Scroller) IsAtBottom() bool {
 // height of 1 is one line.  For a height h with 1 < h < 20 "one page"
 // is h - 1.  For h >= 20 "one page" is h - h/10.
 func (s Scroller) Up() {
+	if s.c.dim.IsOffScreen() {
+		return
+	}
 	if s.c.first == 0 {
 		return
 	}
@@ -40,11 +43,14 @@ func (s Scroller) Up() {
 
 // ToTop scrolls component content to its first line, i.e. the first
 // displayed line is the first content line.
-func (s Scroller) ToTop() {
-	s.c.setFirst(0)
-}
+func (s Scroller) ToTop() { s.c.setFirst(0) }
 
+// ToBottom scrolls to index that the last displayed line is the last
+// line of the content.
 func (s Scroller) ToBottom() {
+	if s.c.dim.IsOffScreen() {
+		return
+	}
 	_, _, _, height := s.c.dim.Area()
 	s.c.setFirst(s.c.Len() - height)
 }
@@ -54,6 +60,9 @@ func (s Scroller) ToBottom() {
 // of 1 is one line.  For a height h with 1 < h < 20 "one page" is h -
 // 1.  For h >= 20 "one page" is h - h/10.
 func (s Scroller) Down() {
+	if s.c.dim.IsOffScreen() {
+		return
+	}
 	_, _, _, height := s.c.dim.Area()
 	if height >= len((*s.c.ll)[s.c.first:]) {
 		return
@@ -71,4 +80,29 @@ func (s Scroller) Down() {
 		return
 	}
 	s.c.setFirst(s.c.first + scroll)
+}
+
+// To scrolls to the index that the line with given index is displayed.
+func (s Scroller) To(idx int) {
+	if s.c.dim.IsOffScreen() {
+		return
+	}
+	_, _, _, height := s.c.dim.Area()
+	if s.c.first <= idx && idx < s.c.first+height {
+		return
+	}
+	if idx <= 0 {
+		s.ToTop()
+		return
+	}
+	if idx >= len(*s.c.ll) {
+		s.ToBottom()
+	}
+
+	for s.c.first > idx {
+		s.Up()
+	}
+	for idx >= s.c.first+height {
+		s.Down()
+	}
 }

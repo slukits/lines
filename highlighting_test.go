@@ -115,7 +115,7 @@ func (s *LineHighlight) Highlights_previous_selectable_line(t *T) {
 
 func (s *LineHighlight) Next_triggered_by_selectable_lines_feat(t *T) {
 	ee, tt, fx := s.iFX(t, func(c *icmpFX, e *Env) {
-		c.FF.Add(linesSelectable)
+		c.FF.Add(LinesSelectable)
 		fmt.Fprint(e, "first\nsecond")
 	}, 4)
 	tt.FireKey(tcell.KeyDown, tcell.ModNone)
@@ -127,7 +127,7 @@ func (s *LineHighlight) Next_triggered_by_selectable_lines_feat(t *T) {
 
 func (s *LineHighlight) Previous_triggered_by_selectable_lines_feat(t *T) {
 	ee, tt, fx := s.iFX(t, func(c *icmpFX, e *Env) {
-		c.FF.Add(linesSelectable)
+		c.FF.Add(LinesSelectable)
 		fmt.Fprint(e, "first\nsecond\nthird")
 		c.Highlight.Next()
 		c.Highlight.Next()
@@ -142,7 +142,7 @@ func (s *LineHighlight) Previous_triggered_by_selectable_lines_feat(t *T) {
 
 func (s *LineHighlight) Reset_triggered_by_selectable_lines_feat(t *T) {
 	ee, tt, fx := s.iFX(t, func(c *icmpFX, e *Env) {
-		c.FF.Add(linesSelectable)
+		c.FF.Add(LinesSelectable)
 		fmt.Fprint(e, "first\nsecond")
 		t.Eq(0, c.Highlight.Next())
 	}, 3)
@@ -178,7 +178,7 @@ func (s *LineHighlight) Reports_highlighted_line_by_sl_feature(t *T) {
 	reported := false
 	_, tt, _ := s.slFX(t,
 		func(c *icmpFX, e *Env) {
-			c.FF.Add(linesSelectable)
+			c.FF.Add(LinesSelectable)
 			fmt.Fprint(e, "first\nsecond")
 			c.Highlight.Next()
 			t.Eq(1, c.Highlight.Next())
@@ -191,6 +191,48 @@ func (s *LineHighlight) Reports_highlighted_line_by_sl_feature(t *T) {
 	)
 	tt.FireKey(tcell.KeyEnter, tcell.ModNone)
 	t.True(reported)
+}
+
+func (s *LineHighlight) Scrolls_to_next_highlighted_line(t *T) {
+	ee, tt, fx := s.iFX(t, func(c *icmpFX, e *Env) {
+		c.FF.Add(LinesSelectable)
+		c.dim.SetHeight(2)
+		fmt.Fprint(e.LL(0, NotSelectable), "line 1")
+		fmt.Fprint(e.LL(1, NotSelectable), "line 2")
+		fmt.Fprint(e.LL(2, NotSelectable), "line 3")
+		fmt.Fprint(e.LL(3, NotSelectable), "line 4")
+		fmt.Fprint(e.LL(4, NotSelectable), "line 5")
+		fmt.Fprint(e.LL(5), "line 6")
+		fmt.Fprint(e.LL(6), "line 7")
+	}, 3)
+	tt.FireKey(tcell.KeyDown, tcell.ModNone)
+	ee.Update(fx, nil, func(e *Env) {
+		t.Eq("line 5\nline 6", tt.Screen().String())
+	})
+}
+
+func (s *LineHighlight) Scrolls_to_previous_highlighted_line(t *T) {
+	ee, tt, fx := s.iFX(t, func(c *icmpFX, e *Env) {
+		c.FF.Add(LinesSelectable)
+		c.dim.SetHeight(2)
+		fmt.Fprint(e.LL(0, NotSelectable), "line 1")
+		fmt.Fprint(e.LL(1), "line 2")
+		fmt.Fprint(e.LL(2, NotSelectable), "line 3")
+		fmt.Fprint(e.LL(3, NotSelectable), "line 4")
+		fmt.Fprint(e.LL(4, NotSelectable), "line 5")
+		fmt.Fprint(e.LL(5), "line 6")
+		fmt.Fprint(e.LL(6), "line 7")
+	}, 5)
+	tt.FireKey(tcell.KeyDown, tcell.ModNone)
+	tt.FireKey(tcell.KeyDown, tcell.ModNone)
+	ee.Update(fx, nil, func(e *Env) {
+		t.Eq("line 5\nline 6", tt.Screen().String())
+	})
+
+	tt.FireKey(tcell.KeyUp, tcell.ModNone)
+	ee.Update(fx, nil, func(e *Env) {
+		t.Eq("line 2\nline 3", tt.Screen().String())
+	})
 }
 
 func TestLineHighlight(t *testing.T) {
