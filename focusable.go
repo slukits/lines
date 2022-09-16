@@ -46,7 +46,7 @@ func (s *LineFocus) Next(highlighted bool) int {
 
 func (s *LineFocus) Previous(highlighted bool) int {
 	initI := s.current - 1
-	if initI < 0 {
+	if s.current == -1 {
 		initI = len(*s.c.ll) - 1
 	}
 	old := s.current

@@ -30,7 +30,11 @@ func (ll *lines) append(ff LineFlags, fmt *llFmt, cc ...[]byte) {
 			ff:      ff,
 		}
 		if fmt != nil {
-			l.ss = lineStyles{Range{0, len(c)}: fmt.sty}
+			if fmt.mask&filled > 0 {
+				l.sty = &fmt.sty
+			} else {
+				l.ss = lineStyles{Range{0, len(c)}: fmt.sty}
+			}
 			l.fmt = fmt.mask
 		}
 		*ll = append(*ll, l)
@@ -58,7 +62,11 @@ func (ll *lines) replaceAt(
 		(*ll)[i].ss = nil
 		(*ll)[i].fmt = 0
 		if fmt != nil {
-			(*ll)[i].ss = lineStyles{Range{0, len(cc[j])}: fmt.sty}
+			if fmt.mask&filled > 0 {
+				(*ll)[i].sty = &fmt.sty
+			} else {
+				(*ll)[i].ss = lineStyles{Range{0, len(cc[j])}: fmt.sty}
+			}
 			(*ll)[i].fmt = fmt.mask
 		}
 		j++
@@ -110,6 +118,8 @@ type line struct {
 	// sub-strings of it.  It defaults to the component's formattings.
 	fmt FmtMask
 
+	sty *tcell.Style
+
 	ss lineStyles
 
 	ff LineFlags
@@ -135,9 +145,12 @@ type runeWriter interface {
 }
 
 func (l *line) sync(x, y, width int, rw runeWriter, fmt llFmt) {
+	if l.sty != nil {
+		fmt.sty = *l.sty
+	}
 	l.dirty = false
 	if l.fmt&filled|onetimeFilled > 0 {
-		l.fill(x, y, width, rw, fmt)
+		l.fill(x, y, width, rw, fmt.sty)
 		if l.fmt&onetimeFilled > 0 {
 			l.fmt &^= onetimeFilled
 		}
@@ -146,9 +159,9 @@ func (l *line) sync(x, y, width int, rw runeWriter, fmt llFmt) {
 	l.stale = ""
 }
 
-func (l *line) fill(x, y, width int, rw runeWriter, fmt llFmt) {
+func (l *line) fill(x, y, width int, rw runeWriter, sty tcell.Style) {
 	for i := x; i < x+width; i++ {
-		rw.SetContent(i, y, ' ', nil, fmt.sty)
+		rw.SetContent(i, y, ' ', nil, sty)
 	}
 	l.stale = ""
 }

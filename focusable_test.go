@@ -187,7 +187,6 @@ func (s *lineFocus) Focuses_previous_focusable_line(t *T) {
 			}
 		})
 
-	tt.FireRune('k') // not reported
 	tt.FireRune('j') // case 1
 	tt.FireRune('k') // case 2
 
