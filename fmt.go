@@ -17,6 +17,10 @@ const (
 	// filled indicates to fill the whole line with a set background
 	// color instead only the non-blank cells.
 	filled
+
+	// onetimeFilled like filled but the fmt-flag is removed one
+	// executed.  E.g. remove highlight.
+	onetimeFilled
 )
 
 // llFmt represents a lines (ll) formatting (fmt) properties for a

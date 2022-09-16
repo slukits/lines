@@ -136,25 +136,33 @@ type runeWriter interface {
 
 func (l *line) sync(x, y, width int, rw runeWriter, fmt llFmt) {
 	l.dirty = false
-	if l.fmt&filled == filled {
-		sty := l.ss.of(0, fmt.sty, l.ff)
-		for i := x; i < x+width; i++ {
-			rw.SetContent(i, y, ' ', nil, sty)
+	if l.fmt&filled|onetimeFilled > 0 {
+		l.fill(x, y, width, rw, fmt)
+		if l.fmt&onetimeFilled > 0 {
+			l.fmt &^= onetimeFilled
 		}
-		l.stale = ""
 	}
 	l.toScreen(x, y, width, rw, fmt.sty)
+	l.stale = ""
+}
+
+func (l *line) fill(x, y, width int, rw runeWriter, fmt llFmt) {
+	for i := x; i < x+width; i++ {
+		rw.SetContent(i, y, ' ', nil, fmt.sty)
+	}
 	l.stale = ""
 }
 
 func (l *line) SwitchHighlighted() {
 	if l.ff&Highlighted == Highlighted {
 		l.ff &^= Highlighted
+		l.fmt &^= filled
+		l.fmt |= onetimeFilled
 	} else {
 		l.ff |= Highlighted
+		l.fmt |= filled
 	}
 	l.dirty = true
-	l.fmt |= filled
 }
 
 func (l *line) toScreen(
