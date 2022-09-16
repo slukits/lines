@@ -45,12 +45,12 @@ func (s *LineFocus) Next(highlighted bool) int {
 }
 
 func (s *LineFocus) Previous(highlighted bool) int {
-	if s.current <= 0 {
-		s.Reset(highlighted)
-		return s.current
+	initI := s.current - 1
+	if initI < 0 {
+		initI = len(*s.c.ll) - 1
 	}
 	old := s.current
-	for i := s.current - 1; i >= 0; i-- {
+	for i := initI; i >= 0; i-- {
 		if (*s.c.ll)[i].ff&NotFocusable == NotFocusable {
 			continue
 		}
