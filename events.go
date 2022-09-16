@@ -240,7 +240,7 @@ func (ee *Events) Update(
 	if cmp == nil {
 		return nil
 	}
-	if ee.t != nil && !ee.isListening {
+	if ee.t != nil && !ee.IsListening() {
 		ee.t.listen()
 	}
 	evt := &UpdateEvent{
