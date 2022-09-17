@@ -217,27 +217,34 @@ func (c *component) SetDirty() {
 func (c *component) Dim() *lyt.Dim { return c.dim }
 
 // Reset blanks out the content of the line with given index the next
-// time it is printed to the screen.
+// time it is printed to the screen.  Provide line flags if for example
+// a reset line should not be focusable.
 func (c *component) Reset(idx int, ff ...LineFlags) {
 	if idx < -1 || idx >= c.Len() {
 		return
 	}
 
+	setFlags := func(l *line) {
+		if len(ff) == 0 {
+			return
+		}
+		_ff := LineFlags(0)
+		for _, f := range ff {
+			_ff |= f
+		}
+		l.ff = _ff
+	}
+
 	if idx == -1 {
 		for _, l := range *c.ll {
 			l.set("")
-			if len(ff) > 0 {
-				_ff := LineFlags(0)
-				for _, f := range ff {
-					_ff |= f
-				}
-				l.ff = _ff
-			}
+			setFlags(l)
 		}
 		return
 	}
 
 	(*c.ll)[idx].set("")
+	setFlags((*c.ll)[idx])
 }
 
 func (c *component) setInitialized() {
