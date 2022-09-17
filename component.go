@@ -218,7 +218,7 @@ func (c *component) Dim() *lyt.Dim { return c.dim }
 
 // Reset blanks out the content of the line with given index the next
 // time it is printed to the screen.
-func (c *component) Reset(idx int) {
+func (c *component) Reset(idx int, ff ...LineFlags) {
 	if idx < -1 || idx >= c.Len() {
 		return
 	}
@@ -226,6 +226,13 @@ func (c *component) Reset(idx int) {
 	if idx == -1 {
 		for _, l := range *c.ll {
 			l.set("")
+			if len(ff) > 0 {
+				_ff := LineFlags(0)
+				for _, f := range ff {
+					_ff |= f
+				}
+				l.ff = _ff
+			}
 		}
 		return
 	}
