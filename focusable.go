@@ -29,10 +29,12 @@ func (s *LineFocus) Next(highlighted bool) int {
 		if l.ff&NotFocusable == NotFocusable {
 			continue
 		}
-		if s.current >= 0 {
+		if s.current >= 0 && highlighted {
 			(*s.c.ll)[s.current].SwitchHighlighted()
 		}
-		l.SwitchHighlighted()
+		if highlighted {
+			l.SwitchHighlighted()
+		}
 		s.current = s.current + 1 + idx
 		break
 	}
@@ -54,10 +56,12 @@ func (s *LineFocus) Previous(highlighted bool) int {
 		if (*s.c.ll)[i].ff&NotFocusable == NotFocusable {
 			continue
 		}
-		if s.current >= 0 {
+		if s.current >= 0 && highlighted {
 			(*s.c.ll)[s.current].SwitchHighlighted()
 		}
-		(*s.c.ll)[i].SwitchHighlighted()
+		if highlighted {
+			(*s.c.ll)[i].SwitchHighlighted()
+		}
 		s.current = i
 		break
 	}
@@ -69,11 +73,15 @@ func (s *LineFocus) Previous(highlighted bool) int {
 	return s.current
 }
 
-func (s *LineFocus) Reset(highlighted bool) int {
+// Reset removes a set line-focus switching of a potential highlight
+// independent of given argument.
+func (s *LineFocus) Reset(_ bool) int {
 	if s.current == -1 {
 		return s.current
 	}
-	(*s.c.ll)[s.current].SwitchHighlighted()
+	if (*s.c.ll)[s.current].IsHighlighted() {
+		(*s.c.ll)[s.current].SwitchHighlighted()
+	}
 	s.current = -1
 	return s.current
 }

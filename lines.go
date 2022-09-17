@@ -178,6 +178,10 @@ func (l *line) SwitchHighlighted() {
 	l.dirty = true
 }
 
+func (l *line) IsHighlighted() bool {
+	return l.ff&Highlighted == Highlighted
+}
+
 func (l *line) toScreen(
 	x, y, width int, rw runeWriter, sty tcell.Style,
 ) {
