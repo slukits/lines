@@ -243,7 +243,7 @@ func (s *_Features) Reports_button_bindings_of_recursive_feature(t *T) {
 func (s *_Features) Ignore_setting_runes_for_comprised_features(t *T) {
 	fx := &cmpFFX{test: func(ff *Features) {
 		ff.SetRunesOf(Selectable, false, 's')
-		t.False(ff.Has(Selectable))
+		t.Not.True(ff.Has(Selectable))
 	}}
 	ee, _ := Test(t.GoT(), fx, 1)
 	ee.Listen()
@@ -253,7 +253,7 @@ func (s *_Features) Ignore_setting_keys_for_comprised_features(t *T) {
 	keyFX := FeatureKeys{{Key: tcell.KeyBacktab, Mod: tcell.ModAlt}}
 	fx := &cmpFFX{test: func(ff *Features) {
 		ff.SetKeysOf(Selectable, false, keyFX...)
-		t.False(ff.Has(Selectable))
+		t.Not.True(ff.Has(Selectable))
 	}}
 	ee, _ := Test(t.GoT(), fx, 1)
 	ee.Listen()
@@ -264,7 +264,7 @@ func (s *_Features) Ignore_setting_buttons_for_comprised_features(t *T) {
 		{Button: tcell.ButtonSecondary, Mod: tcell.ModAlt}}
 	fx := &cmpFFX{test: func(ff *Features) {
 		ff.SetButtonsOf(Selectable, false, bttFX...)
-		t.False(ff.Has(Selectable))
+		t.Not.True(ff.Has(Selectable))
 	}}
 	ee, _ := Test(t.GoT(), fx, 1)
 	ee.Listen()

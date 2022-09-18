@@ -136,8 +136,8 @@ func (s *env) Changes_fore_and_background_for_partial_line(t *T) {
 			t.True(ss.Of(i).HasFG(tcell.ColorWhite))
 			continue
 		}
-		t.False(ss.Of(i).HasBG(tcell.ColorRed))
-		t.False(ss.Of(i).HasFG(tcell.ColorWhite))
+		t.Not.True(ss.Of(i).HasBG(tcell.ColorRed))
+		t.Not.True(ss.Of(i).HasFG(tcell.ColorWhite))
 	}
 
 	ss = tt.LastScreen[2].Styles()

@@ -178,7 +178,7 @@ type KB struct{ Suite }
 func (s *KB) Key_listeners_are_registered(t *T) {
 	fx := &kbCmpFX{}
 	ee, _ := Test(t.GoT(), fx, 1)
-	t.False(fx.HasUpdatedKeyListener())
+	t.Not.True(fx.HasUpdatedKeyListener())
 	ee.Listen()
 	ee.QuitListening()
 	t.True(fx.HasUpdatedKeyListener())
@@ -187,7 +187,7 @@ func (s *KB) Key_listeners_are_registered(t *T) {
 func (s *KB) Rune_listeners_are_registered(t *T) {
 	fx := &kbCmpFX{}
 	ee, _ := Test(t.GoT(), fx, 1)
-	t.False(fx.HasUpdatedRuneListener())
+	t.Not.True(fx.HasUpdatedRuneListener())
 	ee.Listen()
 	ee.QuitListening()
 	t.True(fx.HasUpdatedRuneListener())
@@ -220,7 +220,7 @@ func (s *KB) Key_listeners_are_called(t *T) {
 	ee.UpdateKeys(fx) // deletes F1, registers F2
 	tt.FireKey(tcell.KeyF2, 0)
 	t.True(fx.len(keyListener) == 2)
-	t.False(ee.IsListening())
+	t.Not.True(ee.IsListening())
 }
 
 func (s *KB) Rune_listeners_are_called(t *T) {
@@ -230,14 +230,14 @@ func (s *KB) Rune_listeners_are_called(t *T) {
 	ee.UpdateRunes(fx) // deletes A, registers B
 	tt.FireRune('B')
 	t.True(fx.len(runeListener) == 2)
-	t.False(ee.IsListening())
+	t.Not.True(ee.IsListening())
 }
 
 func (s *KB) Reports_key(t *T) {
 	fx := &kbCmpFX{}
 	ee, tt := Test(t.GoT(), fx, 2)
 	tt.FireKey(tcell.KeyF1, 0)
-	t.False(ee.IsListening())
+	t.Not.True(ee.IsListening())
 	t.True(fx.HasKey())
 }
 
@@ -245,7 +245,7 @@ func (s *KB) Reports_rune(t *T) {
 	fx := &kbCmpFX{}
 	ee, tt := Test(t.GoT(), fx, 2)
 	tt.FireRune('A')
-	t.False(ee.IsListening())
+	t.Not.True(ee.IsListening())
 	t.True(fx.HasRune())
 }
 
@@ -269,7 +269,7 @@ func (s *KB) Bubbles_keys(t *T) {
 	// 2 x keyListener 2 x OnKey
 	ee, tt := Test(t.GoT(), fx, 4)
 	tt.FireKey(tcell.KeyF1, 0)
-	t.False(ee.IsListening())
+	t.Not.True(ee.IsListening())
 	t.True(fx.inner().HasKey())
 	t.True(fx.inner().len(keyListener) == 1)
 	t.True(fx.HasKey())
@@ -281,7 +281,7 @@ func (s *KB) Bubbles_runes(t *T) {
 	// 2 x runeListener 2 x OnRune
 	ee, tt := Test(t.GoT(), fx, 4)
 	tt.FireRune('A')
-	t.False(ee.IsListening())
+	t.Not.True(ee.IsListening())
 	t.True(fx.inner().HasRune())
 	t.True(fx.inner().len(runeListener) == 1)
 	t.True(fx.HasRune())
@@ -301,15 +301,15 @@ func (s *KB) Event_bubbling_may_be_stopped(t *T) {
 	tt.FireRune('A')           // reports runeListener only
 	tt.FireKey(tcell.KeyBS, 0) // report OnKey only
 	tt.FireRune('a')           // report OnRune only
-	t.False(ee.IsListening())
+	t.Not.True(ee.IsListening())
 	t.True(fx.inner().HasKey())
 	t.True(fx.inner().HasRune())
 	t.True(fx.inner().HasKeyListener())
 	t.True(fx.inner().HasRuneListener())
-	t.False(fx.HasKey())
-	t.False(fx.HasRune())
-	t.False(fx.HasKeyListener())
-	t.False(fx.HasRuneListener())
+	t.Not.True(fx.HasKey())
+	t.Not.True(fx.HasRune())
+	t.Not.True(fx.HasKeyListener())
+	t.Not.True(fx.HasRuneListener())
 }
 
 type icmpFX struct {

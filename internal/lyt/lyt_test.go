@@ -19,7 +19,7 @@ func (df *dimerFixture) Dim() *Dim { return df.dim }
 type dimerFactory struct{}
 
 // df produces test-fixtures implementing the Dimer interface which must
-// be implemented by any layouted component.
+// be implemented by any component in a layout.
 var df = &dimerFactory{}
 
 // New creates a Dimer with zero dimensions.
@@ -189,8 +189,8 @@ func (s *manager) Centers_horizontally_fixed_width_root(t *T) {
 
 func (s *manager) Makes_root_without_size_filling(t *T) {
 	m := mf.ScreenOf(&dimerFixture{dim: &Dim{}})
-	t.False(m.Root.Dim().IsFillingHeight())
-	t.False(m.Root.Dim().IsFillingWidth())
+	t.Not.True(m.Root.Dim().IsFillingHeight())
+	t.Not.True(m.Root.Dim().IsFillingWidth())
 
 	t.FatalOn(m.Reflow(nil))
 
@@ -214,7 +214,7 @@ func (s *manager) Accounts_for_clipping_checking_consistency(t *T) {
 		d.Dim().width += 2
 		d.Dim().height += 2
 		fx := mf.Of(sc)
-		t.False(fx.HasConsistentLayout())
+		t.Not.True(fx.HasConsistentLayout())
 		d.Dim().clipHeight = 2
 		d.Dim().clipWidth = 2
 		t.True(fx.HasConsistentLayout())
@@ -230,7 +230,7 @@ func (s *manager) Accounts_for_margins_checking_consistency(t *T) {
 		d.Dim().width -= 2
 		d.Dim().height -= 2
 		fx := mf.Of(sc)
-		t.False(fx.HasConsistentLayout())
+		t.Not.True(fx.HasConsistentLayout())
 		d.Dim().mrgTop = 1
 		d.Dim().mrgRight = 1
 		d.Dim().mrgBottom = 1
@@ -250,7 +250,7 @@ func (s *manager) Leafs_printable_hight_after_update(t *T) {
 	t.Eq(10, h)
 	fx.Root.(*stackerFX).dd[0].Dim().UpdateHeight(1)
 	fx.Reflow(nil)
-	t.False(fx.Root.(*stackerFX).dd[0].Dim().IsDirty())
+	t.Not.True(fx.Root.(*stackerFX).dd[0].Dim().IsDirty())
 	_, _, _, h = fx.Root.(*stackerFX).dd[0].Dim().Area()
 	t.Eq(10, h)
 }
@@ -262,7 +262,7 @@ func (s *manager) Leafs_printable_width_after_update(t *T) {
 	t.Eq(10, w)
 	fx.Root.(*stackerFX).dd[0].Dim().UpdateWidth(1)
 	fx.Reflow(nil)
-	t.False(fx.Root.(*stackerFX).dd[0].Dim().IsDirty())
+	t.Not.True(fx.Root.(*stackerFX).dd[0].Dim().IsDirty())
 	_, _, w, _ = fx.Root.(*stackerFX).dd[0].Dim().Area()
 	t.Eq(10, w)
 }
@@ -328,8 +328,8 @@ func (s *manager) Provides_nil_path_if_dimer_not_locatable(t *T) {
 
 func (s *manager) Recursively_layouts_stacked_dimer(t *T) {
 	fx := sf.New(df.Fixed(), sf.Filling(df.Fixed(), df.Filling()))
-	t.False(fx.HasConsistentLayout())
-	t.False(fx.dd[1].(*stackerFX).HasConsistentLayout())
+	t.Not.True(fx.HasConsistentLayout())
+	t.Not.True(fx.dd[1].(*stackerFX).HasConsistentLayout())
 	t.FatalOn((&Manager{Root: fx}).Reflow(nil))
 	t.True(fx.HasConsistentLayout())
 	t.True(fx.dd[1].(*stackerFX).HasConsistentLayout())

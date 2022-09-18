@@ -173,7 +173,7 @@ func (s *Mouse) Click_is_reported_to_focused_component(t *T) {
 	// reports OnClick and OnMouse bubbling hence Max == 4
 	ee, tt := Test(t.GoT(), fx, 2)
 	tt.FireClick(1, 1)
-	t.False(ee.IsListening())
+	t.Not.True(ee.IsListening())
 	t.True(fx.HasClick())
 }
 
@@ -181,7 +181,7 @@ func (s *Mouse) Context_is_reported_to_focused_component(t *T) {
 	fx := &mouseCmpFX{}
 	ee, tt := Test(t.GoT(), fx, 2)
 	tt.FireContext(1, 1)
-	t.False(ee.IsListening())
+	t.Not.True(ee.IsListening())
 	t.True(fx.HasContext())
 }
 
@@ -189,7 +189,7 @@ func (s *Mouse) Event_is_reported_to_focused_component(t *T) {
 	fx := &mouseCmpFX{}
 	ee, tt := Test(t.GoT(), fx, 1)
 	tt.FireMouse(1, 1, tcell.ButtonMiddle, 0)
-	t.False(ee.IsListening())
+	t.Not.True(ee.IsListening())
 	t.True(fx.HasMouse())
 }
 
@@ -201,7 +201,7 @@ func (s *Mouse) Click_moves_focus_and_reports_to_focusable(t *T) {
 	var fxX, fxY int
 	ee.Update(fx.cmp(), nil, func(e *Env) {
 		fx.cmp().FF.Add(Focusable)
-		t.False(e.Focused() == fx.cmp())
+		t.Not.True(e.Focused() == fx.cmp())
 		// need an event callback to access component features
 		fxX, fxY = fx.cmp().Dim().X(), fx.cmp().Dim().Y()
 	})
@@ -209,7 +209,7 @@ func (s *Mouse) Click_moves_focus_and_reports_to_focusable(t *T) {
 	ee.Update(fx.cmp(), nil, func(e *Env) {
 		t.True(e.Focused() == fx.cmp())
 	})
-	t.False(ee.IsListening())
+	t.Not.True(ee.IsListening())
 	t.True(fx.cmp().HasClick())
 }
 
@@ -221,7 +221,7 @@ func (s *Mouse) Context_moves_focus_and_reports_to_focusable(t *T) {
 	var fxX, fxY int
 	ee.Update(fx.cmp(), nil, func(e *Env) {
 		fx.cmp().FF.Add(Focusable)
-		t.False(e.Focused() == fx.cmp())
+		t.Not.True(e.Focused() == fx.cmp())
 		// need an event callback to access component features
 		fxX, fxY = fx.cmp().Dim().X(), fx.cmp().Dim().Y()
 	})
@@ -229,7 +229,7 @@ func (s *Mouse) Context_moves_focus_and_reports_to_focusable(t *T) {
 	ee.Update(fx.cmp(), nil, func(e *Env) {
 		t.True(e.Focused() == fx.cmp())
 	})
-	t.False(ee.IsListening())
+	t.Not.True(ee.IsListening())
 	t.True(fx.cmp().HasContext())
 }
 
@@ -241,7 +241,7 @@ func (s *Mouse) Event_moves_focus_and_reports_to_focusable(t *T) {
 	var fxX, fxY int
 	ee.Update(fx.cmp(), nil, func(e *Env) {
 		fx.cmp().FF.Add(Focusable)
-		t.False(e.Focused() == fx.cmp())
+		t.Not.True(e.Focused() == fx.cmp())
 		// need an event callback to access component features
 		fxX, fxY = fx.cmp().Dim().X(), fx.cmp().Dim().Y()
 	})
@@ -249,7 +249,7 @@ func (s *Mouse) Event_moves_focus_and_reports_to_focusable(t *T) {
 	ee.Update(fx.cmp(), nil, func(e *Env) {
 		t.True(e.Focused() == fx.cmp())
 	})
-	t.False(ee.IsListening())
+	t.Not.True(ee.IsListening())
 	t.True(fx.cmp().HasMouse())
 }
 
@@ -260,7 +260,7 @@ func (s *Mouse) Is_reported_along_with_other_mouse_listener(t *T) {
 	ee.Listen()
 	tt.FireClick(1, 1)
 	tt.FireContext(1, 1)
-	t.False(ee.IsListening())
+	t.Not.True(ee.IsListening())
 	t.FatalIfNot(fx.HasClick())
 	t.FatalIfNot(fx.HasContext())
 	t.FatalIfNot(fx.HasMouse())
@@ -279,7 +279,7 @@ func (s *Mouse) Event_coordinates_are_translated_into_component(t *T) {
 	})
 	tt.FireClick(fxX+1, fxY+1)
 	tt.FireContext(fxX+1, fxY+1)
-	t.False(ee.IsListening())
+	t.Not.True(ee.IsListening())
 	x, y := fx.cmp().ClickXY()
 	t.True(x == 1 && y == 1)
 	x, y = fx.cmp().ContextXY()
@@ -309,7 +309,7 @@ func (s *Mouse) Events_are_bubbling(t *T) {
 	tt.FireClick(fxX+1, fxY+1)
 	tt.FireContext(fxX+1, fxY+1)
 	tt.FireMouse(fxX+1, fxY+1, tcell.ButtonMiddle, 0)
-	t.False(ee.IsListening())
+	t.Not.True(ee.IsListening())
 	chainer := fx.CC[1].(*nonZeroOriginChainFx)
 	t.True(chainer.reported.len(onMouse) == 3)
 	t.True(chainer.reported.len(onClick) == 1)
@@ -332,11 +332,11 @@ func (s *Mouse) Event_bubbling_may_be_stopped(t *T) {
 	tt.FireClick(fxX+1, fxY+1)
 	tt.FireContext(fxX+1, fxY+1)
 	tt.FireMouse(fxX+1, fxY+1, tcell.ButtonMiddle, 0)
-	t.False(ee.IsListening())
+	t.Not.True(ee.IsListening())
 	chainer := fx.CC[1].(*nonZeroOriginChainFx)
-	t.False(chainer.HasClick())
-	t.False(chainer.HasContext())
-	t.False(chainer.HasMouse())
+	t.Not.True(chainer.HasClick())
+	t.Not.True(chainer.HasContext())
+	t.Not.True(chainer.HasMouse())
 	t.True(fx.cmp().LenMouse() == 1)
 }
 

@@ -29,14 +29,14 @@ func (s *_Dim) Ignores_width_update_resulting_in_non_positive_width(
 	t *T,
 ) {
 	fx := DimFixed(10, 10)
-	t.False(fx.IsUpdated())
+	t.Not.True(fx.IsUpdated())
 	fx.UpdateWidth(-10)
-	t.False(fx.IsUpdated())
+	t.Not.True(fx.IsUpdated())
 }
 
 func (s *_Dim) Is_updated_after_valid_width_update(t *T) {
 	fx := DimFixed(10, 10)
-	t.False(fx.IsUpdated())
+	t.Not.True(fx.IsUpdated())
 	fx.UpdateWidth(-5)
 	t.True(fx.IsUpdated())
 }
@@ -45,14 +45,14 @@ func (s *_Dim) Ignores_height_update_resulting_in_non_positive_height(
 	t *T,
 ) {
 	fx := DimFixed(10, 10)
-	t.False(fx.IsUpdated())
+	t.Not.True(fx.IsUpdated())
 	fx.UpdateHeight(-10)
-	t.False(fx.IsUpdated())
+	t.Not.True(fx.IsUpdated())
 }
 
 func (s *_Dim) Is_updated_after_valid_height_update(t *T) {
 	fx := DimFixed(10, 10)
-	t.False(fx.IsUpdated())
+	t.Not.True(fx.IsUpdated())
 	fx.UpdateHeight(-5)
 	t.True(fx.IsUpdated())
 }
@@ -61,14 +61,14 @@ func (s *_Dim) Stops_filling_width_if_width_set(t *T) {
 	fx := DimFillingWidth(1, 10)
 	t.True(fx.IsFillingWidth())
 	fx.SetWidth(5)
-	t.False(fx.IsFillingWidth())
+	t.Not.True(fx.IsFillingWidth())
 }
 
 func (s *_Dim) Stops_filling_height_if_height_set(t *T) {
 	fx := DimFillingHeight(10, 1)
 	t.True(fx.IsFillingHeight())
 	fx.SetHeight(5)
-	t.False(fx.IsFillingHeight())
+	t.Not.True(fx.IsFillingHeight())
 }
 
 func (s *_Dim) Is_not_dirty_after_being_cleaned(t *T) {
@@ -78,7 +78,7 @@ func (s *_Dim) Is_not_dirty_after_being_cleaned(t *T) {
 	fx.finalizeLayout(d)
 	t.True(fx.IsDirty())
 	fx.setClean()
-	t.False(fx.IsDirty())
+	t.Not.True(fx.IsDirty())
 }
 
 func TestDim(t *testing.T) {

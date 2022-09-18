@@ -35,7 +35,7 @@ func (s *_component) Has_same_line_count_if_one_line_overwrite(t *T) {
 		fmt.Fprint(e, "one line")
 		t.Eq(2, cmp.Len())
 	})
-	t.False(ee.IsListening())
+	t.Not.True(ee.IsListening())
 	// but second line is empty now
 	t.Eq("one line", tt.LastScreen.String())
 }

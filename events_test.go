@@ -55,7 +55,7 @@ func (s *events) Reports_quit_key_events_to_all_quitter(t *T) {
 		tt.FireKey(k.Key, k.Mod)
 		t.True(fx.q1.quitReported)
 		t.True(fx.q2.quitReported)
-		t.False(ee.IsListening())
+		t.Not.True(ee.IsListening())
 	}
 }
 
@@ -86,7 +86,7 @@ func (s *events) Reports_update_to_provided_listener(t *T) {
 	ee.Listen()
 	ee.Update(fx, nil, func(_ *Env) { fx.reported = true })
 	t.True(fx.reported)
-	t.False(ee.IsListening())
+	t.Not.True(ee.IsListening())
 }
 
 type updCmpFX struct {
@@ -102,7 +102,7 @@ func (s *events) Reports_update_without_listener_to_component(t *T) {
 	ee.Listen()
 	ee.Update(fx, nil, nil)
 	t.True(fx.reported)
-	t.False(ee.IsListening())
+	t.Not.True(ee.IsListening())
 }
 
 type stackedCmpFX struct {
@@ -134,7 +134,7 @@ func (s *events) Reports_moved_focus_gaining_and_loosing(t *T) {
 	ee.MoveFocus(fx.cc[0])
 	t.True(fx.lostFocus)
 	t.True(fx.cc[0].(*fcsCmpFX).gainedFocus)
-	t.False(ee.IsListening())
+	t.Not.True(ee.IsListening())
 }
 
 func TestEvents(t *testing.T) {
