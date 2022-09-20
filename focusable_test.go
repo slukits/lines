@@ -100,6 +100,7 @@ func (s *lineFocus) Focuses_first_focusable_line(t *T) {
 			switch c.lfN {
 			case 1:
 				t.Eq(0, c.Focus.Current())
+				t.True(c.LL(c.Focus.Current()).IsFocusable())
 			case 2:
 				t.Eq(1, c.Focus.Current())
 			}

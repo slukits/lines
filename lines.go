@@ -182,6 +182,10 @@ func (l *line) IsHighlighted() bool {
 	return l.ff&Highlighted == Highlighted
 }
 
+func (l *line) IsFocusable() bool {
+	return l.ff&NotFocusable == 0
+}
+
 func (l *line) toScreen(
 	x, y, width int, rw runeWriter, sty tcell.Style,
 ) {
