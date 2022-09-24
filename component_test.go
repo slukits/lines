@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	. "github.com/slukits/gounit"
 )
@@ -336,7 +337,7 @@ func (s *_component) Is_replaceable(t *T) {
 	t.Eq(fx.short, str)
 }
 
-func (s *_component) Fills_line_at_unit_separators(t *T) {
+func (s *_component) Fills_line_at_line_fillers(t *T) {
 	fx := &icmpFX{init: func(c *icmpFX, e *Env) {
 		c.Dim().SetHeight(1).SetWidth(8)
 		fmt.Fprintf(e, "a%sb", LineFiller)
@@ -363,3 +364,36 @@ func TestComponent(t *testing.T) {
 	t.Parallel()
 	Run(&_component{}, t)
 }
+
+type dbg struct{ Suite }
+
+type cmp struct {
+	Component
+	mouse func(*Env)
+}
+
+func (c *cmp) OnClick(e *Env, _, _ int) {
+	c.mouse(e)
+}
+
+func (c *cmp) OnUpdate(e *Env) {
+	fmt.Fprint(e, e.Evt.(*UpdateEvent).Data.(string))
+}
+
+func (s *dbg) Dbg(t *T) {
+	i := 0
+	fx := &cmp{}
+	fx.mouse = func(e *Env) {
+		i++
+		time.Sleep(10 * time.Millisecond)
+		e.EE.Update(fx, fmt.Sprintf("update %d", i), nil)
+	}
+	ee, tt := Test(t.GoT(), fx)
+	defer ee.QuitListening()
+	for i := 0; i < 10; i++ {
+		tt.FireClick(0, 0)
+	}
+	t.Eq(tt.Screen().String(), "update 10")
+}
+
+func TestDBG(t *testing.T) { Run(&dbg{}, t) }

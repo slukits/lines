@@ -227,7 +227,7 @@ func (s *lineFocus) Reset_triggered_by_unfocusable_feature(t *T) {
 }
 
 func (s *lineFocus) Scrolls_to_next_highlighted_line(t *T) {
-	ee, tt, fx := s.lfFX(t,
+	_, tt, fx := s.lfFX(t,
 		func(c *lfCmpFX, e *Env) {
 			c.dim.SetHeight(2)
 			fmt.Fprint(e.LL(0, NotFocusable), "line 1")
@@ -244,15 +244,13 @@ func (s *lineFocus) Scrolls_to_next_highlighted_line(t *T) {
 
 	tt.FireKey(tcell.KeyDown)
 
-	ee.Update(fx, nil, func(e *Env) {
-		t.Eq("line 5\nline 6", tt.Screen().String())
-	})
+	t.Eq("line 5\nline 6", tt.Screen().String())
 
 	t.Eq(1, fx.lfN)
 }
 
 func (s *lineFocus) Scrolls_to_previous_highlighted_line(t *T) {
-	ee, tt, fx := s.lfFX(t,
+	_, tt, fx := s.lfFX(t,
 		func(c *lfCmpFX, e *Env) {
 			c.dim.SetHeight(2)
 			fmt.Fprint(e.LL(0, NotFocusable), "line 1")
@@ -275,16 +273,11 @@ func (s *lineFocus) Scrolls_to_previous_highlighted_line(t *T) {
 	tt.FireKey(tcell.KeyDown)
 	tt.FireKey(tcell.KeyDown)
 
-	ee.Update(fx, nil, func(e *Env) {
-		t.Eq("line 5\nline 6", tt.Screen().String())
-	})
+	t.Eq("line 5\nline 6", tt.Screen().String())
 
 	tt.FireKey(tcell.KeyUp)
 
-	ee.Update(fx, nil, func(e *Env) {
-		t.Eq("line 2\nline 3", tt.Screen().String())
-	})
-
+	t.Eq("line 2\nline 3", tt.Screen().String())
 	t.Eq(3, fx.lfN)
 }
 

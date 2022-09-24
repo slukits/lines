@@ -403,19 +403,43 @@ func syncClosure(tt *Testing, err string, done chan bool) func() {
 
 func (tt *Testing) beforeFinalize() {
 	tt.terminated = true
-	tt.LastScreen = tt.Screen()
+	ts, start := TestScreen{}, 0
+	b, w, h := tt.lib.GetContents()
+	for i := 0; i < h; i++ {
+		l := TestLine{}
+		for _, c := range b[start : start+w] {
+			if len(c.Runes) == 0 {
+				l = append(l, testCell{r: ' ', sty: c.Style})
+				continue
+			}
+			l = append(l, testCell{r: c.Runes[0], sty: c.Style})
+		}
+		ts = append(ts, l)
+		start += w
+	}
+	tt.LastScreen = ts.TrimVertical().TrimHorizontal()
 }
 
-// String provides a string representation of the current screen content.
+// String provides a string representation of the current screen
+// content.  NOTE do not use this function inside an Update-event
+// listener.
 func (tt *Testing) String() string {
-	b, w, _ := tt.lib.GetContents()
 	bld := &strings.Builder{}
-	for i, c := range b {
-		bld.WriteRune(c.Runes[0])
-		if (i+1)%w == 0 {
-			bld.WriteRune('\n')
-		}
+	if tt.ee.scr.focus == nil {
+		return ""
 	}
+	tt.ee.Update(tt.ee.scr.focus.userComponent(), nil, func(e *Env) {
+		b, w, _ := tt.lib.GetContents()
+		for i, c := range b {
+			bld.WriteRune(c.Runes[0])
+			if (i+1)%w == 0 {
+				bld.WriteRune('\n')
+			}
+		}
+		if tt.Max > 0 { // don't count this event
+			tt.Max++
+		}
+	})
 	return bld.String()[:bld.Len()-1]
 }
 
@@ -432,58 +456,74 @@ func (tt *Testing) String() string {
 //	|                    |       +------------+
 //	+--------------------+
 //
-// A cell is considered blank if its rune is ' ', '\t' or '\r'
+// A cell is considered blank if its rune is ' ', '\t' or '\r'.   NOTE
+// do not use this method inside an Update-event listener.
 func (tt *Testing) Screen() TestScreen {
 	return tt.FullScreen().TrimVertical().TrimHorizontal()
 }
 
 // FullScreen returns a matrix of test cells holding a copy of each
-// tcell's sim-cell rune and style information.
+// tcell's sim-cell rune and style information.  NOTE do not use this
+// method inside an Update-event listener.
 func (tt *Testing) FullScreen() TestScreen {
 	ts, start := TestScreen{}, 0
-	b, w, h := tt.lib.GetContents()
-	for i := 0; i < h; i++ {
-		l := TestLine{}
-		for _, c := range b[start : start+w] {
-			if len(c.Runes) == 0 {
-				l = append(l, testCell{r: ' ', sty: c.Style})
-				continue
-			}
-			l = append(l, testCell{r: c.Runes[0], sty: c.Style})
-		}
-		ts = append(ts, l)
-		start += w
+	if tt.ee.scr.focus == nil {
+		return ts
 	}
+	tt.ee.Update(tt.ee.scr.focus.userComponent(), nil, func(e *Env) {
+		b, w, h := tt.lib.GetContents()
+		for i := 0; i < h; i++ {
+			l := TestLine{}
+			for _, c := range b[start : start+w] {
+				if len(c.Runes) == 0 {
+					l = append(l, testCell{r: ' ', sty: c.Style})
+					continue
+				}
+				l = append(l, testCell{r: c.Runes[0], sty: c.Style})
+			}
+			ts = append(ts, l)
+			start += w
+		}
+		if tt.Max > 0 { // don't count this event
+			tt.Max++
+		}
+	})
 	return ts
 }
 
 // ScreenOf provides the screen-portion of given componenter, i.e.
 // including margins and without clippings.  The returned TestScreen is
 // nil if given componenter is not part of the layout or off-screen.
+// NOTE do not use this method inside an Update-event listener.
 func (tt *Testing) ScreenOf(c Componenter) TestScreen {
 	if !c.hasLayoutWrapper() {
 		return nil
 	}
-	dim := c.layoutComponent().wrapped().Dim()
-	if dim.IsOffScreen() {
-		return nil
-	}
-
-	b, w, _ := tt.lib.GetContents()
-	ts := TestScreen{}
-	_, y, width, height := dim.Rect()
-	for i := y; i < y+height; i++ {
-		l, start := TestLine{}, i*w
-		for _, c := range b[start : start+width] {
-			if len(c.Runes) == 0 {
-				l = append(l, testCell{r: ' ', sty: c.Style})
-				continue
-			}
-			l = append(l, testCell{r: c.Runes[0], sty: c.Style})
+	var ts TestScreen
+	tt.ee.Update(c, nil, func(e *Env) {
+		dim := c.layoutComponent().wrapped().Dim()
+		if dim.IsOffScreen() {
+			return
 		}
-		ts = append(ts, l)
-	}
 
+		b, w, _ := tt.lib.GetContents()
+		ts = TestScreen{}
+		_, y, width, height := dim.Rect()
+		for i := y; i < y+height; i++ {
+			l, start := TestLine{}, i*w
+			for _, c := range b[start : start+width] {
+				if len(c.Runes) == 0 {
+					l = append(l, testCell{r: ' ', sty: c.Style})
+					continue
+				}
+				l = append(l, testCell{r: c.Runes[0], sty: c.Style})
+			}
+			ts = append(ts, l)
+		}
+		if tt.Max > 0 { // don't count this event
+			tt.Max++
+		}
+	})
 	return ts
 }
 
