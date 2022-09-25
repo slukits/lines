@@ -94,7 +94,7 @@ func Test(t *testing.T, c Componenter, max ...int) (*Events, *Testing) {
 		ee:       ee,
 		lib:      scr.lib.(tcell.SimulationScreen),
 		t:        t,
-		Timeout:  200 * time.Millisecond,
+		Timeout:  300 * time.Millisecond,
 		syncWait: make(chan (chan bool)),
 	}
 	go syncGroup(ee.t.syncWait, ee.synced)
