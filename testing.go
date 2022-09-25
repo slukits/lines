@@ -122,6 +122,13 @@ func (tt *Testing) SetMax(m int) *Events {
 	return tt.ee
 }
 
+func (tt *Testing) Root() Componenter {
+	if tt.ee.scr.lyt.Root == nil {
+		tt.t.Fatal("testing: root: layout not initialized")
+	}
+	return tt.ee.scr.root().userComponent()
+}
+
 func decrement(tt *Testing) func() {
 	return func() {
 		tt.Max--
@@ -685,25 +692,6 @@ func (l TestLine) blankSuffix() int {
 		break
 	}
 	return n
-}
-
-// Range is a two component array of which the first component should be
-// smaller than the second, i.e. r.Start() <= r.End() if r is a
-// Range-instance.
-type Range [2]int
-
-// Start index of a [lines.TestLine] style range.  Not the start index
-// is inclusive.
-func (r Range) Start() int { return r[0] }
-
-// End index of a [lines.TestLine] style range.  Note the end index is
-// exclusive.
-func (r Range) End() int { return r[1] }
-
-// Contains returns true if given i is in the style range r
-// [r.Start,r.End[.
-func (r Range) Contains(i int) bool {
-	return r.Start() <= i && i < r.End()
 }
 
 // LineTestStyles are provided by a [lines.TestLine] of a [lines.TestScreen]

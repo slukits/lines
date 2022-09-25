@@ -11,7 +11,7 @@ type LineFocus struct {
 	current int
 }
 
-// Current returns the line-index of the currently highlighted line.
+// Current returns the line-index of the currently focused line.
 func (s *LineFocus) Current() int {
 	return s.current
 }

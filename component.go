@@ -228,27 +228,19 @@ func (c *component) Reset(idx int, ff ...LineFlags) {
 		return
 	}
 
-	setFlags := func(l *line) {
-		if len(ff) == 0 {
-			return
-		}
-		_ff := LineFlags(0)
-		for _, f := range ff {
-			_ff |= f
-		}
-		l.ff = _ff
+	_ff := LineFlags(0)
+	for _, f := range ff {
+		_ff |= f
 	}
 
 	if idx == -1 {
 		for _, l := range *c.ll {
-			l.set("")
-			setFlags(l)
+			l.set("").ff = _ff
 		}
 		return
 	}
 
-	(*c.ll)[idx].set("")
-	setFlags((*c.ll)[idx])
+	(*c.ll)[idx].set("").ff = _ff
 }
 
 func (c *component) setInitialized() {
@@ -294,7 +286,7 @@ func (c *component) sync(rw runeWriter) {
 		if i >= sh {
 			return true
 		}
-		l.sync(sx, sy+i, sw, rw, c.fmt)
+		l.sync(sx, sy+i, sw, rw)
 		return false
 	})
 }
@@ -324,17 +316,17 @@ func (c *component) setFirst(f int) {
 }
 
 func (c *component) write(
-	bb []byte, at int, ff LineFlags, f *llFmt,
+	bb []byte, line, cell int, ff LineFlags, sty tcell.Style,
 ) (int, error) {
 	switch {
 	case c.mod&(Appending|Tailing) != 0:
-		c.ll.append(ff, f, bytes.Split(bb, []byte("\n"))...)
+		c.ll.append(ff, sty, bytes.Split(bb, []byte("\n"))...)
 	default:
-		if at == -1 {
-			c.Reset(at)
-			at = 0
+		if line == -1 {
+			c.Reset(line)
+			line = 0
 		}
-		c.ll.replaceAt(at, ff, f, bytes.Split(bb, []byte("\n"))...)
+		c.ll.replaceAt(line, cell, ff, sty, bytes.Split(bb, []byte("\n"))...)
 	}
 	return len(bb), nil
 }

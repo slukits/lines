@@ -100,7 +100,7 @@ func (s *lineFocus) Focuses_first_focusable_line(t *T) {
 			switch c.lfN {
 			case 1:
 				t.Eq(0, c.Focus.Current())
-				t.True(c.LL(c.Focus.Current()).IsFocusable())
+				// t.True(c.LL(c.Focus.Current()).IsFocusable())
 			case 2:
 				t.Eq(1, c.Focus.Current())
 			}
@@ -284,6 +284,7 @@ func (s *lineFocus) Scrolls_to_previous_highlighted_line(t *T) {
 func (s *lineFocus) Inverts_bg_fg_of_focused_if_highlighted(t *T) {
 	_, tt, fx := s.lfFX(t,
 		func(c *lfCmpFX, e *Env) {
+			c.FF.Add(HighlightedFocusable)
 			c.dim.SetHeight(2)
 			fmt.Fprint(e.LL(0, NotFocusable), "line 1")
 			fmt.Fprint(e.LL(1), "line 2")
@@ -296,16 +297,23 @@ func (s *lineFocus) Inverts_bg_fg_of_focused_if_highlighted(t *T) {
 		})
 
 	scr := tt.Screen()
-	l1, l2 := scr[0], scr[1]
-	t.Eq(l1.Styles().Of(0).BG(), l2.Styles().Of(0).BG())
-	t.Eq(l1.Styles().Of(0).FG(), l2.Styles().Of(0).FG())
+	l2 := scr[1]
+	for idx := range scr[1].String() {
+		t.Not.True(l2.Styles().Of(idx).Has(tcell.AttrReverse))
+	}
 
 	tt.FireKey(tcell.KeyDown)
 	t.Eq(1, fx.lfN)
 
-	t.Eq(l1.Styles().Of(0).BG(), l2.Styles().Of(0).FG())
-	t.Eq(l1.Styles().Of(0).FG(), l2.Styles().Of(0).BG())
-
+	scr = tt.Screen()
+	l2 = scr[1]
+	for idx := range scr[1].String() {
+		if idx < len("line 2") {
+			t.True(l2.Styles().Of(idx).Has(tcell.AttrReverse))
+			continue
+		}
+		t.Not.True(l2.Styles().Of(idx).Has(tcell.AttrReverse))
+	}
 }
 
 type lsCmpFX struct {

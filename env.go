@@ -61,13 +61,14 @@ type Env struct {
 }
 
 type cmpWriter interface {
-	write(lines []byte, at int, ff LineFlags, fmt *llFmt) (int, error)
+	write(lines []byte, at, cell int, ff LineFlags, sty tcell.Style) (int, error)
 }
 
 // Write writes to the screen area of the component having given
 // environment.
 func (e *Env) Write(bb []byte) (int, error) {
-	return e.cmp.(cmpWriter).write(bb, -1, 0, nil)
+	return e.cmp.(cmpWriter).write(bb, -1, -1, 0,
+		e.cmp.embedded().fmt.sty)
 }
 
 // Fmt sets the next write's formattings like centered.
@@ -77,20 +78,20 @@ func (e *Env) Write(bb []byte) (int, error) {
 
 // Attr sets the next write's style attributes like bold.
 func (e *Env) Attr(aa tcell.AttrMask) *FmtWriter {
-	return &FmtWriter{cmp: e.cmp.(cmpWriter), fmt: &llFmt{
-		sty: e.cmp.embedded().fmt.sty.Attributes(aa)}}
+	return &FmtWriter{cmp: e.cmp.(cmpWriter),
+		sty: e.cmp.embedded().fmt.sty.Attributes(aa)}
 }
 
 // FG sets the next write's foreground color.
 func (e *Env) FG(color tcell.Color) *FmtWriter {
-	return &FmtWriter{cmp: e.cmp.(cmpWriter), fmt: &llFmt{
-		sty: e.cmp.embedded().fmt.sty.Foreground(color)}}
+	return &FmtWriter{cmp: e.cmp.(cmpWriter),
+		sty: e.cmp.embedded().fmt.sty.Foreground(color)}
 }
 
 // BG sets the next write's foreground color.
-func (e *Env) BG(color tcell.Color) *BGWriter {
-	return &BGWriter{cmp: e.cmp.(cmpWriter), fmt: &llFmt{
-		sty: e.cmp.embedded().fmt.sty.Background(color)}}
+func (e *Env) BG(color tcell.Color) *FmtWriter {
+	return &FmtWriter{cmp: e.cmp.(cmpWriter),
+		sty: e.cmp.embedded().fmt.sty.Background(color)}
 }
 
 // LL returns a writer which writes to the line and its following lines
@@ -100,7 +101,17 @@ func (e *Env) LL(idx int, ff ...LineFlags) *locWriter {
 	for _, f := range ff {
 		_ff |= f
 	}
-	return &locWriter{at: idx, ff: _ff, cmp: e.cmp.(cmpWriter)}
+	return &locWriter{line: idx, cell: -1, ff: _ff, cmp: e.cmp.(cmpWriter)}
+}
+
+// At returns a writer which writes to given line at given position
+// adding given line flags to the line's flags.
+func (e *Env) At(line, cell int, ff ...LineFlags) *locWriter {
+	_ff := LineFlags(0)
+	for _, f := range ff {
+		_ff |= f
+	}
+	return &locWriter{line: line, cell: cell, ff: _ff, cmp: e.cmp.(cmpWriter)}
 }
 
 // Focused returns the currently focused component.  Please remember to

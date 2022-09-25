@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"strings"
 	"testing"
-	"time"
 
 	. "github.com/slukits/gounit"
 )
@@ -26,7 +25,17 @@ func (s *_component) Access_panics_outside_event_processing(t *T) {
 	t.Panics(func() { cmp.Dim().SetHeight(20) })
 }
 
-func (s *_component) Has_same_line_count_if_one_line_overwrite(t *T) {
+func (s *_component) Creates_needed_lines_on_write(t *T) {
+	ee, tt := Test(t.GoT(), &cmpFX{}, 1)
+	ee.Update(tt.Root(), nil, func(e *Env) {
+		fx := tt.Root().(*cmpFX)
+		t.Eq(0, fx.Len())
+		fmt.Fprint(e, "first\nsecond\nthird")
+		t.Eq(3, fx.Len())
+	})
+}
+
+func (s *_component) Doesnt_change_line_count_on_line_overwrite(t *T) {
 	cmp := &cmpFX{}
 	ee, tt := Test(t.GoT(), cmp, 1)
 	ee.Update(cmp, nil, func(e *Env) {
@@ -364,36 +373,3 @@ func TestComponent(t *testing.T) {
 	t.Parallel()
 	Run(&_component{}, t)
 }
-
-type dbg struct{ Suite }
-
-type cmp struct {
-	Component
-	mouse func(*Env)
-}
-
-func (c *cmp) OnClick(e *Env, _, _ int) {
-	c.mouse(e)
-}
-
-func (c *cmp) OnUpdate(e *Env) {
-	fmt.Fprint(e, e.Evt.(*UpdateEvent).Data.(string))
-}
-
-func (s *dbg) Dbg(t *T) {
-	i := 0
-	fx := &cmp{}
-	fx.mouse = func(e *Env) {
-		i++
-		time.Sleep(10 * time.Millisecond)
-		e.EE.Update(fx, fmt.Sprintf("update %d", i), nil)
-	}
-	ee, tt := Test(t.GoT(), fx)
-	defer ee.QuitListening()
-	for i := 0; i < 10; i++ {
-		tt.FireClick(0, 0)
-	}
-	t.Eq(tt.Screen().String(), "update 10")
-}
-
-func TestDBG(t *testing.T) { Run(&dbg{}, t) }

@@ -101,7 +101,7 @@ func (s *env) Changes_fore_and_background_for_whole_line(t *T) {
 	ee, tt := Test(t.GoT(), &icmpFX{init: func(_ *icmpFX, e *Env) {
 		fmt.Fprint(e, "define width for last screen")
 		fmt.Fprint(
-			e.BG(tcell.ColorRed).Filled().FG(tcell.ColorWhite).LL(1),
+			e.BG(tcell.ColorRed).FG(tcell.ColorWhite).LL(1),
 			"line with space",
 		)
 	}}, 1)
@@ -118,11 +118,11 @@ func (s *env) Changes_fore_and_background_for_partial_line(t *T) {
 	ee, tt := Test(t.GoT(), &icmpFX{init: func(_ *icmpFX, e *Env) {
 		fmt.Fprint(e, "define width for last screen")
 		fmt.Fprint(
-			e.BG(tcell.ColorRed).FG(tcell.ColorWhite).LL(1),
+			e.BG(tcell.ColorRed).FG(tcell.ColorWhite).At(1, 0),
 			"un-filled with space",
 		)
 		fmt.Fprint(
-			e.BG(tcell.ColorRed).Filled().FG(tcell.ColorWhite).LL(2),
+			e.BG(tcell.ColorRed).FG(tcell.ColorWhite).LL(2),
 			"filled with space",
 		)
 	}}, 1)
@@ -145,6 +145,25 @@ func (s *env) Changes_fore_and_background_for_partial_line(t *T) {
 	for i := range l {
 		t.True(ss.Of(i).HasBG(tcell.ColorRed))
 		t.True(ss.Of(i).HasFG(tcell.ColorWhite))
+	}
+}
+
+func (s *env) Changes_line_style_for_a_range_of_runes(t *T) {
+	ee, tt := Test(t.GoT(), &icmpFX{init: func(_ *icmpFX, e *Env) {
+		fmt.Fprint(e, "\t")
+		fmt.Fprint(e.FG(tcell.ColorWhite).BG(tcell.ColorRed).At(0, 1), "red")
+		fmt.Fprint(e.At(0, 1+len("red")), LineFiller+"right")
+	}})
+	ee.Listen()
+	defer ee.QuitListening()
+	ss, exp := tt.FullScreen()[0].Styles(), Range{1, 4}
+	str := tt.FullScreen()[0].String()
+	for i := range str {
+		if exp.Contains(i) {
+			t.True(ss.Of(i).HasBG(tcell.ColorRed))
+			continue
+		}
+		t.Not.True(ss.Of(i).HasBG(tcell.ColorRed))
 	}
 }
 
