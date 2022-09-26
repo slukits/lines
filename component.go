@@ -81,6 +81,7 @@ func (c *Component) initialize(
 	inner := &component{
 		dim:     lyt.DimFilling(1, 1),
 		ll:      &lines{},
+		global:  &global{tabWidth: 4},
 		fmt:     llFmt{sty: tcell.StyleDefault},
 		userCmp: userComponent,
 		mod:     Overwriting,
@@ -140,6 +141,7 @@ func (c *Component) embedded() *Component { return c }
 // component is the actual implementation of a lines-Component.
 type component struct {
 	userCmp     Componenter
+	global      *global
 	dim         *lyt.Dim
 	mod         ComponentMode
 	initialized bool
@@ -220,6 +222,8 @@ func (c *component) SetDirty() {
 // them.
 func (c *component) Dim() *lyt.Dim { return c.dim }
 
+const All = -1
+
 // Reset blanks out the content of the line with given index the next
 // time it is printed to the screen.  Provide line flags if for example
 // a reset line should not be focusable.
@@ -235,12 +239,12 @@ func (c *component) Reset(idx int, ff ...LineFlags) {
 
 	if idx == -1 {
 		for _, l := range *c.ll {
-			l.set("").ff = _ff
+			l.reset(c.fmt.sty, _ff)
 		}
 		return
 	}
 
-	(*c.ll)[idx].set("").ff = _ff
+	(*c.ll)[idx].reset(c.fmt.sty, _ff)
 }
 
 func (c *component) setInitialized() {
@@ -320,15 +324,31 @@ func (c *component) write(
 ) (int, error) {
 	switch {
 	case c.mod&(Appending|Tailing) != 0:
-		c.ll.append(ff, sty, bytes.Split(bb, []byte("\n"))...)
+		c.ll.append(
+			c.lineFactory, ff, sty, bytes.Split(bb, []byte("\n"))...)
 	default:
 		if line == -1 {
 			c.Reset(line)
 			line = 0
 		}
-		c.ll.replaceAt(line, cell, ff, sty, bytes.Split(bb, []byte("\n"))...)
+		c.ll.replaceAt(
+			c.lineFactory, line, cell, ff, sty,
+			bytes.Split(bb, []byte("\n"))...)
 	}
 	return len(bb), nil
+}
+
+func (c *component) lineFactory() *line {
+	return &line{
+		sty:    c.fmt.sty,
+		dirty:  true,
+		global: c.global,
+	}
+}
+
+// global represents settings which apply for all lines of a component.
+type global struct {
+	tabWidth int
 }
 
 // layoutComponenter combines the user-provided component with its

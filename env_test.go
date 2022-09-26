@@ -156,7 +156,7 @@ func (s *env) Changes_line_style_for_a_range_of_runes(t *T) {
 	}})
 	ee.Listen()
 	defer ee.QuitListening()
-	ss, exp := tt.FullScreen()[0].Styles(), Range{1, 4}
+	ss, exp := tt.FullScreen()[0].Styles(), Range{4, 7}
 	str := tt.FullScreen()[0].String()
 	for i := range str {
 		if exp.Contains(i) {
@@ -171,36 +171,3 @@ func TestEnv(t *testing.T) {
 	t.Parallel()
 	Run(&env{}, t)
 }
-
-// type A struct{}
-//
-// type B struct{ a *A }
-//
-// func (b *B) A() *A { return b.a }
-//
-// func (b *B) init() *B {
-// 	b.a = &A{}
-// 	return b
-// }
-//
-// func (b *B) reset(_b *B) {
-// 	*b = *_b
-// }
-//
-// type C struct{ B }
-//
-// func (s *events) Test(t *T) {
-// 	c := &C{}
-// 	bInitialized := *c.init()
-// 	tBeforeReset := fmt.Sprintf("%T::%[1]v", bInitialized.A())
-// 	t.Log(tBeforeReset)
-// 	bZero := &B{}
-// 	c.reset(bZero)
-// 	tInit := fmt.Sprintf("%T::%[1]v", bInitialized.A())
-// 	tZero := fmt.Sprintf("%T::%[1]v", bZero.A())
-// 	t.Log(tInit, tZero)
-// 	cZero := fmt.Sprintf("%T::%[1]v", c.A())
-// 	c.reset(&bInitialized)
-// 	cInit := fmt.Sprintf("%T::%[1]v", c.A())
-// 	t.Log(cZero, cInit)
-// }

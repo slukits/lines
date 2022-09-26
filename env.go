@@ -82,6 +82,22 @@ func (e *Env) Attr(aa tcell.AttrMask) *FmtWriter {
 		sty: e.cmp.embedded().fmt.sty.Attributes(aa)}
 }
 
+func (e *Env) AddStyleRange(idx int, sr SR, rr ...SR) {
+	ll := *e.cmp.embedded().ll
+	if idx < 0 || idx > len(ll) {
+		return
+	}
+	ll[idx].addStyleRange(sr, rr...)
+}
+
+func (e *Env) SetLineFlags(idx int, ff LineFlags) {
+	ll := *e.cmp.embedded().ll
+	if idx < 0 || idx > len(ll) {
+		return
+	}
+	ll[idx].setFlags(ff)
+}
+
 // FG sets the next write's foreground color.
 func (e *Env) FG(color tcell.Color) *FmtWriter {
 	return &FmtWriter{cmp: e.cmp.(cmpWriter),
