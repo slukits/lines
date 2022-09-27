@@ -74,7 +74,7 @@ func (l *line) setFlags(ff LineFlags) {
 // with blanks if necessary) and given style is set for the range
 // cell to len(content).  Is cell < -1 the call is ignored.
 func (l *line) replaceAt(
-	cell int, content string, s tcell.Style, ff ...LineFlags,
+	cell int, content string, s tcell.Style, ff LineFlags,
 ) {
 	if cell < -1 {
 		return
@@ -85,11 +85,7 @@ func (l *line) replaceAt(
 	if l.stale == "" {
 		l.stale = l.content
 	}
-	_ff := LineFlags(0)
-	for _, f := range ff {
-		_ff |= f
-	}
-	l.ff = _ff
+	l.ff = ff
 	if cell == -1 {
 		l.sty = s
 		l.content = content
