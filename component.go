@@ -233,6 +233,11 @@ func (c *component) Reset(idx int, ff ...LineFlags) {
 	}
 
 	c.setFirst(0)
+	_, _, _, height := c.Dim().Area()
+	if len(*c.ll) > height {
+		ll := (*c.ll)[:height]
+		c.ll = &ll
+	}
 
 	_ff := LineFlags(0)
 	for _, f := range ff {
