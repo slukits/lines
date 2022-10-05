@@ -232,6 +232,8 @@ func (c *component) Reset(idx int, ff ...LineFlags) {
 		return
 	}
 
+	c.setFirst(0)
+
 	_ff := LineFlags(0)
 	for _, f := range ff {
 		_ff |= f
