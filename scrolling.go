@@ -14,6 +14,21 @@ func (s Scroller) IsAtBottom() bool {
 	return s.c.first+height >= s.c.Len()
 }
 
+// CoordinateToIndex maps a y-coordinate relative to the components
+// origin to its line index taking potential down-scrolling into
+// account.
+func (s Scroller) CoordinateToIndex(y int) (line int) {
+	if s.c.first == 0 {
+		return y
+	}
+	// TODO: add error handling
+	if s.c.first+y >= s.c.Len() {
+		return s.c.Len() - 1
+	}
+
+	return s.c.first + y
+}
+
 // Up scrolls one page up or to the last content line is the last
 // displayed line.  Whereas "one page" is in case of a component
 // height of 1 is one line.  For a height h with 1 < h < 20 "one page"
