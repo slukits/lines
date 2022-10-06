@@ -222,21 +222,19 @@ func (c *component) SetDirty() {
 // them.
 func (c *component) Dim() *lyt.Dim { return c.dim }
 
+// All indicates for an operation with a line-index that the operation
+// should be executed for all lines, e.g. Reset on a component.
 const All = -1
 
-// Reset blanks out the content of the line with given index the next
-// time it is printed to the screen.  Provide line flags if for example
-// a reset line should not be focusable.
+// Reset blanks out the content of the line or all lines with given
+// index the next time it is printed to the screen.  Provide line flags
+// if for example a reset line should not be focusable.  If provided
+// lines index is -1 (see All-constant) Rest scrolls to the top,
+// truncates its lines to the screen-area-height and resets the
+// remaining lines.
 func (c *component) Reset(idx int, ff ...LineFlags) {
 	if idx < -1 || idx >= c.Len() {
 		return
-	}
-
-	c.setFirst(0)
-	_, _, _, height := c.Dim().Area()
-	if len(*c.ll) > height {
-		ll := (*c.ll)[:height]
-		c.ll = &ll
 	}
 
 	_ff := LineFlags(0)
@@ -245,6 +243,12 @@ func (c *component) Reset(idx int, ff ...LineFlags) {
 	}
 
 	if idx == -1 {
+		c.setFirst(0)
+		_, _, _, height := c.Dim().Area()
+		if len(*c.ll) > height {
+			ll := (*c.ll)[:height]
+			c.ll = &ll
+		}
 		for _, l := range *c.ll {
 			l.reset(c.fmt.sty, _ff)
 		}

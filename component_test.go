@@ -108,6 +108,19 @@ func (s *_component) fxCmp(
 	return ee, tt, cmp
 }
 
+func (s *_component) Truncates_lines_to_screen_area_on_reset_all(t *T) {
+	ee, tt, fx := s.fxCmp(t, 2)
+	tt.FireResize(20, 2)
+	ee.Update(fx, nil, func(e *Env) {
+		fmt.Fprint(e, "first\nsecond\nthird\nforth")
+		t.Eq(4, fx.Len())
+	})
+	ee.Update(fx, nil, func(e *Env) {
+		fx.Reset(All)
+		t.Eq(2, fx.Len())
+	})
+}
+
 func (s *_component) Scrolls_by_one_line_if_height_is_one(t *T) {
 	ee, tt, fx := s.fxCmp(t, 5)
 	ee.Update(fx, nil, func(e *Env) {
@@ -251,7 +264,21 @@ func (s *_component) Scrolls_up_by_90_percent_height(t *T) {
 	t.Eq(strings.Join(exp, "\n"), tt.LastScreen.String())
 }
 
-func (s *_component) Updates(t *T) {
+func (s *_component) Scrolls_to_top_on_reset_all(t *T) {
+	ee, tt, fx := s.fxCmp(t, 2)
+	tt.FireResize(20, 2)
+	ee.Update(fx, nil, func(e *Env) {
+		fmt.Fprint(e, "first\nsecond\nthird\nforth")
+		fx.Scroll.ToBottom()
+		t.Not.True(fx.Scroll.IsAtTop())
+	})
+	ee.Update(fx, nil, func(e *Env) {
+		fx.Reset(All)
+		t.True(fx.Scroll.IsAtTop())
+	})
+}
+
+func (s *_component) Updates_according_its_on_update_definition(t *T) {
 	cmp := &uiCmpFX{init: func(c *uiCmpFX, e *Env) {
 		fmt.Fprint(e, "initial value")
 	}}
