@@ -428,7 +428,7 @@ func (tt *Testing) beforeFinalize() {
 }
 
 // String provides a string representation of the current screen
-// content.  NOTE do not use this function inside an Update-event
+// content.  NOTE this method does not work inside an Update-event
 // listener.
 func (tt *Testing) String() string {
 	bld := &strings.Builder{}
