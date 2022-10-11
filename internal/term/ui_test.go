@@ -12,10 +12,6 @@ import (
 
 type AnUI struct{ Suite }
 
-func (s *AnUI) Panics_if_screen_cant_be_obtained(t *T) {
-	t.Panics(func() { New() })
-}
-
 func TestAnUI(t *testing.T) {
 	t.Parallel()
 	Run(&AnUI{}, t)
