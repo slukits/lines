@@ -44,10 +44,6 @@ type screen struct {
 	focus layoutComponenter
 }
 
-// zeroComponent is set a Component's component after a listener of its
-// componenter returns
-var zeroComponent *component
-
 // newSim returns a new Screen instance wrapping tcell's simulation
 // screen for testing purposes.
 func newSim(cmp Componenter) (*screen, error) {
