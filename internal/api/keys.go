@@ -161,6 +161,10 @@ const (
 	CtrlRightSq    = GS
 	CtrlCarat      = RS
 	CtrlUnderscore = US
+	Enter          = CR
+	Tab            = TAB
+	Backspace      = BS
+	Esc            = ESC
 )
 
 const k = tcell.KeyBEL
