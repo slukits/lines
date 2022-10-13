@@ -167,6 +167,10 @@ const (
 	CtrlRightSq    Key = api.CtrlRightSq
 	CtrlCarat      Key = api.CtrlCarat
 	CtrlUnderscore Key = api.CtrlUnderscore
+	Enter          Key = api.Enter
+	Tab            Key = api.Tab
+	Backspace      Key = api.Backspace
+	Esc            Key = api.Esc
 )
 
 // A Modifier mask are the pressed modifier keys of a key, rune or mouse

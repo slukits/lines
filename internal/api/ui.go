@@ -4,6 +4,8 @@
 
 package api
 
+import "time"
+
 // Color represents an rgb color.  Predefined colors are expressed in
 // the typical hex-format 0xRRGGBB whereas R, G and B are hex-digits,
 // i.e. red is 0xFF0000.
@@ -41,6 +43,26 @@ func (s Style) Equals(other Style) bool {
 	return s.AA == other.AA && s.FG == other.FG && s.BG == other.BG
 }
 
+func (s Style) WithAttrsAdded(aa StyleAttribute) Style {
+	return Style{FG: s.FG, BG: s.BG, AA: s.AA | aa}
+}
+
+func (s Style) WithAttrsRemoved(aa StyleAttribute) Style {
+	return Style{FG: s.FG, BG: s.BG, AA: s.AA &^ aa}
+}
+
+func (s Style) WithAttrs(aa StyleAttribute) Style {
+	return Style{FG: s.FG, BG: s.BG, AA: aa}
+}
+
+func (s Style) WithFG(c Color) Style {
+	return Style{FG: c, BG: s.BG, AA: s.AA}
+}
+
+func (s Style) WithBG(c Color) Style {
+	return Style{FG: s.FG, BG: c, AA: s.AA}
+}
+
 // Displayer implementation provides the screen/a window as a set of
 // lines and cells to which a rune at a given position with a given
 // style can be written.
@@ -65,11 +87,15 @@ type Displayer interface {
 // EventProcessor provides user input events and programmatically posted
 // events.
 type EventProcessor interface {
-	// Poll provides user input events and programmatically posted
-	// events around which lines is looping.
-	Poll() Eventer
+
 	// Post posts given event to the event loop.
-	Post(Eventer)
+	Post(Eventer) error
+
+	// Quit event polling.
+	Quit()
+
+	// WaitForQuit blocks until the backend was quit.
+	WaitForQuit()
 }
 
 // An UIer implementation provides the functionality lines needs to
@@ -77,7 +103,18 @@ type EventProcessor interface {
 type UIer interface {
 	Displayer
 	EventProcessor
-	Quit()
+
+	// Lib provides access to the encapsulated backend library.
+	Lib() interface{}
+}
+
+// Eventer is the abstract interface which must be implemented by all
+// reported/posted events.
+type Eventer interface {
+	// When returns the creation time of an event.
+	When() time.Time
+	// Source returns the wrapped event of the backend.
+	Source() interface{}
 }
 
 // KeyEventer implementation is reported on a user special-key input
@@ -107,7 +144,7 @@ type RuneEventer interface {
 type MouseEventer interface {
 	Eventer
 
-	// Button returns the button number of the mouse event.
+	// Button returns the buttons mask of the mouse event.
 	Button() Button
 
 	// Mod reports the pressed modifier key like shift, alt, ...
@@ -128,8 +165,8 @@ type ResizeEventer interface {
 	Size() (int, int)
 }
 
-// QuitEventer implementation is reported on to quit the application.
 type QuitEventer interface {
-	// Quit is only there for a discriminating type switch.
-	Quit()
+	Eventer
+	// Quitting is only defined to discriminate from Eventer.
+	Quitting()
 }

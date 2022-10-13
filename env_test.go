@@ -5,11 +5,8 @@
 package lines
 
 import (
-	"fmt"
-	"strings"
 	"testing"
 
-	"github.com/gdamore/tcell/v2"
 	. "github.com/slukits/gounit"
 )
 
@@ -39,133 +36,133 @@ func (c *envCmpFX) OnUpdate(e *Env) {
 	f(e)
 }
 
-func (s *env) Access_panics_outside_event_processing(t *T) {
-	cmp := &envCmpFX{}
-	ee, _ := Test(t.GoT(), cmp, 0)
-	defer ee.QuitListening()
-	t.Panics(func() { fmt.Fprint(cmp.env, "panics") })
-}
-
-func (s *env) Provides_writer_for_the_nth_line(t *T) {
-	ee, tt := Test(t.GoT(), &envCmpFX{test: func(e *Env) {
-		fmt.Fprint(e.LL(0), "first line")
-		fmt.Fprint(e.LL(7), "eighth line")
-	}}, 1)
-	ee.Listen()
-
-	sl := strings.Split(tt.LastScreen.String(), "\n")
-	t.FatalIfNot(t.Eq(8, len(sl)))
-	t.Eq(strings.TrimSpace(sl[0]), "first line")
-	t.Eq(strings.TrimSpace(sl[7]), "eighth line")
-}
-
-func (s *env) Overwrites_given_line_and_following(t *T) {
-	fxCmp := &envCmpFX{test: func(e *Env) {
-		fmt.Fprint(e.LL(0), "first line")
-		fmt.Fprint(e.LL(7), "eighth line")
-	}}
-	ee, tt := Test(t.GoT(), fxCmp, 2)
-	ee.Listen()
-	ee.Update(fxCmp, func(e *Env) {
-		fmt.Fprint(e.LL(6), "seventh line\n"+
-			"short 8th\nninth line")
-	}, nil)
-
-	sl := strings.Split(tt.LastScreen.String(), "\n")
-	t.FatalIfNot(t.Eq(9, len(sl)))
-	t.Eq(strings.TrimSpace(sl[0]), "first line")
-	t.Eq(strings.TrimSpace(sl[6]), "seventh line")
-	t.Eq(strings.TrimSpace(sl[7]), "short 8th")
-	t.Eq(strings.TrimSpace(sl[8]), "ninth line")
-}
-
-func (s *env) Changes_fore_and_background_for_line_s_content(t *T) {
-	ee, tt := Test(t.GoT(), &icmpFX{init: func(_ *icmpFX, e *Env) {
-		fmt.Fprint(
-			e.BG(tcell.ColorRed).FG(tcell.ColorWhite),
-			"text with read back- and white foreground",
-		)
-	}}, 1)
-	ee.Listen()
-	ss := tt.LastScreen[0].Styles()
-	str := tt.LastScreen.String()
-	l := tt.LastScreen[0]
-	for i := range l {
-		t.True(ss.Of(i).HasBG(tcell.ColorRed))
-		t.True(ss.Of(i).HasFG(tcell.ColorWhite))
-		t.Eq(l[i].r, int32(str[i]))
-	}
-}
-
-func (s *env) Changes_fore_and_background_for_whole_line(t *T) {
-	ee, tt := Test(t.GoT(), &icmpFX{init: func(_ *icmpFX, e *Env) {
-		fmt.Fprint(e, "define width for last screen")
-		fmt.Fprint(
-			e.BG(tcell.ColorRed).FG(tcell.ColorWhite).LL(1),
-			"line with space",
-		)
-	}}, 1)
-	ee.Listen()
-	ss := tt.LastScreen[1].Styles()
-	l := tt.LastScreen[1]
-	for i := range l {
-		t.True(ss.Of(i).HasBG(tcell.ColorRed))
-		t.True(ss.Of(i).HasFG(tcell.ColorWhite))
-	}
-}
-
-func (s *env) Changes_fore_and_background_for_partial_line(t *T) {
-	ee, tt := Test(t.GoT(), &icmpFX{init: func(_ *icmpFX, e *Env) {
-		fmt.Fprint(e, "define width for last screen")
-		fmt.Fprint(
-			e.BG(tcell.ColorRed).FG(tcell.ColorWhite).At(1, 0),
-			"un-filled with space",
-		)
-		fmt.Fprint(
-			e.BG(tcell.ColorRed).FG(tcell.ColorWhite).LL(2),
-			"filled with space",
-		)
-	}}, 1)
-	ee.Listen()
-
-	ss := tt.LastScreen[1].Styles()
-	l := tt.LastScreen[1]
-	for i := range l {
-		if l[i].r != ' ' || len(l) > i+1 && l[i+1].r != ' ' {
-			t.True(ss.Of(i).HasBG(tcell.ColorRed))
-			t.True(ss.Of(i).HasFG(tcell.ColorWhite))
-			continue
-		}
-		t.Not.True(ss.Of(i).HasBG(tcell.ColorRed))
-		t.Not.True(ss.Of(i).HasFG(tcell.ColorWhite))
-	}
-
-	ss = tt.LastScreen[2].Styles()
-	l = tt.LastScreen[2]
-	for i := range l {
-		t.True(ss.Of(i).HasBG(tcell.ColorRed))
-		t.True(ss.Of(i).HasFG(tcell.ColorWhite))
-	}
-}
-
-func (s *env) Changes_line_style_for_a_range_of_runes(t *T) {
-	ee, tt := Test(t.GoT(), &icmpFX{init: func(_ *icmpFX, e *Env) {
-		fmt.Fprint(e, "\t")
-		fmt.Fprint(e.FG(tcell.ColorWhite).BG(tcell.ColorRed).At(0, 1), "red")
-		fmt.Fprint(e.At(0, 1+len("red")), LineFiller+"right")
-	}})
-	ee.Listen()
-	defer ee.QuitListening()
-	ss, exp := tt.FullScreen()[0].Styles(), Range{4, 7}
-	str := tt.FullScreen()[0].String()
-	for i := range str {
-		if exp.Contains(i) {
-			t.True(ss.Of(i).HasBG(tcell.ColorRed))
-			continue
-		}
-		t.Not.True(ss.Of(i).HasBG(tcell.ColorRed))
-	}
-}
+// func (s *env) Access_panics_outside_event_processing(t *T) {
+// 	cmp := &envCmpFX{}
+// 	ee, _ := Test(t.GoT(), cmp, 0)
+// 	defer ee.QuitListening()
+// 	t.Panics(func() { fmt.Fprint(cmp.env, "panics") })
+// }
+//
+// func (s *env) Provides_writer_for_the_nth_line(t *T) {
+// 	ee, tt := Test(t.GoT(), &envCmpFX{test: func(e *Env) {
+// 		fmt.Fprint(e.LL(0), "first line")
+// 		fmt.Fprint(e.LL(7), "eighth line")
+// 	}}, 1)
+// 	ee.Listen()
+//
+// 	sl := strings.Split(tt.LastScreen.String(), "\n")
+// 	t.FatalIfNot(t.Eq(8, len(sl)))
+// 	t.Eq(strings.TrimSpace(sl[0]), "first line")
+// 	t.Eq(strings.TrimSpace(sl[7]), "eighth line")
+// }
+//
+// func (s *env) Overwrites_given_line_and_following(t *T) {
+// 	fxCmp := &envCmpFX{test: func(e *Env) {
+// 		fmt.Fprint(e.LL(0), "first line")
+// 		fmt.Fprint(e.LL(7), "eighth line")
+// 	}}
+// 	ee, tt := Test(t.GoT(), fxCmp, 2)
+// 	ee.Listen()
+// 	ee.Update(fxCmp, func(e *Env) {
+// 		fmt.Fprint(e.LL(6), "seventh line\n"+
+// 			"short 8th\nninth line")
+// 	}, nil)
+//
+// 	sl := strings.Split(tt.LastScreen.String(), "\n")
+// 	t.FatalIfNot(t.Eq(9, len(sl)))
+// 	t.Eq(strings.TrimSpace(sl[0]), "first line")
+// 	t.Eq(strings.TrimSpace(sl[6]), "seventh line")
+// 	t.Eq(strings.TrimSpace(sl[7]), "short 8th")
+// 	t.Eq(strings.TrimSpace(sl[8]), "ninth line")
+// }
+//
+// func (s *env) Changes_fore_and_background_for_line_s_content(t *T) {
+// 	ee, tt := Test(t.GoT(), &icmpFX{init: func(_ *icmpFX, e *Env) {
+// 		fmt.Fprint(
+// 			e.BG(tcell.ColorRed).FG(tcell.ColorWhite),
+// 			"text with read back- and white foreground",
+// 		)
+// 	}}, 1)
+// 	ee.Listen()
+// 	ss := tt.LastScreen[0].Styles()
+// 	str := tt.LastScreen.String()
+// 	l := tt.LastScreen[0]
+// 	for i := range l {
+// 		t.True(ss.Of(i).HasBG(tcell.ColorRed))
+// 		t.True(ss.Of(i).HasFG(tcell.ColorWhite))
+// 		t.Eq(l[i].r, int32(str[i]))
+// 	}
+// }
+//
+// func (s *env) Changes_fore_and_background_for_whole_line(t *T) {
+// 	ee, tt := Test(t.GoT(), &icmpFX{init: func(_ *icmpFX, e *Env) {
+// 		fmt.Fprint(e, "define width for last screen")
+// 		fmt.Fprint(
+// 			e.BG(tcell.ColorRed).FG(tcell.ColorWhite).LL(1),
+// 			"line with space",
+// 		)
+// 	}}, 1)
+// 	ee.Listen()
+// 	ss := tt.LastScreen[1].Styles()
+// 	l := tt.LastScreen[1]
+// 	for i := range l {
+// 		t.True(ss.Of(i).HasBG(tcell.ColorRed))
+// 		t.True(ss.Of(i).HasFG(tcell.ColorWhite))
+// 	}
+// }
+//
+// func (s *env) Changes_fore_and_background_for_partial_line(t *T) {
+// 	ee, tt := Test(t.GoT(), &icmpFX{init: func(_ *icmpFX, e *Env) {
+// 		fmt.Fprint(e, "define width for last screen")
+// 		fmt.Fprint(
+// 			e.BG(tcell.ColorRed).FG(tcell.ColorWhite).At(1, 0),
+// 			"un-filled with space",
+// 		)
+// 		fmt.Fprint(
+// 			e.BG(tcell.ColorRed).FG(tcell.ColorWhite).LL(2),
+// 			"filled with space",
+// 		)
+// 	}}, 1)
+// 	ee.Listen()
+//
+// 	ss := tt.LastScreen[1].Styles()
+// 	l := tt.LastScreen[1]
+// 	for i := range l {
+// 		if l[i].r != ' ' || len(l) > i+1 && l[i+1].r != ' ' {
+// 			t.True(ss.Of(i).HasBG(tcell.ColorRed))
+// 			t.True(ss.Of(i).HasFG(tcell.ColorWhite))
+// 			continue
+// 		}
+// 		t.Not.True(ss.Of(i).HasBG(tcell.ColorRed))
+// 		t.Not.True(ss.Of(i).HasFG(tcell.ColorWhite))
+// 	}
+//
+// 	ss = tt.LastScreen[2].Styles()
+// 	l = tt.LastScreen[2]
+// 	for i := range l {
+// 		t.True(ss.Of(i).HasBG(tcell.ColorRed))
+// 		t.True(ss.Of(i).HasFG(tcell.ColorWhite))
+// 	}
+// }
+//
+// func (s *env) Changes_line_style_for_a_range_of_runes(t *T) {
+// 	ee, tt := Test(t.GoT(), &icmpFX{init: func(_ *icmpFX, e *Env) {
+// 		fmt.Fprint(e, "\t")
+// 		fmt.Fprint(e.FG(tcell.ColorWhite).BG(tcell.ColorRed).At(0, 1), "red")
+// 		fmt.Fprint(e.At(0, 1+len("red")), LineFiller+"right")
+// 	}})
+// 	ee.Listen()
+// 	defer ee.QuitListening()
+// 	ss, exp := tt.FullScreen()[0].Styles(), Range{4, 7}
+// 	str := tt.FullScreen()[0].String()
+// 	for i := range str {
+// 		if exp.Contains(i) {
+// 			t.True(ss.Of(i).HasBG(tcell.ColorRed))
+// 			continue
+// 		}
+// 		t.Not.True(ss.Of(i).HasBG(tcell.ColorRed))
+// 	}
+// }
 
 func TestEnv(t *testing.T) {
 	t.Parallel()

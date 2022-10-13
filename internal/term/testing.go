@@ -7,6 +7,7 @@ package term
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/slukits/lines/internal/api"
@@ -21,15 +22,68 @@ type Testing struct {
 	Height int
 }
 
-// Fixture instantiates a new UI with an simulation screen and an
-// testing instance.
-func Fixture(t *testing.T) (*UI, *Testing) {
+// LstFixture instantiates a new UI with an simulation screen and an
+// testing instance reporting all events to provided listener.  The ui
+// is setup for transactional events, i.e. an event-post p returns not
+// before all event-posts have been processed which were posted during
+// p's processing.  Processing of p times out after given timeout.
+// LstFixture does not returns before initial resize event wasn't
+// processed.  Listener may be nil and a zero-timeout defaults to 100ms.
+func LstFixture(
+	t *testing.T, listener func(api.Eventer), timeout time.Duration,
+) (*UI, *Testing) {
+
 	t.Helper()
-	ui := initUI(tcell.NewSimulationScreen("UTF-8"))
-	ui.lib.PostEvent(tcell.NewEventResize(tstWidth, tstHeight))
+
+	if timeout == 0 {
+		timeout = 100 * time.Millisecond
+	}
+	ui := initUI(tcell.NewSimulationScreen("UTF-8"), listener)
 	t.Cleanup(func() { ui.Quit() })
-	return ui, &Testing{
+	ui.EnableTransactionalEventPosts(timeout)
+
+	tt := &Testing{
 		t: t, ui: ui, Width: tstWidth, Height: tstHeight}
+	if err := tt.PostResize(tstWidth, tstHeight); err != nil {
+		t.Fatalf("fixture: %v", err)
+	}
+
+	return ui, tt
+}
+
+// Fixture instantiates a new UI with an simulation screen and an
+// testing instance.  In order to receive events [Testing.Listen] must
+// be called additionally.  The ui is setup for transactional events,
+// i.e. an event-post p returns not before all event-posts have been
+// processed which were posted during p's processing.  Processing of p
+// times out after given timeout.  A zero-timeout defaults to 100ms.
+func Fixture(t *testing.T, timeout time.Duration) (*UI, *Testing) {
+
+	t.Helper()
+
+	if timeout == 0 {
+		timeout = 100 * time.Millisecond
+	}
+	ui := initUI(tcell.NewSimulationScreen("UTF-8"), nil)
+	t.Cleanup(func() { ui.Quit() })
+	ui.EnableTransactionalEventPosts(timeout)
+
+	tt := &Testing{
+		t: t, ui: ui, Width: tstWidth, Height: tstHeight}
+
+	return ui, tt
+}
+
+// Listen sets the listener and posts initial resize event.  Listen is an
+// no-op if already a listener is set.
+func (tt *Testing) Listen(l func(api.Eventer)) {
+	if tt.ui.listener != nil {
+		return
+	}
+	tt.ui.listener = l
+	if err := tt.PostResize(tstWidth, tstHeight); err != nil {
+		tt.t.Fatalf("fixture: %v", err)
+	}
 }
 
 func (tt *Testing) Display(s string, sty api.Style) {
@@ -58,9 +112,31 @@ func (tt *Testing) PostMouse(
 }
 
 func (tt *Testing) PostResize(width, height int) error {
+	if width == 0 && height == 0 {
+		return nil
+	}
+	w, h := tt.ui.Size()
+	if width == 0 {
+		width = w
+	}
+	if height == 0 {
+		height = h
+	}
 	tt.ui.lib.(tcell.SimulationScreen).SetSize(width, height)
 	return tt.ui.Post(newResize(width, height))
 }
+
+type resize struct{ evt *tcell.EventResize }
+
+func newResize(width, height int) api.ResizeEventer {
+	return &resize{evt: tcell.NewEventResize(
+		width, height,
+	)}
+}
+
+func (r *resize) Source() interface{} { return r.evt }
+func (r *resize) When() time.Time     { return r.evt.When() }
+func (r *resize) Size() (int, int)    { return r.evt.Size() }
 
 func (tt *Testing) Screen() api.StringScreen {
 	bld, screen := &strings.Builder{}, api.StringScreen{}

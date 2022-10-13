@@ -2,94 +2,117 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-// NOTE this is not the entry point to this package!  The central types
-// are found in events.go, screen.go, component.go and env.go.  Also
-// testing.go is a good place to start.  The lines type provides a
-// sequence of lines which make up a component's content (not its screen
-// representation).  The content of lines can be manipulated writing to
-// an environment instance of type Env or to a writer provided by some
-// of its methods.  Lines can not be accessed directly by a client since
-// the lines do not need to represent a components logical lines due to
-// line wrapping.
-
 package lines
 
 import (
-	"github.com/gdamore/tcell/v2"
+	"github.com/slukits/lines/internal/api"
+	"github.com/slukits/lines/internal/term"
 )
 
-// LineFiller can be used in component content-lines indicating that a
-// line l should fill up its whole width whereas its remaining empty
-// space is spread equally over filler found in l.
-const LineFiller = string(rune(29))
+// Eventer is the interface which all reported events implement.
+type Eventer = api.Eventer
 
-type lines []*line
+// QuitEventer is reported when a Lines-instance is quit.
+type QuitEventer = api.QuitEventer
 
-// append given content lines to current content
-func (ll *lines) append(
-	lnFactory func() *line,
-	ff LineFlags,
-	sty tcell.Style,
-	cc ...[]byte,
-) {
+// ResizeEventer is reported when the Lines-display was resized.
+type ResizeEventer = api.ResizeEventer
 
-	for _, c := range cc {
-		l := lnFactory()
-		l.content = string(c)
-		l.ff = ff
-		l.sty = sty
-		*ll = append(*ll, l)
-	}
+type Lines struct {
+	// scr to report resize events to screen components.
+	scr *screen
+
+	// backend is needed to post events.
+	backend api.EventProcessor
 }
 
-// replaceAt replaces starting at given index the following lines with
-// given content lines.  replaceAt is a no-op if idx < 0 or len(cc) == 0
-func (ll *lines) replaceAt(
-	lnFactory func() *line,
-	idx, cell int,
-	ff LineFlags,
-	sty tcell.Style,
-	cc ...[]byte,
-) {
-	if idx < 0 || len(cc) == 0 {
-		return
-	}
-	for idx+len(cc) > len(*ll) {
-		*ll = append(*ll, lnFactory())
-	}
-	for i, j := idx, 0; i < idx+len(cc); i++ {
-		(*ll)[i].replaceAt(cell, string(cc[j]), sty, ff)
-		j++
-	}
+// Term returns a Lines up with a terminal backend displaying and reporting
+// events to given componenter.  Given componenter has the Quitable
+// feature set to 'q', ctrl-c and ctrl-d.  The binding to 'q' may be
+// removed.  The bindings to ctrl-c and ctrl-d may not be removed.  Use
+// the TermKiosk constructor for an setup without any quit bindings.
+// Term panics if the terminal screen can't be obtained.
+func Term(cmp Componenter) *Lines {
+	ll := Lines{}
+	ll.backend = term.New(ll.listen)
+	ll.scr = newScreen(ll.backend.(api.UIer), cmp)
+	return &ll
 }
 
-// IsDirty returns true if on of the lines is dirty.
-func (ll lines) IsDirty() bool {
-	for _, l := range ll {
-		if !l.dirty {
-			continue
-		}
-		return true
-	}
-	return false
+// Componenter is the private interface a type must implement to be used
+// as an lines ui component.  Embedding [lines.Component] in a type
+// automatically fulfills this condition:
+//
+//	type MyTUIComponent struct { lines.Component }
+//	lines.New(&MyTUIComponent{}).Listen()
+type Componenter interface {
+
+	// enable makes the embedded component usable for the client, i.e.
+	// accessing its properties and methods won't panic.
+	enable()
+
+	// disable makes the embedded component unusable for the client,
+	// i.e. accessing its properties and methods is likely to panic.
+	disable()
+
+	// hasLayoutWrapper is true if a component is part of the layout and
+	// its layout has been calculated by the layout manager.
+	hasLayoutWrapper() bool
+
+	// layoutComponent is a wrapper around a client-component and its
+	// embedded component independent of being enabled/disabled.  It
+	// combines the client-components stacking or chaining aspects and
+	// the internally calculated dimensional aspects of a component.
+	layoutComponent() layoutComponenter
+
+	// initialize sets up the embedded *component instance and wraps it
+	// together with the client-instance in a layoutComponenter which is
+	// returned.
+	initialize(
+		Componenter, interface{ Post(Eventer) error },
+	) layoutComponenter
+
+	// isInitialized returns true if embedded *component was wrapped
+	// into a layout component.
+	isInitialized() bool
+
+	// embedded returns a reference to client-component's embedded
+	// Component-instance.
+	embedded() *Component
 }
 
-// ForDirty calls back for every dirty line.
-func (ll lines) ForDirty(cb func(int, *line)) {
-	for i, l := range ll {
-		if !l.dirty {
+// TermKiosk returns an Events instance without registered Quitable feature,
+// i.e. the application can't be quit by the user.
+func TermKiosk(cmp Componenter) {
+	defaultFeatures = &features{
+		keys: map[Modifier]map[Key]FeatureMask{},
+		runes: map[Modifier]map[rune]FeatureMask{ZeroModifier: {
+			0: NoFeature, // indicates the immutable default features
+		}},
+		buttons: map[Modifier]map[Button]FeatureMask{},
+	}
+	Term(cmp)
+}
+
+// Quit quits given lines instance's backend and unblocks WaitForQuit.
+func (ee *Lines) Quit() { ee.backend.Quit() }
+
+// WaitForQuit blocks until given Lines-instance is quit.
+func (ee *Lines) WaitForQuit() { ee.backend.WaitForQuit() }
+
+func (l *Lines) listen(evt api.Eventer) {
+	switch evt := evt.(type) {
+	case ResizeEventer:
+		width, height := evt.Size()
+		l.scr.setWidth(width).setHeight(height)
+		reportInit(l, l.scr)
+		l.scr.hardSync(l)
+	default:
+		if quit := report(evt, l, l.scr); quit {
+			l.backend.Quit()
 			return
 		}
-		cb(i, l)
-	}
-}
-
-// For calls back for every line of given lines ll starting at given
-// offset.
-func (ll lines) For(offset int, cb func(int, *line) (stop bool)) {
-	for i, l := range ll[offset:] {
-		if cb(i, l) {
-			return
-		}
+		reportInit(l, l.scr)
+		l.scr.softSync(l)
 	}
 }

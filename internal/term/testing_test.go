@@ -23,29 +23,16 @@ const exp = `upper left
   bottom     `
 
 func (s *_testing) Reports_string_representation_of_screen(t *T) {
-	ui, tt := Fixture(t.GoT())
-	c := make(chan api.Eventer)
-	go func() { ui.Poll(); c <- ui.Poll() }()
-	tt.PostResize(16, 5)
-	select {
-	case <-c:
-	case <-t.Timeout(0):
-		t.Fatal("initial resize-event timed out")
-	}
+	ui, tt := LstFixture(t.GoT(), nil, 0)
+	t.FatalOn(tt.PostResize(16, 5))
+
 	tt.Display(fx, api.Style{})
 	ui.Redraw()
 	t.Eq(fx, tt.Screen().String())
 }
 
 func (s *_testing) Reports_trimmed_string_representation_of_screen(t *T) {
-	ui, tt := Fixture(t.GoT())
-	c := make(chan api.Eventer)
-	go func() { c <- ui.Poll() }()
-	select {
-	case <-c:
-	case <-t.Timeout(0):
-		t.Fatal("initial resize-event timed out")
-	}
+	ui, tt := LstFixture(t.GoT(), nil, 0)
 
 	tt.Display(fx, api.Style{})
 	ui.Redraw()
@@ -53,14 +40,7 @@ func (s *_testing) Reports_trimmed_string_representation_of_screen(t *T) {
 }
 
 func (s *_testing) Reports_string_of_given_screen_area(t *T) {
-	ui, tt := Fixture(t.GoT())
-	c := make(chan api.Eventer)
-	go func() { c <- ui.Poll() }()
-	select {
-	case <-c:
-	case <-t.Timeout(0):
-		t.Fatal("initial resize-event timed out")
-	}
+	ui, tt := LstFixture(t.GoT(), nil, 0)
 
 	tt.Display(fx, api.Style{})
 	ui.Redraw()
@@ -68,29 +48,16 @@ func (s *_testing) Reports_string_of_given_screen_area(t *T) {
 }
 
 func (s *_testing) Reports_cells_of_screen(t *T) {
-	ui, tt := Fixture(t.GoT())
-	c := make(chan api.Eventer)
-	go func() { ui.Poll(); c <- ui.Poll() }()
+	ui, tt := LstFixture(t.GoT(), nil, 0)
 	tt.PostResize(16, 5)
-	select {
-	case <-c:
-	case <-t.Timeout(0):
-		t.Fatal("initial resize-event timed out")
-	}
+
 	tt.Display(fx, api.Style{})
 	ui.Redraw()
 	t.Eq(fx, tt.Cells().String())
 }
 
 func (s *_testing) Reports_trimmed_cells_of_screen(t *T) {
-	ui, tt := Fixture(t.GoT())
-	c := make(chan api.Eventer)
-	go func() { c <- ui.Poll() }()
-	select {
-	case <-c:
-	case <-t.Timeout(0):
-		t.Fatal("initial resize-event timed out")
-	}
+	ui, tt := LstFixture(t.GoT(), nil, 0)
 
 	tt.Display(fx, api.Style{})
 	ui.Redraw()
@@ -98,19 +65,29 @@ func (s *_testing) Reports_trimmed_cells_of_screen(t *T) {
 }
 
 func (s *_testing) Reports_cells_of_screen_area(t *T) {
-	ui, tt := Fixture(t.GoT())
-	c := make(chan api.Eventer)
-	go func() { c <- ui.Poll() }()
-	select {
-	case <-c:
-	case <-t.Timeout(0):
-		t.Fatal("initial resize-event timed out")
-	}
+	ui, tt := LstFixture(t.GoT(), nil, 0)
 
 	tt.Display(fx, api.Style{})
 	ui.Redraw()
 	str := tt.CellsArea(3, 1, 13, 3).String()
 	t.Eq(exp, str)
+}
+
+func (s *_testing) Returns_from_evt_post_after_sub_posts_processed(t *T) {
+	var ui *UI
+	runeReported := false
+	ui, tt := LstFixture(t.GoT(), func(evt api.Eventer) {
+		switch evt.(type) {
+		case api.KeyEventer:
+			ui.Post(newRuneEvent('r', api.ZeroModifier))
+		case api.RuneEventer:
+			runeReported = true
+		}
+	}, 0)
+
+	tt.PostKey(api.Enter, api.ZeroModifier)
+
+	t.True(runeReported)
 }
 
 func TestTesting(t *testing.T) {

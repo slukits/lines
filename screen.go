@@ -5,9 +5,7 @@
 package lines
 
 import (
-	"fmt"
-
-	"github.com/gdamore/tcell/v2"
+	"github.com/slukits/lines/internal/api"
 	"github.com/slukits/lines/internal/lyt"
 )
 
@@ -39,53 +37,21 @@ type Chainer interface {
 }
 
 type screen struct {
-	lyt   *lyt.Manager
-	lib   tcell.Screen
-	focus layoutComponenter
+	lyt     *lyt.Manager
+	backend api.Displayer
+	focus   layoutComponenter
 }
 
-// newSim returns a new Screen instance wrapping tcell's simulation
-// screen for testing purposes.
-func newSim(cmp Componenter) (*screen, error) {
-	lib := screenFactory.NewSimulationScreen("")
-	if err := lib.Init(); err != nil {
-		return nil, err
-	}
-	scr := &screen{lib: lib}
+func newScreen(backend api.UIer, cmp Componenter) *screen {
+	scr := &screen{backend: backend}
 	if cmp != nil {
-		lc := cmp.initialize(cmp)
+		lc := cmp.initialize(cmp, backend)
 		lc.wrapped().ensureFeatures()
 		scr.lyt = &lyt.Manager{Root: lc}
 		scr.focus = lc
 	} else {
 		cmp := &Component{}
-		lc := cmp.initialize(cmp)
-		lc.wrapped().ensureFeatures()
-		scr.lyt = &lyt.Manager{Root: lc}
-		scr.focus = lc
-	}
-	return scr, nil
-}
-
-// newScreen returns a new Screen instance or panics if the screen can't
-// be obtained respectively initialized.
-func newScreen(cmp Componenter) *screen {
-	lib, err := screenFactory.NewScreen()
-	if err != nil {
-		panic(fmt.Sprintf("can't obtain screen: %v\n", err))
-	}
-	if err := lib.Init(); err != nil {
-		panic(fmt.Sprintf("can't initialize screen: %v\n", err))
-	}
-	scr := &screen{lib: lib}
-	if cmp != nil {
-		lc := cmp.initialize(cmp)
-		lc.wrapped().ensureFeatures()
-		scr.lyt = &lyt.Manager{Root: lc}
-		scr.focus = lc
-	} else {
-		cmp := &Component{}
-		lc := cmp.initialize(cmp)
+		lc := cmp.initialize(cmp, backend)
 		lc.wrapped().ensureFeatures()
 		scr.lyt = &lyt.Manager{Root: lc}
 		scr.focus = lc
@@ -149,35 +115,35 @@ func (s *screen) forBubbling(
 }
 
 // hardSync reflows the layout and hard-syncs every component.
-func (s *screen) hardSync(ee *Events) {
-	s.syncReLayout(ee, nil)
+func (s *screen) hardSync(ll *Lines) {
+	s.syncReLayout(ll, nil)
 	s.lyt.ForDimer(nil, func(d lyt.Dimer) (stop bool) {
 		wrapped := d.(layoutComponenter).wrapped()
-		wrapped.hardSync(s.lib)
+		wrapped.hardSync(s.backend)
 		return false
 	})
-	s.lib.Sync()
+	s.backend.Redraw()
 }
 
 // softSync reflows the layout and  hard-syncs every component whose
 // layout changed and soft-syncs all remaining dirty components.
 // NOTE reflowing the layout is always necessary because we don't know
 // if the user added any new components.
-func (s *screen) softSync(ee *Events) {
-	s.syncReLayout(ee, func(cmp Componenter) {
-		cmp.layoutComponent().wrapped().hardSync(s.lib)
+func (s *screen) softSync(ll *Lines) {
+	s.syncReLayout(ll, func(cmp Componenter) {
+		cmp.layoutComponent().wrapped().hardSync(s.backend)
 	})
 	s.syncDirty()
-	s.lib.Show()
+	s.backend.Update()
 }
 
 // syncReLayout reflows the layout and reports to every component with
 // changed layout implementing Layouter.  It also calls back for every
 // component with changed layout if callback not nil.
-func (s *screen) syncReLayout(ee *Events, cb func(Componenter)) {
+func (s *screen) syncReLayout(ll *Lines, cb func(Componenter)) {
 	if s.lyt.IsDirty() {
 		reported := false
-		cntx := &rprContext{ee: ee, scr: s}
+		cntx := &rprContext{ll: ll, scr: s}
 		s.lyt.Reflow(func(d lyt.Dimer) {
 			cmp := d.(layoutComponenter).userComponent()
 			if lyt, ok := cmp.(Layouter); ok {
@@ -190,9 +156,6 @@ func (s *screen) syncReLayout(ee *Events, cb func(Componenter)) {
 				cb(cmp)
 			}
 		})
-		if reported {
-			reportReported(ee)
-		}
 	}
 }
 
@@ -202,33 +165,10 @@ func (s *screen) syncDirty() {
 		// cmp := d.(layoutComponenter).userComponent()
 		wrapped := d.(layoutComponenter).wrapped()
 		if wrapped.IsDirty() {
-			wrapped.sync(s.lib)
+			wrapped.sync(s.backend)
 		}
 		return false
 	})
-}
-
-// screenFactory is used to create new tcell-screens for production or
-// for simulation.  export_test.go makes it possible to replace this
-// screen factory with a screen-factory mocking up tcell's screen
-// creation errors so they can be tested.
-var screenFactory screenFactoryer = &defaultFactory{}
-
-type defaultFactory struct{}
-
-func (f *defaultFactory) NewScreen() (tcell.Screen, error) {
-	return tcell.NewScreen()
-}
-
-func (f *defaultFactory) NewSimulationScreen(
-	s string,
-) tcell.SimulationScreen {
-	return tcell.NewSimulationScreen(s)
-}
-
-type screenFactoryer interface {
-	NewScreen() (tcell.Screen, error)
-	NewSimulationScreen(string) tcell.SimulationScreen
 }
 
 // Stacking embedded in a component makes the component implement the

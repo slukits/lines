@@ -4,8 +4,6 @@
 
 package lines
 
-import "github.com/gdamore/tcell/v2"
-
 // Initer is implemented by components which want to be notified for
 // initialization purposes before the first layout and before user input
 // events are processed.
@@ -63,17 +61,17 @@ type Updater interface {
 }
 
 type rprContext struct {
-	evt tcell.Event
-	ee  *Events
+	evt Eventer
+	ll  *Lines
 	scr *screen
 }
 
 // reportInit reports the init-event to the screen-components which
 // haven't been initialized yet.
-func reportInit(ee *Events, scr *screen) {
+func reportInit(ll *Lines, scr *screen) {
 
 	var reportedInit bool
-	cntx := &rprContext{ee: ee, scr: scr}
+	cntx := &rprContext{ll: ll, scr: scr}
 
 	scr.forUninitialized(func(cmp Componenter) {
 		if !cmp.hasLayoutWrapper() {
@@ -86,48 +84,38 @@ func reportInit(ee *Events, scr *screen) {
 				reportedInit = true
 			}
 		}
-		registerKeys(cmp, cntx)
-		registerRunes(cmp, cntx)
 		cmp.layoutComponent().wrapped().setInitialized()
 	})
-	if reportedInit {
-		reportReported(ee)
-	}
 }
 
 func report(
-	evt tcell.Event, ee *Events, scr *screen,
+	evt Eventer, ee *Lines, scr *screen,
 ) (quit bool) {
 
-	cntx := &rprContext{evt: evt, ee: ee, scr: scr}
+	cntx := &rprContext{evt: evt, ll: ee, scr: scr}
 
 	switch evt := evt.(type) {
-	case *UpdateEvent:
-		reportUpdate(cntx)
-	case *moveFocusEvent:
-		reportMoveFocus(cntx)
-	case *updateKeysEvent:
-		registerKeys(evt.cmp, cntx)
-	case *updateRunesEvent:
-		registerRunes(evt.cmp, cntx)
-	case *tcell.EventKey:
-		switch evt.Key() {
-		case tcell.KeyRune:
-			return reportRune(cntx)
-		default:
-			return reportKey(cntx)
-		}
-	case *tcell.EventMouse:
-		reportMouse(cntx)
-	case *quitEvent:
+	case QuitEventer:
 		reportQuit(cntx)
-		return true
+	case *UpdateEvent:
+		reportUpdate(cntx, evt)
+	// case *moveFocusEvent:
+	// 	reportMoveFocus(cntx)
+	// case *updateKeysEvent:
+	// 	registerKeys(evt.cmp, cntx)
+	// case *updateRunesEvent:
+	// 	registerRunes(evt.cmp, cntx)
+	case RuneEventer:
+		return reportRune(cntx, evt)
+	case KeyEventer:
+		return reportKey(cntx, evt)
+	case MouseEventer:
+		reportMouse(cntx, evt)
 	}
 	return false
 }
 
-func reportUpdate(cntx *rprContext) {
-	evt := cntx.evt.(*UpdateEvent)
+func reportUpdate(cntx *rprContext, evt *UpdateEvent) {
 	if evt.lst != nil {
 		callback(evt.cmp, cntx, evt.lst)
 		return
@@ -139,9 +127,9 @@ func reportUpdate(cntx *rprContext) {
 	callback(evt.cmp, cntx, upd.OnUpdate)
 }
 
-func reportMoveFocus(cntx *rprContext) {
-	moveFocus(cntx.evt.(*moveFocusEvent).cmp, cntx)
-}
+// func reportMoveFocus(cntx *rprContext) {
+// 	moveFocus(cntx.evt.(*moveFocusEvent).cmp, cntx)
+// }
 
 func moveFocus(cmp Componenter, cntx *rprContext) {
 	fls, ok := cntx.scr.focus.userComponent().(FocusLooser)
@@ -156,7 +144,7 @@ func moveFocus(cmp Componenter, cntx *rprContext) {
 }
 
 func mouseFocusable(
-	evt *tcell.EventMouse,
+	evt MouseEventer,
 ) func(ff *features, recursive bool) bool {
 
 	return func(ff *features, recursive bool) bool {
@@ -164,7 +152,7 @@ func mouseFocusable(
 		if ff == nil {
 			return false
 		}
-		f := ff.buttonFeature(evt.Buttons(), evt.Modifiers())
+		f := ff.buttonFeature(evt.Button(), evt.Mod())
 
 		if !recursive && f&Focusable != NoFeature {
 			return true
@@ -178,12 +166,12 @@ func mouseFocusable(
 	}
 }
 
-func focusIfFocusable(cmp layoutComponenter, cntx *rprContext) bool {
+func focusIfFocusable(cntx *rprContext, cmp layoutComponenter) bool {
 
 	focusAble := true // we abuse this as indicator for recursive ...
 	var isFocusable func(*features, bool) bool
 	switch evt := cntx.evt.(type) {
-	case *tcell.EventMouse:
+	case MouseEventer:
 		isFocusable = mouseFocusable(evt)
 	default:
 		return false
@@ -212,16 +200,12 @@ func focusIfFocusable(cmp layoutComponenter, cntx *rprContext) bool {
 	return true
 }
 
-func sizeClosure(scr tcell.Screen) func() (int, int) {
-	return func() (int, int) { return scr.Size() }
-}
-
 func cbEnv(cntx *rprContext, cmp Componenter) *Env {
 	return &Env{
 		cmp:  cmp,
-		EE:   cntx.ee,
+		EE:   cntx.ll,
 		Evt:  cntx.evt,
-		size: sizeClosure(cntx.scr.lib),
+		size: cntx.scr.backend.Size,
 	}
 }
 
@@ -242,9 +226,6 @@ func callback(
 	cmp.disable()
 	env.reset()
 
-	if cntx.evt != nil {
-		reportReported(cntx.ee)
-	}
 	return env.flags
 }
 
@@ -261,12 +242,4 @@ func reportQuit(cntx *rprContext) {
 	if !reported {
 		return
 	}
-	reportReported(cntx.ee)
-}
-
-func reportReported(ee *Events) {
-	if ee.reported == nil {
-		return
-	}
-	ee.reported()
 }

@@ -2,7 +2,6 @@ package api
 
 import (
 	"strings"
-	"time"
 )
 
 // Tester implementation augments an UIer implementation with additional
@@ -29,6 +28,14 @@ type Tester interface {
 
 	// Display brings given string in given style to the screen.
 	Display(string, Style)
+
+	PostKey(Key, Modifier) error
+
+	PostRune(rune, Modifier) error
+
+	PostMouse(x, y int, _ Button, _ Modifier) error
+
+	PostResize(width, height int) error
 }
 
 type StringLine string
@@ -314,13 +321,4 @@ func trimHorizontal(s screener) (int, int) {
 		return
 	})
 	return x, width
-}
-
-// Eventer is the abstract interface which must be implemented by all
-// reported/posted events.
-type Eventer interface {
-	// When returns the creation time of an event.
-	When() time.Time
-	// Source returns the wrapped event of the backend.
-	Source() interface{}
 }

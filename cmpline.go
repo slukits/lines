@@ -6,8 +6,6 @@ package lines
 
 import (
 	"strings"
-
-	"github.com/gdamore/tcell/v2"
 )
 
 type line struct {
@@ -26,7 +24,7 @@ type line struct {
 	// settings coming from parent component's lines factory.
 	global *global
 
-	sty tcell.Style
+	sty Style
 
 	ss lineStyles
 
@@ -34,7 +32,7 @@ type line struct {
 }
 
 // Set updates the content of a line.
-func (l *line) reset(sty tcell.Style, ff LineFlags) *line {
+func (l *line) reset(sty Style, ff LineFlags) *line {
 	l.sty = sty
 	l.ss = nil
 	l.ff = ff
@@ -74,7 +72,7 @@ func (l *line) setFlags(ff LineFlags) {
 // with blanks if necessary) and given style is set for the range
 // cell to len(content).  Is cell < -1 the call is ignored.
 func (l *line) replaceAt(
-	cell int, content string, s tcell.Style, ff LineFlags,
+	cell int, content string, s Style, ff LineFlags,
 ) {
 	if cell < -1 {
 		return
@@ -104,7 +102,7 @@ func (l *line) replaceAt(
 }
 
 type runeWriter interface {
-	SetContent(x, y int, r rune, combo []rune, s tcell.Style)
+	Display(x, y int, r rune, s Style)
 }
 
 func (l *line) sync(x, y, width int, rw runeWriter) {
@@ -122,7 +120,7 @@ func (l *line) fill(x, y, width int, rw runeWriter) {
 		return
 	}
 	for i := x; i < x+width; i++ {
-		rw.SetContent(i, y, ' ', nil, l.sty)
+		rw.Display(i, y, ' ', l.sty)
 	}
 	l.stale = ""
 }
@@ -158,7 +156,7 @@ func (l *line) toScreen(x, y, width int, rw runeWriter) {
 		if i == width {
 			break
 		}
-		rw.SetContent(x+i, y, r, nil, ss.of(i, l.sty))
+		rw.Display(x+i, y, r, ss.of(i, l.sty))
 	}
 
 	if forScrLen >= width {
@@ -190,10 +188,11 @@ func (l *line) toScreenHighlighted(
 		l.fill(x, y, width, rw)
 	}
 
-	_, _, aa := l.sty.Decompose()
-	rvr := l.sty.Reverse(true)
-	if aa&tcell.AttrReverse > 0 {
-		rvr = l.sty.Reverse(false)
+	var rvr Style
+	if l.sty.AA&Reverse == 0 {
+		rvr = l.sty.WithAttrsAdded(Reverse)
+	} else {
+		rvr = l.sty.WithAttrsRemoved(Reverse)
 	}
 	for i, r := range s {
 		if i == width {
@@ -201,11 +200,11 @@ func (l *line) toScreenHighlighted(
 		}
 		switch {
 		case i < trimL:
-			rw.SetContent(x+i, y, ' ', nil, l.sty)
+			rw.Display(x+i, y, ' ', l.sty)
 		case i+trimR >= len(s):
-			rw.SetContent(x+i, y, ' ', nil, l.sty)
+			rw.Display(x+i, y, ' ', l.sty)
 		default:
-			rw.SetContent(x+i, y, r, nil, rvr)
+			rw.Display(x+i, y, r, rvr)
 		}
 	}
 	if len(s) < width {
@@ -354,10 +353,10 @@ func (r Range) Contains(i int) bool {
 // [Env.AddStyleRange].
 type SR struct {
 	Range
-	tcell.Style
+	Style
 }
 
-type lineStyles map[Range]tcell.Style
+type lineStyles map[Range]Style
 
 func (s lineStyles) copy() lineStyles {
 	if s == nil {
@@ -402,7 +401,7 @@ func (s lineStyles) contract(at, by int) {
 // defined relative to a lines origin; i.e. the first cell's style is
 //
 //	s.of(0, dflt)
-func (s lineStyles) of(cell int, dflt tcell.Style) tcell.Style {
+func (s lineStyles) of(cell int, dflt Style) Style {
 
 	if s == nil {
 		return dflt
