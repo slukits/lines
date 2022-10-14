@@ -4,12 +4,8 @@
 
 package api
 
-import "github.com/gdamore/tcell/v2"
-
 // Button mask is used to report/post user mouse input events.
 type Button int32
-
-const c = tcell.Color100
 
 const (
 	Button1 Button = 1 << iota // Usually the left (primary) mouse button.
@@ -26,7 +22,7 @@ const (
 	WheelRight            // Wheel motion to right.
 	ZeroButton Button = 0 // No button or wheel events.
 
-	Primary      = Button1
-	Secondary    = Button2
-	ButtonMiddle = Button3
+	Primary   = Button1
+	Secondary = Button2
+	Middle    = Button3
 )

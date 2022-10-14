@@ -4,8 +4,6 @@
 
 package lines
 
-import "github.com/gdamore/tcell/v2"
-
 type envMask uint64
 
 const (
@@ -50,18 +48,17 @@ type Env struct {
 
 	// EE is the Events instance providing given environment
 	// instance.
-	EE *Events
+	EE *Lines
 
-	// Evt is the tcell-event triggering the creation of a receiving
-	// environment to report it back to a registered listener.  NOTE Evt
-	// can be nil especially for programmatically generated events.
-	Evt tcell.Event
+	// Evt is the event which triggered the creation of the environment
+	// instance.  NOTE with Evt.Source() a backend event may be accessed.
+	Evt Eventer
 
 	flags envMask
 }
 
 type cmpWriter interface {
-	write(lines []byte, at, cell int, ff LineFlags, sty tcell.Style) (int, error)
+	write(lines []byte, at, cell int, ff LineFlags, sty Style) (int, error)
 }
 
 // Write writes to the screen area of the component having given
@@ -77,9 +74,9 @@ func (e *Env) Write(bb []byte) (int, error) {
 // }
 
 // Attr sets the next write's style attributes like bold.
-func (e *Env) Attr(aa tcell.AttrMask) *FmtWriter {
+func (e *Env) Attr(aa StyleAttribute) *FmtWriter {
 	return &FmtWriter{cmp: e.cmp.(cmpWriter),
-		sty: e.cmp.embedded().fmt.sty.Attributes(aa)}
+		sty: e.cmp.embedded().fmt.sty.WithAttrsAdded(aa)}
 }
 
 func (e *Env) AddStyleRange(idx int, sr SR, rr ...SR) {
@@ -99,15 +96,15 @@ func (e *Env) SetLineFlags(idx int, ff LineFlags) {
 }
 
 // FG sets the next write's foreground color.
-func (e *Env) FG(color tcell.Color) *FmtWriter {
+func (e *Env) FG(color Color) *FmtWriter {
 	return &FmtWriter{cmp: e.cmp.(cmpWriter),
-		sty: e.cmp.embedded().fmt.sty.Foreground(color)}
+		sty: e.cmp.embedded().fmt.sty.WithFG(color)}
 }
 
 // BG sets the next write's foreground color.
-func (e *Env) BG(color tcell.Color) *FmtWriter {
+func (e *Env) BG(color Color) *FmtWriter {
 	return &FmtWriter{cmp: e.cmp.(cmpWriter),
-		sty: e.cmp.embedded().fmt.sty.Background(color)}
+		sty: e.cmp.embedded().fmt.sty.WithBG(color)}
 }
 
 // LL returns a writer which writes to the line and its following lines

@@ -4,8 +4,6 @@
 
 package lines
 
-import "github.com/gdamore/tcell/v2"
-
 // Clicker is implemented by components which want to be informed about
 // a "left"-mouse click event in their printable area.  If the clicked
 // component, i.e. the component with the smallest layout area
@@ -64,9 +62,9 @@ func mouseCurry(l func(*Env, int, int), x, y int) func(*Env) {
 // reportMouse makes sure that the smallest component containing
 // the click coordinates has the focus; then the click events are
 // reported bubbling.
-func reportMouse(cntx *rprContext) {
+func reportMouse(cntx *rprContext, evt MouseEventer) {
 
-	x, y := cntx.evt.(*tcell.EventMouse).Position()
+	x, y := evt.Pos()
 	path, err := cntx.scr.lyt.LocateAt(x, y)
 	if err != nil {
 		return
@@ -77,7 +75,7 @@ func reportMouse(cntx *rprContext) {
 	lytCmp := path[len(path)-1].(layoutComponenter)
 
 	if lytCmp != cntx.scr.focus {
-		focusIfFocusable(lytCmp, cntx)
+		focusIfFocusable(cntx, lytCmp)
 	}
 
 	for i := len(path) - 1; i >= 0; i-- {
@@ -104,8 +102,7 @@ func reportClick(
 	cntx *rprContext, lc layoutComponenter, x, y int,
 ) (stopBubbling bool) {
 
-	if cntx.evt.(*tcell.EventMouse).Buttons()&tcell.ButtonPrimary ==
-		tcell.ButtonNone {
+	if cntx.evt.(MouseEventer).Button()&Primary == ZeroButton {
 		return
 	}
 
@@ -125,8 +122,8 @@ func reportContext(
 	cntx *rprContext, lc layoutComponenter, x, y int,
 ) (stopBubbling bool) {
 
-	if cntx.evt.(*tcell.EventMouse).Buttons()&tcell.ButtonSecondary ==
-		tcell.ButtonNone {
+	if cntx.evt.(MouseEventer).Button()&Secondary ==
+		ZeroButton {
 		return
 	}
 

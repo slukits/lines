@@ -4,30 +4,9 @@
 
 package lines
 
-import "github.com/gdamore/tcell/v2"
-
-// KeysRegisterer implementations are ask at initialization time if they
-// want to register listeners for particular keys.  To update the
-// registered keys of a component use Events.UpdateKeys.
-type KeysRegisterer interface {
-
-	// Keys implementation is provided with a callback function of which
-	// each call maps a key and its modifier to an event listener.
-	// Invalid calls are ignored.  A provided nil listener removes the
-	// rune binding.
-	Keys(KeyRegistration)
-}
-
-// RunesRegisterer implementations are ask at initialization time if they
-// want to register listeners for particular runes.  To update the
-// registered runes of a component use Events.UpdateRunes.
-type RunesRegisterer interface {
-
-	// Runes implementation is provided with a callback function of
-	// which each call maps a rune to an event listener.  Invalid calls
-	// are ignored.  A provided nil listener removes the rune binding.
-	Runes(RuneRegistration)
-}
+import (
+	"github.com/slukits/lines/internal/api"
+)
 
 // Keyer is implemented by components who want to take over the user's
 // key-input if they are focused.
@@ -35,56 +14,18 @@ type Keyer interface {
 
 	// OnKey is provided with every key-press and reported modifiers which
 	// were pressed at the same time.
-	OnKey(*Env, tcell.Key, tcell.ModMask)
+	OnKey(*Env, Key, Modifier)
 }
 
 // Runer is implemented by components who want to take over the user's
 // rune-input if they are focused.
 type Runer interface {
 
-	// OnRune is provided with every rune-input.  NOTE modifiers and
-	// runes are not really a thing when it comes to terminals.  Hence
-	// they are mainly ignored by lines.  But the provided Env
-	// instance's Evt-Property provides the original received
-	// *tcell.EventKey instance which holds all information which tcell
-	// provided about reported rune event.
-	OnRune(*Env, rune)
+	// OnRune is provided with every rune-input.
+	OnRune(*Env, rune, Modifier)
 }
 
-func registerKeys(cmp Componenter, cntx *rprContext) {
-	if !cmp.hasLayoutWrapper() {
-		return
-	}
-	wrapped := cmp.layoutComponent().wrapped()
-	if wrapped.lst == nil {
-		wrapped.lst = &listeners{}
-	}
-	kc, ok := cmp.(KeysRegisterer)
-	if ok {
-		kc.Keys(func(k tcell.Key, mm tcell.ModMask, l Listener) {
-			wrapped.lst.key(k, mm, l)
-		})
-	}
-}
-
-func registerRunes(cmp Componenter, cntx *rprContext) {
-	if !cmp.hasLayoutWrapper() {
-		return
-	}
-	wrapped := cmp.layoutComponent().wrapped()
-	if wrapped.lst == nil {
-		wrapped.lst = &listeners{}
-	}
-	rc, ok := cmp.(RunesRegisterer)
-	if ok {
-		rc.Runes(func(r rune, l Listener) {
-			wrapped.lst.rune(r, l)
-		})
-	}
-}
-
-func reportKey(cntx *rprContext) (quit bool) {
-	evt := cntx.evt.(*tcell.EventKey)
+func reportKey(cntx *rprContext, evt api.KeyEventer) (quit bool) {
 	sb := false
 	stopBubbling := func() bool {
 		sb = true
@@ -102,21 +43,17 @@ func reportKey(cntx *rprContext) (quit bool) {
 	if sb {
 		return false
 	}
-	execFeature(cntx, evt)
-	if !cntx.scr.root().ff.keyQuits(evt.Key()) {
-		return false
-	}
-	reportQuit(cntx)
-	return true
+	execKeyFeature(cntx, evt)
+	return cntx.scr.root().ff.keyQuits(evt.Key())
 }
 
 func reportKeyListener(
-	c layoutComponenter, evt *tcell.EventKey, cntx *rprContext,
+	c layoutComponenter, evt api.KeyEventer, cntx *rprContext,
 ) (stopBubbling bool) {
 	if c.wrapped().lst == nil {
 		return false
 	}
-	l, ok := c.wrapped().lst.keyListenerOf(evt.Key(), evt.Modifiers())
+	l, ok := c.wrapped().lst.keyListenerOf(evt.Key(), evt.Mod())
 	if !ok {
 		return false
 	}
@@ -125,22 +62,17 @@ func reportKeyListener(
 }
 
 func keyCurry(
-	evt *tcell.EventKey, cb func(*Env, tcell.Key, tcell.ModMask),
+	evt api.KeyEventer, cb func(*Env, api.Key, api.Modifier),
 ) func(*Env) {
 	return func(e *Env) {
-		cb(e, evt.Key(), evt.Modifiers())
+		cb(e, evt.Key(), evt.Mod())
 	}
 }
 
-func execFeature(cntx *rprContext, evt *tcell.EventKey) {
+func execKeyFeature(cntx *rprContext, evt api.KeyEventer) {
 	usr := cntx.scr.focus.userComponent()
-	var f FeatureMask
-	if evt.Key() == tcell.KeyRune {
-		f = usr.layoutComponent().wrapped().ff.runeFeature(evt.Rune())
-	} else {
-		f = usr.layoutComponent().wrapped().ff.keyFeature(
-			evt.Key(), evt.Modifiers())
-	}
+	f := usr.layoutComponent().wrapped().ff.keyFeature(
+		evt.Key(), evt.Mod())
 	if f == NoFeature {
 		return
 	}
@@ -150,7 +82,7 @@ func execFeature(cntx *rprContext, evt *tcell.EventKey) {
 }
 
 func reportOnKey(
-	c layoutComponenter, evt *tcell.EventKey, cntx *rprContext,
+	c layoutComponenter, evt api.KeyEventer, cntx *rprContext,
 ) (stopBubbling bool) {
 	kyr, ok := c.userComponent().(Keyer)
 	if !ok {
@@ -160,8 +92,7 @@ func reportOnKey(
 	return env&envStopBubbling == envStopBubbling
 }
 
-func reportRune(cntx *rprContext) (quit bool) {
-	evt := cntx.evt.(*tcell.EventKey)
+func reportRune(cntx *rprContext, evt RuneEventer) (quit bool) {
 	sb := false
 	stopBubbling := func() bool {
 		sb = true
@@ -179,21 +110,17 @@ func reportRune(cntx *rprContext) (quit bool) {
 	if sb {
 		return false
 	}
-	execFeature(cntx, evt)
-	if !cntx.scr.root().ff.runeQuits(evt.Rune()) {
-		return false
-	}
-	reportQuit(cntx)
-	return true
+	execRuneFeature(cntx, evt)
+	return cntx.scr.root().ff.runeQuits(evt.Rune())
 }
 
 func reportRuneListener(
-	c layoutComponenter, evt *tcell.EventKey, cntx *rprContext,
+	c layoutComponenter, evt RuneEventer, cntx *rprContext,
 ) (stopBubbling bool) {
 	if c.wrapped().lst == nil {
 		return false
 	}
-	l, ok := c.wrapped().lst.runeListenerOf(evt.Rune())
+	l, ok := c.wrapped().lst.runeListenerOf(evt.Rune(), evt.Mod())
 	if !ok {
 		return false
 	}
@@ -202,13 +129,13 @@ func reportRuneListener(
 }
 
 func runeCurry(
-	evt *tcell.EventKey, cb func(*Env, rune),
+	evt RuneEventer, cb func(*Env, rune, Modifier),
 ) func(*Env) {
-	return func(e *Env) { cb(e, evt.Rune()) }
+	return func(e *Env) { cb(e, evt.Rune(), evt.Mod()) }
 }
 
 func reportOnRune(
-	c layoutComponenter, evt *tcell.EventKey, cntx *rprContext,
+	c layoutComponenter, evt RuneEventer, cntx *rprContext,
 ) (stopBubbling bool) {
 	rnr, ok := c.userComponent().(Runer)
 	if !ok {
@@ -216,4 +143,16 @@ func reportOnRune(
 	}
 	env := callback(c.userComponent(), cntx, runeCurry(evt, rnr.OnRune))
 	return env&envStopBubbling == envStopBubbling
+}
+
+func execRuneFeature(cntx *rprContext, evt api.RuneEventer) {
+	usr := cntx.scr.focus.userComponent()
+	f := usr.layoutComponent().wrapped().ff.runeFeature(
+		evt.Rune(), evt.Mod())
+	if f == NoFeature {
+		return
+	}
+	usr.enable()
+	defer usr.disable()
+	execute(cntx, usr, f)
 }

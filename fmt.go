@@ -4,8 +4,6 @@
 
 package lines
 
-import "github.com/gdamore/tcell/v2"
-
 // FmtMask types a control's respectively a control's line formattings.
 type FmtMask uint
 
@@ -26,7 +24,7 @@ const (
 // llFmt represents a lines (ll) formatting (fmt) properties for a
 // component, a line or a partial line.
 type llFmt struct {
-	sty  tcell.Style
+	sty  Style
 	mask FmtMask
 }
 
@@ -34,24 +32,24 @@ type llFmt struct {
 // writing to a component's line(s).
 type FmtWriter struct {
 	cmp cmpWriter
-	sty tcell.Style
+	sty Style
 }
 
 // FG sets the next write's foreground color.
-func (w *FmtWriter) FG(color tcell.Color) *FmtWriter {
-	w.sty = w.sty.Foreground(color)
+func (w *FmtWriter) FG(color Color) *FmtWriter {
+	w.sty.FG = color
 	return w
 }
 
 // BG sets the next write's foreground color.
-func (w *FmtWriter) BG(color tcell.Color) *FmtWriter {
-	w.sty = w.sty.Background(color)
+func (w *FmtWriter) BG(color Color) *FmtWriter {
+	w.sty.BG = color
 	return w
 }
 
 // Attr sets the next write's style attributes like bold.
-func (w *FmtWriter) Attr(aa tcell.AttrMask) *FmtWriter {
-	w.sty = w.sty.Attributes(aa)
+func (w *FmtWriter) Attr(aa StyleAttribute) *FmtWriter {
+	w.sty.AA = aa
 	return w
 }
 
@@ -104,7 +102,7 @@ func (w *FmtWriter) Write(bb []byte) (int, error) {
 // component which either starts at a given line, at a given line's cell
 // or appends at the end.
 type locWriter struct {
-	sty        tcell.Style
+	sty        Style
 	line, cell int
 	ff         LineFlags
 	cmp        cmpWriter

@@ -12,11 +12,9 @@ import (
 	. "github.com/slukits/gounit"
 )
 
-type events struct{ Suite }
+type _lines struct{ Suite }
 
-func (s *events) SetUp(t *T) {
-	t.Parallel()
-}
+func (s *_lines) SetUp(t *T) { t.Parallel() }
 
 type initFX struct{ Component }
 
@@ -24,10 +22,13 @@ const expInit = "component-fixture initialized"
 
 func (c *initFX) OnInit(e *Env) { fmt.Fprint(e, expInit) }
 
-func (s *events) Initializes_initially_given_component(t *T) {
-	ee, tt := Test(t.GoT(), &initFX{}, 1)
-	ee.Listen()
-	t.Eq(expInit, tt.LastScreen.String())
+func (s *_lines) tt(t *T, cmp Componenter) *Testing {
+	return TermFixture(t.GoT(), 0, cmp)
+}
+
+func (s *_lines) Initializes_initially_given_component(t *T) {
+	tt := s.tt(t, &initFX{})
+	t.Eq(expInit, tt.Screen().Trimmed().String())
 }
 
 type quitCmpFX struct {
@@ -47,15 +48,15 @@ func (x *twoQuittersFX) ForStacked(cb func(Componenter) (stop bool)) {
 	cb(x.q2)
 }
 
-func (s *events) Reports_quit_key_events_to_all_quitter(t *T) {
+func (s *_lines) Reports_quit_key_events_to_all_quitter(t *T) {
 	for _, k := range defaultFeatures.keysOf(Quitable) {
 		fx := &twoQuittersFX{q1: &quitCmpFX{}, q2: &quitCmpFX{}}
-		ee, tt := Test(t.GoT(), fx, -1)
-		ee.Listen()
+		tt := s.tt(t, fx)
+
 		tt.FireKey(k.Key, k.Mod)
+
 		t.True(fx.q1.quitReported)
 		t.True(fx.q2.quitReported)
-		t.Not.True(ee.IsListening())
 	}
 }
 
@@ -68,10 +69,9 @@ func (c *lytCmpFX) OnInit(*Env) { c.init = time.Now() }
 
 func (c *lytCmpFX) OnLayout(*Env) { c.lyt = time.Now() }
 
-func (s *events) Reports_layout_after_initialization(t *T) {
+func (s *_lines) Reports_layout_after_initialization(t *T) {
 	fx := &lytCmpFX{}
-	ee, _ := Test(t.GoT(), fx, 2)
-	ee.Listen()
+	s.tt(t, fx)
 	t.True(fx.init.Before(fx.lyt))
 }
 
@@ -80,13 +80,11 @@ type updLstCmpFX struct {
 	reported bool
 }
 
-func (s *events) Reports_update_to_provided_listener(t *T) {
+func (s *_lines) Reports_update_to_provided_listener(t *T) {
 	fx := &updLstCmpFX{}
-	ee, _ := Test(t.GoT(), fx, 1)
-	ee.Listen()
-	ee.Update(fx, nil, func(_ *Env) { fx.reported = true })
+	s.tt(t, fx)
+	fx.Update(nil, func(_ *Env) { fx.reported = true })
 	t.True(fx.reported)
-	t.Not.True(ee.IsListening())
 }
 
 type updCmpFX struct {
@@ -96,13 +94,11 @@ type updCmpFX struct {
 
 func (c *updCmpFX) OnUpdate(e *Env) { c.reported = true }
 
-func (s *events) Reports_update_without_listener_to_component(t *T) {
+func (s *_lines) Reports_update_without_listener_to_component(t *T) {
 	fx := &updCmpFX{}
-	ee, _ := Test(t.GoT(), fx, 1)
-	ee.Listen()
-	ee.Update(fx, nil, nil)
+	s.tt(t, fx)
+	fx.Update(nil, nil)
 	t.True(fx.reported)
-	t.Not.True(ee.IsListening())
 }
 
 type stackedCmpFX struct {
@@ -128,16 +124,23 @@ type fcsCmpFX struct {
 
 func (c *fcsCmpFX) OnFocus(*Env) { c.gainedFocus = true }
 
-func (s *events) Reports_moved_focus_gaining_and_loosing(t *T) {
+func (s *_lines) Reports_moved_focus_gaining_and_loosing(t *T) {
 	fx := &stackedCmpFX{cc: []Componenter{&fcsCmpFX{}}}
-	ee, _ := Test(t.GoT(), fx, 2)
-	ee.MoveFocus(fx.cc[0])
+	s.tt(t, fx)
+	t.FatalOn(fx.cc[0].(*fcsCmpFX).Focus())
 	t.True(fx.lostFocus)
 	t.True(fx.cc[0].(*fcsCmpFX).gainedFocus)
-	t.Not.True(ee.IsListening())
 }
 
-func TestEvents(t *testing.T) {
+func (s *_lines) Ignores_focus_on_focused_component(t *T) {
+	fx := &stackedCmpFX{cc: []Componenter{&fcsCmpFX{}}}
+	s.tt(t, fx)
+	t.FatalOn(fx.Focus())
+	t.Not.True(fx.lostFocus)
+	t.Not.True(fx.cc[0].(*fcsCmpFX).gainedFocus)
+}
+
+func TestLines(t *testing.T) {
 	t.Parallel()
-	Run(&events{}, t)
+	Run(&_lines{}, t)
 }

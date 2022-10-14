@@ -8,55 +8,39 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/gdamore/tcell/v2"
 	. "github.com/slukits/gounit"
 )
 
 type lineFocus struct {
 	Suite
-	Fixtures
 }
 
-func (s *lineFocus) SetUp(t *T) {
-	t.Parallel()
-}
+func (s *lineFocus) SetUp(t *T) { t.Parallel() }
 
-func (s *lineFocus) TearDown(t *T) {
-	ee, ok := s.Get(t).(*Events)
-	if !ok {
-		return
-	}
-	if !ee.IsListening() {
-		return
-	}
-	ee.QuitListening()
-}
-
-func (s *lineFocus) iFX(
-	t *T, init func(*icmpFX, *Env), max ...int,
-) (*Events, *Testing, *icmpFX) {
+func (s *lineFocus) itt(
+	t *T, init func(*icmpFX, *Env),
+) (*Testing, *icmpFX) {
 	fx := &icmpFX{init: init}
-	ee, tt := Test(t.GoT(), fx, max...)
-	s.Set(t, ee)
-	ee.Listen()
-	return ee, tt, fx
+	tt := TermFixture(t.GoT(), 0, fx)
+	return tt, fx
 }
 
 func (s *lineFocus) Has_initially_no_line_focused(t *T) {
-	s.iFX(t, func(c *icmpFX, e *Env) {
-		t.Eq(-1, c.Focus.Current())
+	s.itt(t, func(c *icmpFX, e *Env) {
+		t.Eq(-1, c.LL.Focus.Current())
 		// no-ops for coverage
-		c.Focus.Next(false)
-		c.Focus.Reset(false)
-		t.Eq(-1, c.Focus.Current())
-	}, 1)
+		c.LL.Focus.Next(false)
+		c.LL.Focus.Reset(false)
+		t.Eq(-1, c.LL.Focus.Current())
+	})
 }
 
 type lfCmpFX struct {
 	Component
 	onInit func(*lfCmpFX, *Env)
 	onLf   func(*lfCmpFX, *Env, int)
-	lfN    int
+	// the number of received line focus events
+	lfN int
 }
 
 func (c *lfCmpFX) OnInit(e *Env) {
@@ -75,23 +59,21 @@ func (c *lfCmpFX) OnLineFocus(e *Env, idx int) {
 	c.onLf(c, e, idx)
 }
 
-func (s *lineFocus) lfFX(t *T,
+func (s *lineFocus) lfFX(
+	t *T,
 	init func(*lfCmpFX, *Env),
 	onLf func(*lfCmpFX, *Env, int),
-	max ...int,
-) (*Events, *Testing, *lfCmpFX) {
+) (*Testing, *lfCmpFX) {
 	fx := &lfCmpFX{
 		onInit: init,
 		onLf:   onLf,
 	}
-	ee, tt := Test(t.GoT(), fx, max...)
-	s.Set(t, ee)
-	ee.Listen()
-	return ee, tt, fx
+	tt := TermFixture(t.GoT(), 0, fx)
+	return tt, fx
 }
 
 func (s *lineFocus) Focuses_first_focusable_line(t *T) {
-	ee, tt, fx := s.lfFX(t,
+	tt, fx := s.lfFX(t,
 		func(c *lfCmpFX, e *Env) { // OnInit
 			c.FF.Add(LinesFocusable)
 			fmt.Fprint(e, "first\nsecond")
@@ -99,28 +81,26 @@ func (s *lineFocus) Focuses_first_focusable_line(t *T) {
 		func(c *lfCmpFX, e *Env, i int) { // OnLineFocus
 			switch c.lfN {
 			case 1:
-				t.Eq(0, c.Focus.Current())
-				// t.True(c.LL(c.Focus.Current()).IsFocusable())
+				t.Eq(0, c.LL.Focus.Current())
 			case 2:
-				t.Eq(1, c.Focus.Current())
+				t.Eq(1, c.LL.Focus.Current())
 			}
-		}, 4)
+		})
 
 	tt.FireRune('j')
 
-	ee.Update(fx, nil, func(e *Env) {
-		fx.Focus.Reset(false)
+	fx.Update(nil, func(e *Env) {
+		fx.LL.Focus.Reset(false)
 		fmt.Fprint(e.LL(0, NotFocusable), "first")
 		fmt.Fprint(e.LL(1), "second")
 	})
 
-	tt.FireKey(tcell.KeyDown)
-
+	tt.FireKey(Down)
 	t.Eq(2, fx.lfN)
 }
 
 func (s *lineFocus) Focuses_next_focusable_line(t *T) {
-	_, tt, fx := s.lfFX(t,
+	tt, fx := s.lfFX(t,
 		func(c *lfCmpFX, e *Env) {
 			fmt.Fprint(e.LL(0), "first")
 			fmt.Fprint(e.LL(1, NotFocusable), "second")
@@ -129,69 +109,69 @@ func (s *lineFocus) Focuses_next_focusable_line(t *T) {
 		func(c *lfCmpFX, e *Env, idx int) {
 			switch c.lfN {
 			case 1:
-				t.Eq(0, c.Focus.Current())
+				t.Eq(0, c.LL.Focus.Current())
 			case 2:
-				t.Eq(2, c.Focus.Current())
+				t.Eq(2, c.LL.Focus.Current())
 			}
-		}, 3)
+		})
 
 	tt.FireRune('j')
-	tt.FireKey(tcell.KeyDown)
+	tt.FireKey(Down)
 
 	t.Eq(2, fx.lfN)
 }
 
 func (s *lineFocus) Resets_if_no_next_focusable(t *T) {
-	ee, tt, fx := s.lfFX(t,
+	tt, fx := s.lfFX(t,
 		func(c *lfCmpFX, e *Env) { // OnInit
 			fmt.Fprint(e.LL(0), "first")
 		},
 		func(c *lfCmpFX, e *Env, i int) { // OnLineFocus
 			switch c.lfN % 2 {
 			case 0:
-				t.Eq(-1, c.Focus.Current())
+				t.Eq(-1, c.LL.Focus.Current())
 			case 1:
-				t.Eq(0, c.Focus.Current())
+				t.Eq(0, c.LL.Focus.Current())
 			}
 		})
 
 	tt.FireRune('j')
 	tt.FireRune('j')
 
-	ee.Update(fx, nil, func(e *Env) {
-		t.Eq(-1, fx.Focus.Current())
+	fx.Update(nil, func(e *Env) {
+		t.Eq(-1, fx.LL.Focus.Current())
 		fmt.Fprint(e.LL(1, NotFocusable), "second")
 		fmt.Fprint(e.LL(2, NotFocusable), "third")
 	})
 
-	tt.FireKey(tcell.KeyDown)
-	tt.FireKey(tcell.KeyDown)
+	tt.FireKey(Down)
+	tt.FireKey(Down)
 
 	t.Eq(4, fx.lfN)
 }
 
 func (s *lineFocus) Focuses_previous_focusable_line(t *T) {
-	ee, tt, fx := s.lfFX(t,
+	tt, fx := s.lfFX(t,
 		func(lcf *lfCmpFX, e *Env) { // OnInit
 			fmt.Fprint(e, "first\nsecond")
 		},
 		func(c *lfCmpFX, e *Env, i int) { // OnLineFocused
 			switch c.lfN {
 			case 1:
-				t.Eq(0, c.Focus.Current())
+				t.Eq(0, c.LL.Focus.Current())
 			case 2, 4:
-				t.Eq(-1, c.Focus.Current())
+				t.Eq(-1, c.LL.Focus.Current())
 			case 3, 5, 7:
-				t.Eq(1, c.Focus.Current())
+				t.Eq(1, c.LL.Focus.Current())
 			case 6:
-				t.Eq(2, c.Focus.Current())
+				t.Eq(2, c.LL.Focus.Current())
 			}
 		})
 
 	tt.FireRune('j') // case 1
 	tt.FireRune('k') // case 2
 
-	ee.Update(fx, nil, func(e *Env) {
+	fx.Update(nil, func(e *Env) {
 		fmt.Fprint(e.LL(0, NotFocusable), "first")
 		fmt.Fprint(e.LL(1), "second")
 		fmt.Fprint(e.LL(2), "third")
@@ -207,27 +187,27 @@ func (s *lineFocus) Focuses_previous_focusable_line(t *T) {
 }
 
 func (s *lineFocus) Reset_triggered_by_unfocusable_feature(t *T) {
-	_, tt, fx := s.lfFX(t,
+	tt, fx := s.lfFX(t,
 		func(c *lfCmpFX, e *Env) {
 			fmt.Fprint(e, "first\nsecond")
 		},
 		func(c *lfCmpFX, e *Env, i int) {
 			switch c.lfN {
 			case 1:
-				t.Eq(0, c.Focus.Current())
+				t.Eq(0, c.LL.Focus.Current())
 			case 2:
-				t.Eq(-1, c.Focus.Current())
+				t.Eq(-1, c.LL.Focus.Current())
 			}
 		})
 
 	tt.FireRune('j')
-	tt.FireKey(tcell.KeyEsc, tcell.ModNone)
+	tt.FireKey(Esc)
 
 	t.Eq(2, fx.lfN)
 }
 
 func (s *lineFocus) Scrolls_to_next_highlighted_line(t *T) {
-	_, tt, fx := s.lfFX(t,
+	tt, fx := s.lfFX(t,
 		func(c *lfCmpFX, e *Env) {
 			c.dim.SetHeight(2)
 			fmt.Fprint(e.LL(0, NotFocusable), "line 1")
@@ -239,18 +219,18 @@ func (s *lineFocus) Scrolls_to_next_highlighted_line(t *T) {
 			fmt.Fprint(e.LL(6), "line 7")
 		},
 		func(c *lfCmpFX, e *Env, i int) {
-			t.Eq(5, c.Focus.Current())
+			t.Eq(5, c.LL.Focus.Current())
 		})
 
-	tt.FireKey(tcell.KeyDown)
+	tt.FireKey(Down)
 
-	t.Eq("line 5\nline 6", tt.Screen().String())
+	t.Eq("line 5\nline 6", tt.ScreenOf(fx).Trimmed().String())
 
 	t.Eq(1, fx.lfN)
 }
 
 func (s *lineFocus) Scrolls_to_previous_highlighted_line(t *T) {
-	_, tt, fx := s.lfFX(t,
+	tt, fx := s.lfFX(t,
 		func(c *lfCmpFX, e *Env) {
 			c.dim.SetHeight(2)
 			fmt.Fprint(e.LL(0, NotFocusable), "line 1")
@@ -264,25 +244,25 @@ func (s *lineFocus) Scrolls_to_previous_highlighted_line(t *T) {
 		func(c *lfCmpFX, e *Env, i int) {
 			switch c.lfN {
 			case 1, 3:
-				t.Eq(1, c.Focus.Current())
+				t.Eq(1, c.LL.Focus.Current())
 			case 2:
-				t.Eq(5, c.Focus.Current())
+				t.Eq(5, c.LL.Focus.Current())
 			}
 		})
 
-	tt.FireKey(tcell.KeyDown)
-	tt.FireKey(tcell.KeyDown)
+	tt.FireKey(Down)
+	tt.FireKey(Down)
 
-	t.Eq("line 5\nline 6", tt.Screen().String())
+	t.Eq("line 5\nline 6", tt.ScreenOf(fx).Trimmed().String())
 
-	tt.FireKey(tcell.KeyUp)
+	tt.FireKey(Up)
 
-	t.Eq("line 2\nline 3", tt.Screen().String())
+	t.Eq("line 2\nline 3", tt.ScreenOf(fx).Trimmed().String())
 	t.Eq(3, fx.lfN)
 }
 
 func (s *lineFocus) Inverts_bg_fg_of_focused_if_highlighted(t *T) {
-	_, tt, fx := s.lfFX(t,
+	tt, fx := s.lfFX(t,
 		func(c *lfCmpFX, e *Env) {
 			c.FF.Add(HighlightedFocusable)
 			c.dim.SetHeight(2)
@@ -292,27 +272,25 @@ func (s *lineFocus) Inverts_bg_fg_of_focused_if_highlighted(t *T) {
 		func(c *lfCmpFX, e *Env, i int) {
 			switch c.lfN {
 			case 1:
-				t.Eq(1, c.Focus.Current())
+				t.Eq(1, c.LL.Focus.Current())
 			}
 		})
 
-	scr := tt.Screen()
-	l2 := scr[1]
-	for idx := range scr[1].String() {
-		t.Not.True(l2.Styles().Of(idx).Has(tcell.AttrReverse))
+	l2 := tt.CellsOf(fx).Trimmed()[1]
+	for x := range l2 {
+		t.Not.True(l2.HasAttr(x, Reverse))
 	}
 
-	tt.FireKey(tcell.KeyDown)
+	tt.FireKey(Down)
 	t.Eq(1, fx.lfN)
 
-	scr = tt.Screen()
-	l2 = scr[1]
-	for idx := range scr[1].String() {
-		if idx < len("line 2") {
-			t.True(l2.Styles().Of(idx).Has(tcell.AttrReverse))
+	l2 = tt.CellsOf(fx).Trimmed()[1]
+	for x := range l2 {
+		if x < len("line 2") {
+			t.True(l2.HasAttr(x, Reverse))
 			continue
 		}
-		t.Not.True(l2.Styles().Of(idx).Has(tcell.AttrReverse))
+		t.Not.True(l2.HasAttr(x, Reverse))
 	}
 }
 
@@ -351,21 +329,18 @@ func (s *lineFocus) slFX(t *T,
 	onIN func(*lsCmpFX, *Env),
 	onLF func(*lsCmpFX, *Env, int),
 	onLS func(*lsCmpFX, *Env, int),
-	max ...int,
-) (*Events, *Testing, *lsCmpFX) {
+) (*Testing, *lsCmpFX) {
 	fx := &lsCmpFX{
 		onIN: onIN,
 		onLF: onLF,
 		onLS: onLS,
 	}
-	ee, tt := Test(t.GoT(), fx, max...)
-	s.Set(t, ee)
-	ee.Listen()
-	return ee, tt, fx
+	tt := TermFixture(t.GoT(), 0, fx)
+	return tt, fx
 }
 
 func (s *lineFocus) Reports_focused_line_on_line_selection(t *T) {
-	_, tt, fx := s.slFX(t,
+	tt, fx := s.slFX(t,
 		func(c *lsCmpFX, e *Env) { // OnInit
 			c.FF.Add(LinesSelectable)
 			fmt.Fprint(e, "first\nsecond")
@@ -373,9 +348,9 @@ func (s *lineFocus) Reports_focused_line_on_line_selection(t *T) {
 		func(c *lsCmpFX, e *Env, i int) { // OnLineFocus
 			switch c.lfN {
 			case 1:
-				t.Eq(0, c.Focus.Current())
+				t.Eq(0, c.LL.Focus.Current())
 			case 2:
-				t.Eq(1, c.Focus.Current())
+				t.Eq(1, c.LL.Focus.Current())
 			}
 		},
 		func(c *lsCmpFX, e *Env, i int) { // OnLineSelection
@@ -385,7 +360,7 @@ func (s *lineFocus) Reports_focused_line_on_line_selection(t *T) {
 
 	tt.FireRune('j')
 	tt.FireRune('j')
-	tt.FireKey(tcell.KeyEnter)
+	tt.FireKey(Enter)
 
 	t.Eq(2, fx.lfN)
 	t.Eq(1, fx.lsN)

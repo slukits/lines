@@ -27,7 +27,7 @@ const (
 	WheelRight Button = api.WheelRight // Wheel motion to right.
 	ZeroButton Button = api.ZeroButton // No button or wheel events.
 
-	Primary      Button = Button1
-	Secondary    Button = Button2
-	ButtonMiddle Button = Button3
+	Primary   Button = Button1
+	Secondary Button = Button2
+	Middle    Button = Button3
 )

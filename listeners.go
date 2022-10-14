@@ -4,27 +4,55 @@
 
 package lines
 
-import (
-	"github.com/gdamore/tcell/v2"
-)
-
 // Listener is the most common type of event listener: a callback
 // provided with an environment.
 type Listener func(*Env)
 
 // KeyRegistration is the callback provided to a Keyer implementation of
 // a component to register specific keys to specific key-listeners.
-type KeyRegistration func(tcell.Key, tcell.ModMask, Listener)
+type KeyRegistration func(Key, Modifier, Listener)
 
 // RuneRegistration is the callback provided to a Runer implementation
 // of a component to register specific runes to specific rune-listeners
 type RuneRegistration func(rune, Listener)
 
+// Listeners provide the API to register key and rune event listeners.
+// While lines will *not* panic if this API is used outside an
+// event-listener callback registering methods are not concurrency save.
+type Listeners struct {
+	c *Component
+}
+
+func (ll *Listeners) listeners() *listeners {
+	if ll.c.layoutCmp == nil {
+		return nil
+	}
+	wrapped := ll.c.layoutCmp.wrapped()
+	wrapped.ensureListeners()
+	return wrapped.lst
+}
+
+func (ll *Listeners) Key(k Key, m Modifier, l Listener) {
+	cll := ll.listeners()
+	if cll == nil {
+		return
+	}
+	cll.key(k, m, l)
+}
+
+func (ll *Listeners) Rune(r rune, m Modifier, l Listener) {
+	cll := ll.listeners()
+	if cll == nil {
+		return
+	}
+	cll.rune(r, m, l)
+}
+
 // listeners hold a components event-listers for particular key or rune
 // events.
 type listeners struct {
-	kk map[tcell.ModMask]map[tcell.Key]Listener
-	rr map[rune]Listener
+	kk map[Modifier]map[Key]Listener
+	rr map[Modifier]map[rune]Listener
 }
 
 // key registers provided listener for given key/mode combination
@@ -33,9 +61,9 @@ type listeners struct {
 // given key/mode or if the zero key is given or if given key is
 // associated with the quit-feature.  NOTE use *Quit* at an
 // Register-instance to receive the Quit-event.
-func (ll *listeners) key(k tcell.Key, m tcell.ModMask, l Listener) {
+func (ll *listeners) key(k Key, m Modifier, l Listener) {
 	if ll.kk == nil {
-		ll.kk = map[tcell.ModMask]map[tcell.Key]Listener{}
+		ll.kk = map[Modifier]map[Key]Listener{}
 	}
 	if l == nil {
 		if ll.kk[m] != nil {
@@ -43,11 +71,11 @@ func (ll *listeners) key(k tcell.Key, m tcell.ModMask, l Listener) {
 		}
 		return
 	}
-	if k == tcell.KeyNUL {
+	if k == NUL {
 		return
 	}
 	if ll.kk[m] == nil {
-		ll.kk[m] = map[tcell.Key]Listener{k: l}
+		ll.kk[m] = map[Key]Listener{k: l}
 		return
 	}
 	ll.kk[m][k] = l
@@ -56,9 +84,7 @@ func (ll *listeners) key(k tcell.Key, m tcell.ModMask, l Listener) {
 // keyListenerOf returns the listener registered for given key/mode
 // combination.  The second return value is false if no listener is
 // registered for given key.
-func (ll *listeners) keyListenerOf(
-	k tcell.Key, m tcell.ModMask,
-) (Listener, bool) {
+func (ll *listeners) keyListenerOf(k Key, m Modifier) (Listener, bool) {
 
 	if ll.kk == nil {
 		return nil, false
@@ -74,34 +100,44 @@ func (ll *listeners) keyListenerOf(
 
 // rune registers provided listener for given rune respectively removes
 // the registration for given rune if the listener is nil.
-func (ll *listeners) rune(r rune, l Listener) error {
+func (ll *listeners) rune(r rune, m Modifier, l Listener) {
 
 	if ll.rr == nil {
-		ll.rr = map[rune]Listener{}
+		ll.rr = map[Modifier]map[rune]Listener{}
 	}
 
 	if l == nil {
-		delete(ll.rr, r)
-		return nil
+		if ll.rr[m] != nil {
+			delete(ll.rr[m], r)
+		}
+		return
 	}
 
 	if r == rune(0) {
-		return nil
+		return
 	}
 
-	ll.rr[r] = l
-	return nil
+	if ll.rr[m] == nil {
+		ll.rr[m] = map[rune]Listener{r: l}
+		return
+	}
+
+	ll.rr[m][r] = l
 }
 
 // runeListenerOf returns the listener registered for given rune.  The
 // second return value is false if no listener is registered for given
 // rune.
-func (kk *listeners) runeListenerOf(r rune) (Listener, bool) {
+func (ll *listeners) runeListenerOf(r rune, m Modifier) (Listener, bool) {
 
-	if kk.rr == nil {
+	if ll.rr == nil {
 		return nil, false
 	}
 
-	l, ok := kk.rr[r]
+	if _, ok := ll.rr[m]; !ok {
+		return nil, false
+	}
+
+	l, ok := ll.rr[m][r]
 	return l, ok
 }

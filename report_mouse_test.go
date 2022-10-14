@@ -7,7 +7,6 @@ package lines
 import (
 	"testing"
 
-	"github.com/gdamore/tcell/v2"
 	. "github.com/slukits/gounit"
 )
 
@@ -20,7 +19,7 @@ const (
 )
 
 type mouseEvent struct {
-	tcell   *tcell.EventMouse
+	evt     MouseEventer
 	evtType mouseEventType
 	x, y    int
 }
@@ -28,10 +27,10 @@ type mouseEvent struct {
 type mouseEvents []mouseEvent
 
 func (me *mouseEvents) append(
-	evt *tcell.EventMouse, evtTyp mouseEventType, x, y int,
+	evt MouseEventer, evtTyp mouseEventType, x, y int,
 ) {
 	*me = append(*me, mouseEvent{
-		tcell: evt, evtType: evtTyp, x: x, y: y})
+		evt: evt, evtType: evtTyp, x: x, y: y})
 }
 
 func (me mouseEvents) has(evtType mouseEventType) bool {
@@ -79,21 +78,21 @@ type mouseFX struct {
 }
 
 func (c *mouseFX) OnClick(e *Env, x, y int) {
-	c.reported.append(e.Evt.(*tcell.EventMouse), onClick, x, y)
+	c.reported.append(e.Evt.(MouseEventer), onClick, x, y)
 	if c.stopBubblingClick {
 		e.StopBubbling()
 	}
 }
 
 func (c *mouseFX) OnContext(e *Env, x, y int) {
-	c.reported.append(e.Evt.(*tcell.EventMouse), onContext, x, y)
+	c.reported.append(e.Evt.(MouseEventer), onContext, x, y)
 	if c.stopBubblingContext {
 		e.StopBubbling()
 	}
 }
 
 func (c *mouseFX) OnMouse(e *Env, x, y int) {
-	c.reported.append(e.Evt.(*tcell.EventMouse), onMouse, x, y)
+	c.reported.append(e.Evt.(MouseEventer), onMouse, x, y)
 	if c.stopBubblingMouse {
 		e.StopBubbling()
 	}
@@ -168,99 +167,87 @@ type Mouse struct{ Suite }
 
 func (s *Mouse) SetUp(t *T) { t.Parallel() }
 
+func (s *Mouse) tt(t *T, cmp Componenter) *Testing {
+	return TermFixture(t.GoT(), 0, cmp)
+}
+
 func (s *Mouse) Click_is_reported_to_focused_component(t *T) {
 	fx := &mouseCmpFX{}
-	// reports OnClick and OnMouse bubbling hence Max == 4
-	ee, tt := Test(t.GoT(), fx, 2)
+	tt := s.tt(t, fx)
 	tt.FireClick(1, 1)
-	t.Not.True(ee.IsListening())
 	t.True(fx.HasClick())
 }
 
 func (s *Mouse) Context_is_reported_to_focused_component(t *T) {
 	fx := &mouseCmpFX{}
-	ee, tt := Test(t.GoT(), fx, 2)
+	tt := s.tt(t, fx)
 	tt.FireContext(1, 1)
-	t.Not.True(ee.IsListening())
 	t.True(fx.HasContext())
 }
 
 func (s *Mouse) Event_is_reported_to_focused_component(t *T) {
 	fx := &mouseCmpFX{}
-	ee, tt := Test(t.GoT(), fx, 1)
-	tt.FireMouse(1, 1, tcell.ButtonMiddle, 0)
-	t.Not.True(ee.IsListening())
+	tt := s.tt(t, fx)
+	tt.FireMouse(1, 1, Middle, 0)
 	t.True(fx.HasMouse())
 }
 
 func (s *Mouse) Click_moves_focus_and_reports_to_focusable(t *T) {
 	fx := &nonZeroOriginFx{}
-	// OnInit, 2xOnUpdate, 2xOnClick, 2xOnMouse (because bubbling)
-	ee, tt := Test(t.GoT(), fx, 7)
-	ee.Listen()
+	tt := s.tt(t, fx)
 	var fxX, fxY int
-	ee.Update(fx.cmp(), nil, func(e *Env) {
+	fx.cmp().Update(nil, func(e *Env) {
 		fx.cmp().FF.Add(Focusable)
 		t.Not.True(e.Focused() == fx.cmp())
 		// need an event callback to access component features
 		fxX, fxY = fx.cmp().Dim().X(), fx.cmp().Dim().Y()
 	})
 	tt.FireClick(fxX+1, fxY+1)
-	ee.Update(fx.cmp(), nil, func(e *Env) {
+	fx.cmp().Update(nil, func(e *Env) {
 		t.True(e.Focused() == fx.cmp())
 	})
-	t.Not.True(ee.IsListening())
 	t.True(fx.cmp().HasClick())
 }
 
 func (s *Mouse) Context_moves_focus_and_reports_to_focusable(t *T) {
 	fx := &nonZeroOriginFx{}
-	// OnInit, 2xOnUpdate, 2xOnClick, 2xOnMouse (because bubbling)
-	ee, tt := Test(t.GoT(), fx, 7)
-	ee.Listen()
+	tt := s.tt(t, fx)
 	var fxX, fxY int
-	ee.Update(fx.cmp(), nil, func(e *Env) {
+	fx.cmp().Update(nil, func(e *Env) {
 		fx.cmp().FF.Add(Focusable)
 		t.Not.True(e.Focused() == fx.cmp())
 		// need an event callback to access component features
 		fxX, fxY = fx.cmp().Dim().X(), fx.cmp().Dim().Y()
 	})
 	tt.FireContext(fxX+1, fxY+1)
-	ee.Update(fx.cmp(), nil, func(e *Env) {
+	fx.cmp().Update(nil, func(e *Env) {
 		t.True(e.Focused() == fx.cmp())
 	})
-	t.Not.True(ee.IsListening())
 	t.True(fx.cmp().HasContext())
 }
 
 func (s *Mouse) Event_moves_focus_and_reports_to_focusable(t *T) {
 	fx := &nonZeroOriginFx{}
-	// OnInit, 2xOnUpdate, 2xOnMouse (because bubbling)
-	ee, tt := Test(t.GoT(), fx, 5)
-	ee.Listen()
+	tt := s.tt(t, fx)
 	var fxX, fxY int
-	ee.Update(fx.cmp(), nil, func(e *Env) {
+	fx.cmp().Update(nil, func(e *Env) {
 		fx.cmp().FF.Add(Focusable)
 		t.Not.True(e.Focused() == fx.cmp())
 		// need an event callback to access component features
 		fxX, fxY = fx.cmp().Dim().X(), fx.cmp().Dim().Y()
 	})
-	tt.FireMouse(fxX+1, fxY+1, tcell.ButtonMiddle, tcell.ModNone)
-	ee.Update(fx.cmp(), nil, func(e *Env) {
+	tt.FireMouse(fxX+1, fxY+1, Middle, ZeroModifier)
+	fx.cmp().Update(nil, func(e *Env) {
 		t.True(e.Focused() == fx.cmp())
 	})
-	t.Not.True(ee.IsListening())
 	t.True(fx.cmp().HasMouse())
 }
 
 func (s *Mouse) Is_reported_along_with_other_mouse_listener(t *T) {
 	fx := &mouseCmpFX{}
-	// 1xOnClick, 1xOnContext, 2xOnMouse
-	ee, tt := Test(t.GoT(), fx, 4)
-	ee.Listen()
+	tt := s.tt(t, fx)
 	tt.FireClick(1, 1)
 	tt.FireContext(1, 1)
-	t.Not.True(ee.IsListening())
 	t.FatalIfNot(fx.HasClick())
 	t.FatalIfNot(fx.HasContext())
 	t.FatalIfNot(fx.HasMouse())
@@ -270,16 +257,14 @@ func (s *Mouse) Is_reported_along_with_other_mouse_listener(t *T) {
 func (s *Mouse) Event_coordinates_are_translated_into_component(t *T) {
 	fx := &nonZeroOriginFx{}
 	// OnInit, OnUpdate, 2xOnClick, 2xOnContext, 4xOnMouse
-	ee, tt := Test(t.GoT(), fx, 10)
-	ee.Listen()
+	tt := s.tt(t, fx)
 	var fxX, fxY int
-	ee.Update(fx.cmp(), nil, func(e *Env) {
+	fx.cmp().Update(nil, func(e *Env) {
 		fx.cmp().FF.Add(Focusable)
 		fxX, fxY = fx.cmp().Dim().X(), fx.cmp().Dim().Y()
 	})
 	tt.FireClick(fxX+1, fxY+1)
 	tt.FireContext(fxX+1, fxY+1)
-	t.Not.True(ee.IsListening())
 	x, y := fx.cmp().ClickXY()
 	t.True(x == 1 && y == 1)
 	x, y = fx.cmp().ContextXY()
@@ -298,18 +283,15 @@ func (s *Mouse) Event_coordinates_are_translated_into_component(t *T) {
 
 func (s *Mouse) Events_are_bubbling(t *T) {
 	fx := &nonZeroOriginFx{}
-	// OnInit, OnUpdate 2xOnClick, 2xOnContext, 6xOnMouse
-	ee, tt := Test(t.GoT(), fx, 12)
-	ee.Listen()
+	tt := s.tt(t, fx)
 	var fxX, fxY int
-	ee.Update(fx.cmp(), nil, func(e *Env) {
+	fx.cmp().Update(nil, func(e *Env) {
 		fx.cmp().FF.Add(Focusable)
 		fxX, fxY = fx.cmp().Dim().X(), fx.cmp().Dim().Y()
 	})
 	tt.FireClick(fxX+1, fxY+1)
 	tt.FireContext(fxX+1, fxY+1)
-	tt.FireMouse(fxX+1, fxY+1, tcell.ButtonMiddle, 0)
-	t.Not.True(ee.IsListening())
+	tt.FireMouse(fxX+1, fxY+1, Middle, ZeroModifier)
 	chainer := fx.CC[1].(*nonZeroOriginChainFx)
 	t.True(chainer.reported.len(onMouse) == 3)
 	t.True(chainer.reported.len(onClick) == 1)
@@ -318,21 +300,18 @@ func (s *Mouse) Events_are_bubbling(t *T) {
 
 func (s *Mouse) Event_bubbling_may_be_stopped(t *T) {
 	fx := &nonZeroOriginFx{}
-	// OnInit, OnUpdate 1xOnClick, 1xOnContext, 1xOnMouse
-	ee, tt := Test(t.GoT(), fx, 5)
-	ee.Listen()
+	tt := s.tt(t, fx)
 	fx.cmp().stopBubblingClick = true
 	fx.cmp().stopBubblingContext = true
 	fx.cmp().stopBubblingMouse = true
 	var fxX, fxY int
-	ee.Update(fx.cmp(), nil, func(e *Env) {
+	fx.cmp().Update(nil, func(e *Env) {
 		fx.cmp().FF.Add(Focusable)
 		fxX, fxY = fx.cmp().Dim().X(), fx.cmp().Dim().Y()
 	})
 	tt.FireClick(fxX+1, fxY+1)
 	tt.FireContext(fxX+1, fxY+1)
-	tt.FireMouse(fxX+1, fxY+1, tcell.ButtonMiddle, 0)
-	t.Not.True(ee.IsListening())
+	tt.FireMouse(fxX+1, fxY+1, Middle, ZeroModifier)
 	chainer := fx.CC[1].(*nonZeroOriginChainFx)
 	t.Not.True(chainer.HasClick())
 	t.Not.True(chainer.HasContext())

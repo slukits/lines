@@ -32,7 +32,7 @@ defined in defaultBinding, e.g.:
     var defaultBindings = map[FeatureMask]*bindings{
         // ...
         previousLineSelectable: {
-            kk: FeatureKeys{{Key: tcell.KeyUp, Mod: tcell.ModNone}},
+            kk: FeatureKeys{{Key: KeyUp, Mod: ZeroModifier}},
             rr: FeatureRunes{'k'},
         },
         // ...
@@ -64,10 +64,6 @@ reporting associated events if any, e.g.:
 */
 
 package lines
-
-import (
-	"github.com/gdamore/tcell/v2"
-)
 
 // Features provides access and fine grained control over the behavior
 // of a component provided by lines.  Its methods will panic used
@@ -106,18 +102,16 @@ func (ff *Features) AddRecursive(f FeatureMask) {
 	ff.ensureInitialized().add(f, true)
 }
 
-func (ff *Features) OfKey(k tcell.Key, mm tcell.ModMask) FeatureMask {
-	ff.ensureInitialized()
-	return ff.c.ff.keyFeature(k, mm)
+func (ff *Features) OfKey(k Key, mm Modifier) FeatureMask {
+	return ff.ensureInitialized().keyFeature(k, mm)
 }
 
-func (ff *Features) OfRune(r rune) FeatureMask {
-	ff.ensureInitialized()
-	return ff.c.ff.runeFeature(r)
+func (ff *Features) OfRune(r rune, mm Modifier) FeatureMask {
+	return ff.ensureInitialized().runeFeature(r, mm)
 }
 
 func (ff *Features) OfButton(
-	b tcell.ButtonMask, mm tcell.ModMask,
+	b Button, mm Modifier,
 ) FeatureMask {
 	ff.ensureInitialized()
 	return ff.c.ff.buttonFeature(b, mm)
@@ -182,7 +176,7 @@ func (ff *Features) RunesOf(f FeatureMask) FeatureRunes {
 // feature is not a power of two i.e. a single feature.  Providing no
 // runes simply removes all runes-bindings for given feature.
 func (ff *Features) SetRunesOf(
-	f FeatureMask, recursive bool, rr ...rune,
+	f FeatureMask, recursive bool, rr ...FeatureRune,
 ) {
 	ff.ensureInitialized().setRunesOf(f, recursive, rr...)
 }
@@ -198,10 +192,10 @@ func (ff *Features) SetRunesOf(
 //	func (c *Root) OnInit(e *lines.Env) { fmt.Fprint(e, "hello world") }
 //
 //	func (c *Root) Keys(register lines.KeyRegistration) {
-//	    register(tcell.KeyCtrlC, tcell.ModNone, func(e *Env) {
+//	    register(lines.CtrlC, lines.ZeroModifier, func(e *Env) {
 //	        e.StopBubbling()
 //	    })
-//	    register(tcell.KeyCtrlD, tcell.ModNone, func(e *Env) {
+//	    register(lines.CtrlD, ZeroModifier, func(e *Env) {
 //	        e.StopBubbling()
 //	    })
 //	}
@@ -344,9 +338,9 @@ const (
 // a copy of the *DefaultFeatures* features-instance initialized which
 // holds the quit-feature only.
 type features struct {
-	keys    map[tcell.ModMask]map[tcell.Key]FeatureMask
-	runes   map[rune]FeatureMask
-	buttons map[tcell.ModMask]map[tcell.ButtonMask]FeatureMask
+	keys    map[Modifier]map[Key]FeatureMask
+	runes   map[Modifier]map[rune]FeatureMask
+	buttons map[Modifier]map[Button]FeatureMask
 	have    FeatureMask
 }
 
@@ -358,14 +352,14 @@ func (ff *features) modifiable() bool {
 
 // keyQuits returns true if given key is associated with the
 // quit-feature.
-func (ff *features) keyQuits(k tcell.Key) bool {
-	return ff.keys[tcell.ModNone][k]&Quitable != NoFeature
+func (ff *features) keyQuits(k Key) bool {
+	return ff.keys[ZeroModifier][k]&Quitable != NoFeature
 }
 
 // runeQuits return true if given rune is associated with the
 // quit-feature.
 func (ff *features) runeQuits(r rune) bool {
-	return ff.runes[r]&Quitable != NoFeature
+	return ff.runes[ZeroModifier][r]&Quitable != NoFeature
 }
 
 // copy creates a new Features instance initialized with the features of
@@ -373,25 +367,28 @@ func (ff *features) runeQuits(r rune) bool {
 func (ff *features) copy() *features {
 
 	cpy := features{
-		keys:    map[tcell.ModMask]map[tcell.Key]FeatureMask{},
-		runes:   map[rune]FeatureMask{},
-		buttons: map[tcell.ModMask]map[tcell.ButtonMask]FeatureMask{},
+		keys:    map[Modifier]map[Key]FeatureMask{},
+		runes:   map[Modifier]map[rune]FeatureMask{},
+		buttons: map[Modifier]map[Button]FeatureMask{},
 		have:    ff.have,
 	}
 
 	for m, kk := range ff.keys {
-		cpy.keys[m] = map[tcell.Key]FeatureMask{}
+		cpy.keys[m] = map[Key]FeatureMask{}
 		for k, f := range kk {
 			cpy.keys[m][k] = f
 		}
 	}
 
-	for r, f := range ff.runes {
-		cpy.runes[r] = f
+	for m, rr := range ff.runes {
+		cpy.runes[m] = map[rune]FeatureMask{}
+		for r, f := range rr {
+			cpy.runes[m][r] = f
+		}
 	}
 
 	for m, bb := range ff.buttons {
-		cpy.buttons[m] = map[tcell.ButtonMask]FeatureMask{}
+		cpy.buttons[m] = map[Button]FeatureMask{}
 		for b, f := range bb {
 			cpy.buttons[m][b] = f
 		}
@@ -450,9 +447,11 @@ func (ff *features) all() FeatureMask {
 }
 
 func (ff *features) forRuneFeatures(cb func(FeatureMask) (stoop bool)) {
-	for _, f := range ff.runes {
-		if cb(f) {
-			return
+	for _, rr := range ff.runes {
+		for _, f := range rr {
+			if cb(f) {
+				return
+			}
 		}
 	}
 }
@@ -499,20 +498,23 @@ func (ff *features) add(f FeatureMask, recursive bool) {
 		}
 		for _, k := range df.kk {
 			if ff.keys[k.Mod] == nil {
-				ff.keys[k.Mod] = map[tcell.Key]FeatureMask{}
+				ff.keys[k.Mod] = map[Key]FeatureMask{}
 			}
 			ff.keys[k.Mod][k.Key] = f
 		}
 
 		for _, b := range df.bb {
 			if ff.buttons[b.Mod] == nil {
-				ff.buttons[b.Mod] = map[tcell.ButtonMask]FeatureMask{}
+				ff.buttons[b.Mod] = map[Button]FeatureMask{}
 			}
 			ff.buttons[b.Mod][b.Button] = f
 		}
 
 		for _, r := range df.rr {
-			ff.runes[r] = f
+			if ff.runes[r.Mod] == nil {
+				ff.runes[r.Mod] = map[rune]FeatureMask{}
+			}
+			ff.runes[r.Mod][r.Rune] = f
 		}
 	}
 
@@ -521,12 +523,11 @@ func (ff *features) add(f FeatureMask, recursive bool) {
 	}
 }
 
-// FeatureKey represents a key bound to a feature with its tcell.ModMask
-// and tcell.Key value.  FeatureKey instances must be also provided to
-// SetKeysOf.
+// FeatureKey represents a key bound to a feature with its Modifier and
+// Key value.  FeatureKey instances must be also provided to SetKeysOf.
 type FeatureKey struct {
-	Mod tcell.ModMask
-	Key tcell.Key
+	Mod Modifier
+	Key Key
 }
 
 // FeatureKeys are provided by KeysOf of an Features instance reporting
@@ -593,7 +594,7 @@ func (ff *features) setKeysOf(
 	}
 	for _, k := range kk {
 		if ff.keys[k.Mod] == nil {
-			ff.keys[k.Mod] = map[tcell.Key]FeatureMask{}
+			ff.keys[k.Mod] = map[Key]FeatureMask{}
 		}
 		ff.keys[k.Mod][k.Key] = f
 	}
@@ -602,11 +603,11 @@ func (ff *features) setKeysOf(
 }
 
 // FeatureButton represents a button (mask) bound to a feature with its
-// tcell.ModMask and tcell.ButtonMask value.  FeatureButton instances
-// must be also provided to SetButtonsOf.
+// Modifier and Button value.  FeatureButton instances must be also
+// provided to SetButtonsOf.
 type FeatureButton struct {
-	Mod    tcell.ModMask
-	Button tcell.ButtonMask
+	Mod    Modifier
+	Button Button
 }
 
 // FeatureButtons are provided by ButtonsOf of an Features instance
@@ -670,7 +671,7 @@ func (ff *features) setButtonsOf(
 	}
 	for _, b := range bb {
 		if ff.buttons[b.Mod] == nil {
-			ff.buttons[b.Mod] = map[tcell.ButtonMask]FeatureMask{}
+			ff.buttons[b.Mod] = map[Button]FeatureMask{}
 		}
 		ff.buttons[b.Mod][b.Button] = f
 	}
@@ -678,10 +679,15 @@ func (ff *features) setButtonsOf(
 	ff.have = ff.all()
 }
 
+type FeatureRune struct {
+	Rune rune
+	Mod  Modifier
+}
+
 // FeatureRunes are provided by RunesOf of an Features instance
 // reporting the runes bound to a given feature.  FeaturesRunes may be
 // also used as variadic argument for an Features instance's SetRunesOf.
-type FeatureRunes []rune
+type FeatureRunes []FeatureRune
 
 // Equals returns true if receiving and given FeatureRunes contain the
 // same runes.
@@ -692,7 +698,7 @@ func (fr FeatureRunes) Equals(other FeatureRunes) bool {
 	for _, r := range fr {
 		has := false
 		for _, o := range other {
-			if r != o {
+			if r.Rune != o.Rune {
 				continue
 			}
 			has = true
@@ -706,14 +712,16 @@ func (fr FeatureRunes) Equals(other FeatureRunes) bool {
 
 // runesOf returns the runes for given lines-feature.
 func (ff *features) runesOf(f FeatureMask) FeatureRunes {
-	rr := []rune{}
-	for r, _f := range ff.runes {
-		if f&_f == NoFeature {
-			continue
+	fr := FeatureRunes{}
+	for m, rr := range ff.runes {
+		for r, _f := range rr {
+			if f&_f == NoFeature {
+				continue
+			}
+			fr = append(fr, FeatureRune{Rune: r, Mod: m})
 		}
-		rr = append(rr, r)
 	}
-	return rr
+	return fr
 }
 
 // setRunesOf deletes all set runes for given feature an binds given
@@ -722,7 +730,7 @@ func (ff *features) runesOf(f FeatureMask) FeatureRunes {
 // feature is not a power of two i.e. a single feature.  NOTE providing
 // no runes simply removes all runes-bindings for given feature.
 func (ff *features) setRunesOf(
-	f FeatureMask, recursive bool, rr ...rune,
+	f FeatureMask, recursive bool, rr ...FeatureRune,
 ) {
 
 	if f == 0 || f&(f-1) != 0 { // f is not a power of two
@@ -735,7 +743,10 @@ func (ff *features) setRunesOf(
 		f |= _recursive
 	}
 	for _, r := range rr {
-		ff.runes[r] = f
+		if ff.runes[r.Mod] == nil {
+			ff.runes[r.Mod] = map[rune]FeatureMask{}
+		}
+		ff.runes[r.Mod][r.Rune] = f
 	}
 
 	ff.have = ff.all()
@@ -805,23 +816,24 @@ func (ff *features) deleteButtonsOf(f FeatureMask) {
 }
 
 func (ff *features) deleteRunesOf(f FeatureMask) {
-	for r, _f := range ff.runes {
-		if f&_f == NoFeature {
-			continue
+	for m, rr := range ff.runes {
+		for r, _f := range rr {
+			if f&_f == NoFeature {
+				continue
+			}
+			delete(ff.runes[m], r)
 		}
-		delete(ff.runes, r)
 	}
 }
 
-var allButtons = []tcell.ButtonMask{
-	tcell.Button1, tcell.Button2, tcell.Button3, tcell.Button4,
-	tcell.Button5, tcell.Button6, tcell.Button7, tcell.Button8,
-	tcell.WheelUp, tcell.WheelDown, tcell.WheelLeft, tcell.WheelRight,
+var allButtons = []Button{
+	Button1, Button2, Button3, Button4, Button5, Button6, Button7,
+	Button8, WheelUp, WheelDown, WheelLeft, WheelRight,
 }
 
 // keyFeature maps a key to its associated feature or to NoEvent if not
 // registered.
-func (ff *features) keyFeature(k tcell.Key, m tcell.ModMask) FeatureMask {
+func (ff *features) keyFeature(k Key, m Modifier) FeatureMask {
 	if ff == nil || ff.keys == nil || ff.keys[m] == nil {
 		return NoFeature
 	}
@@ -832,7 +844,7 @@ func (ff *features) keyFeature(k tcell.Key, m tcell.ModMask) FeatureMask {
 // keyFeature maps a key to its associated feature or to NoEvent if not
 // registered.
 func (ff *features) buttonFeature(
-	b tcell.ButtonMask, m tcell.ModMask,
+	b Button, m Modifier,
 ) FeatureMask {
 
 	if ff == nil || ff.buttons[m] == nil {
@@ -844,11 +856,11 @@ func (ff *features) buttonFeature(
 
 // runeFeature maps a rune to its associated feature or to NoEvent if not
 // registered.
-func (ff *features) runeFeature(r rune) FeatureMask {
-	if ff == nil || ff.runes == nil {
+func (ff *features) runeFeature(r rune, m Modifier) FeatureMask {
+	if ff == nil || ff.runes == nil || ff.runes[ZeroModifier] == nil {
 		return NoFeature
 	}
-	return ff.runes[r]
+	return ff.runes[m][r]
 }
 
 // allFeatures provides a slice of all elementary features
@@ -867,17 +879,19 @@ var allFeatures = []FeatureMask{
 // with (end-user) features.  NOTE defaultFeatures cannot be
 // modified, a copy of them can!
 var defaultFeatures = &features{
-	keys: map[tcell.ModMask]map[tcell.Key]FeatureMask{
-		tcell.ModNone: {
-			tcell.KeyCtrlC: Quitable,
-			tcell.KeyCtrlD: Quitable,
+	keys: map[Modifier]map[Key]FeatureMask{
+		ZeroModifier: {
+			CtrlC: Quitable,
+			CtrlD: Quitable,
 		},
 	},
-	runes: map[rune]FeatureMask{
-		0:   NoFeature, // indicates the immutable default features
-		'q': Quitable,
+	runes: map[Modifier]map[rune]FeatureMask{
+		ZeroModifier: {
+			0:   NoFeature, // indicates the immutable default features
+			'q': Quitable,
+		},
 	},
-	buttons: map[tcell.ModMask]map[tcell.ButtonMask]FeatureMask{},
+	buttons: map[Modifier]map[Button]FeatureMask{},
 	have:    Quitable,
 }
 
@@ -890,55 +904,57 @@ type bindings struct {
 var defaultBindings = map[FeatureMask]*bindings{
 	Focusable: {
 		bb: FeatureButtons{{
-			Button: tcell.ButtonPrimary,
-			Mod:    tcell.ModNone,
+			Button: Primary,
+			Mod:    ZeroModifier,
 		}, {
-			Button: tcell.ButtonSecondary,
-			Mod:    tcell.ModNone,
+			Button: Secondary,
+			Mod:    ZeroModifier,
 		}, {
-			Button: tcell.ButtonMiddle,
-			Mod:    tcell.ModNone,
+			Button: Middle,
+			Mod:    ZeroModifier,
 		}},
 	},
 	NextSelectable: {
 		kk: FeatureKeys{{
-			Key: tcell.KeyTAB,
-			Mod: tcell.ModNone,
+			Key: TAB,
+			Mod: ZeroModifier,
 		}},
 	},
 	PreviousSelectable: {
 		kk: FeatureKeys{{
-			Key: tcell.KeyTAB,
-			Mod: tcell.ModShift,
+			Key: TAB,
+			Mod: Shift,
 		}},
 	},
 	UpScrollable: {
 		kk: FeatureKeys{{
-			Key: tcell.KeyPgUp,
-			Mod: tcell.ModNone,
+			Key: PgUp,
+			Mod: ZeroModifier,
 		}},
 	},
 	DownScrollable: {
 		kk: FeatureKeys{{
-			Key: tcell.KeyPgDn,
-			Mod: tcell.ModNone,
+			Key: PgDn,
+			Mod: ZeroModifier,
 		}},
 	},
 	PreviousLineFocusable: {
-		kk: FeatureKeys{{Key: tcell.KeyUp, Mod: tcell.ModNone}},
-		rr: FeatureRunes{'k'},
+		kk: FeatureKeys{{Key: Up, Mod: ZeroModifier}},
+		rr: FeatureRunes{{Rune: 'k', Mod: ZeroModifier}},
 	},
 	NextLineFocusable: {
-		kk: FeatureKeys{{Key: tcell.KeyDown, Mod: tcell.ModNone}},
-		rr: FeatureRunes{'j'},
+		kk: FeatureKeys{{Key: Down, Mod: ZeroModifier}},
+		rr: FeatureRunes{{Rune: 'j', Mod: ZeroModifier}},
 	},
 	LineSelectable: {
-		kk: FeatureKeys{{Key: tcell.KeyEnter, Mod: tcell.ModNone}},
+		kk: FeatureKeys{{Key: Enter, Mod: ZeroModifier}},
 	},
 	LineUnfocusable: {
-		kk: FeatureKeys{{Key: tcell.KeyESC, Mod: tcell.ModNone}},
+		kk: FeatureKeys{{Key: Esc, Mod: ZeroModifier}},
 	},
-	highlightedFocusable: {rr: FeatureRunes{rune(0)}},
+	highlightedFocusable: {
+		rr: FeatureRunes{{Rune: rune(0), Mod: ZeroModifier}},
+	},
 }
 
 type LineSelecter interface{ OnLineSelection(*Env, int) }
@@ -952,11 +968,11 @@ func execute(cntx *rprContext, usr Componenter, f FeatureMask) {
 	case DownScrollable:
 		usr.embedded().Scroll.Down()
 	case NextLineFocusable:
-		executeLineFocus(cntx, usr, usr.embedded().Focus.Next)
+		executeLineFocus(cntx, usr, usr.embedded().LL.Focus.Next)
 	case PreviousLineFocusable:
-		executeLineFocus(cntx, usr, usr.embedded().Focus.Previous)
+		executeLineFocus(cntx, usr, usr.embedded().LL.Focus.Previous)
 	case LineUnfocusable:
-		executeLineFocus(cntx, usr, usr.embedded().Focus.Reset)
+		executeLineFocus(cntx, usr, usr.embedded().LL.Focus.Reset)
 	case LineSelectable:
 		reportSelectedLine(cntx, usr)
 	}
@@ -965,8 +981,8 @@ func execute(cntx *rprContext, usr Componenter, f FeatureMask) {
 func executeLineFocus(
 	cntx *rprContext, usr Componenter, f func(bool) int,
 ) {
-	current := usr.embedded().Focus.Current()
-	rf := usr.embedded().ff.runeFeature(rune(0))
+	current := usr.embedded().LL.Focus.Current()
+	rf := usr.embedded().ff.runeFeature(rune(0), ZeroModifier)
 	highlighted := rf&highlightedFocusable == highlightedFocusable
 	if current == f(highlighted) {
 		return
@@ -984,7 +1000,7 @@ func reportLineFocus(cntx *rprContext, usr Componenter) {
 		return
 	}
 	callback(usr, cntx, lfCurry(
-		lf, usr.embedded().Focus.Current()))
+		lf, usr.embedded().LL.Focus.Current()))
 }
 
 func lsCurry(ls LineSelecter, idx int) func(*Env) {
@@ -992,7 +1008,7 @@ func lsCurry(ls LineSelecter, idx int) func(*Env) {
 }
 
 func reportSelectedLine(cntx *rprContext, usr Componenter) {
-	if usr.embedded().Focus.Current() < 0 {
+	if usr.embedded().LL.Focus.Current() < 0 {
 		return
 	}
 	ls, ok := usr.(LineSelecter)
@@ -1000,5 +1016,5 @@ func reportSelectedLine(cntx *rprContext, usr Componenter) {
 		return
 	}
 	callback(usr, cntx, lsCurry(
-		ls, usr.embedded().Focus.Current()))
+		ls, usr.embedded().LL.Focus.Current()))
 }

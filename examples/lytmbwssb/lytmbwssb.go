@@ -49,7 +49,10 @@ type WS struct {
 func (c *WS) OnInit(e *lines.Env) {
 	c.CC = append(c.CC, &Panel{}, &Panel{})
 	c.FF.AddRecursive(lines.Focusable)
-	e.EE.MoveFocus(c.CC[0])
+}
+
+func (c *WS) OnLayout(e *lines.Env) {
+	c.CC[0].(*Panel).Focus()
 }
 
 type Panel struct{ lines.Component }
@@ -75,4 +78,4 @@ func (c *Panel) OnClick(e *lines.Env, x int, y int) {
 	fmt.Fprintf(e, "clicked (%d,%d)", x, y)
 }
 
-func main() { lines.New(&App{}).Listen() }
+func main() { lines.Term(&App{}).WaitForQuit() }
