@@ -5,7 +5,6 @@
 package lines
 
 import (
-	"errors"
 	"time"
 )
 
@@ -14,13 +13,10 @@ import (
 // given component.  Is given listener is nil the event is to the
 // OnUpdate implementation of given component reported.  Update returns
 // fails if given component is not initialized or the backend fails.
-func (c *component) Update(data interface{}, l Listener) error {
-	if !c.initialized {
-		return errors.New("component: update: not initialized")
-	}
-	return c.backend.Post(&UpdateEvent{
+func (c *Component) Update(data interface{}, l Listener) error {
+	return c.bcknd.Post(&UpdateEvent{
 		when: time.Now(),
-		cmp:  c.userCmp,
+		cmp:  c,
 		lst:  l,
 		Data: data,
 	})
@@ -30,8 +26,11 @@ func (c *component) Update(data interface{}, l Listener) error {
 // provides the data which was passed to that Update call.
 type UpdateEvent struct {
 	when time.Time
-	cmp  Componenter
-	lst  Listener
+	// NOTE we can not extract the componenter from the component
+	// without risking a race condition hence we leave it to the
+	// reporter to do so.
+	cmp *Component
+	lst Listener
 
 	// Data provided to an update event listener
 	Data interface{}
@@ -48,13 +47,10 @@ func (u *UpdateEvent) Source() interface{} { return u }
 // executed.  Finally the focus is set to given component.  MoveFocus
 // fails if the event-loop is full returned error will wrap tcell's
 // *PostEvent* error.  MoveFocus is an no-op if Componenter is nil.
-func (c *component) Focus() error {
-	if !c.initialized {
-		return errors.New("component: update: not initialized")
-	}
-	return c.backend.Post(&moveFocusEvent{
+func (c *Component) Focus() error {
+	return c.bcknd.Post(&moveFocusEvent{
 		when: time.Now(),
-		cmp:  c.userCmp,
+		cmp:  c,
 	})
 }
 
@@ -62,7 +58,10 @@ func (c *component) Focus() error {
 // change of focus.  This event-instance is not provided to the user.
 type moveFocusEvent struct {
 	when time.Time
-	cmp  Componenter
+	// NOTE we can not extract the componenter from the component
+	// without risking a race condition hence we leave it to the
+	// reporter to do so.
+	cmp *Component
 }
 
 func (e *moveFocusEvent) When() time.Time { return e.when }

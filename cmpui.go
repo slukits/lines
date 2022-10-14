@@ -49,10 +49,6 @@ func (c *component) Len() int {
 	return len(*c.ll)
 }
 
-func (c *component) LL(idx int) *line {
-	return (*c.ll)[idx]
-}
-
 // IsDirty is true if this component is flagged dirty or one of its
 // lines.
 func (c *component) IsDirty() bool {

@@ -99,12 +99,8 @@ func report(
 		reportQuit(cntx)
 	case *UpdateEvent:
 		reportUpdate(cntx, evt)
-	// case *moveFocusEvent:
-	// 	reportMoveFocus(cntx)
-	// case *updateKeysEvent:
-	// 	registerKeys(evt.cmp, cntx)
-	// case *updateRunesEvent:
-	// 	registerRunes(evt.cmp, cntx)
+	case *moveFocusEvent:
+		reportMoveFocus(cntx, evt)
 	case RuneEventer:
 		return reportRune(cntx, evt)
 	case KeyEventer:
@@ -120,18 +116,27 @@ func reportUpdate(cntx *rprContext, evt *UpdateEvent) {
 		callback(evt.cmp, cntx, evt.lst)
 		return
 	}
-	upd, ok := evt.cmp.(Updater)
+	if !evt.cmp.isInitialized() {
+		return
+	}
+	upd, ok := evt.cmp.layoutCmp.userComponent().(Updater)
 	if !ok {
 		return
 	}
 	callback(evt.cmp, cntx, upd.OnUpdate)
 }
 
-// func reportMoveFocus(cntx *rprContext) {
-// 	moveFocus(cntx.evt.(*moveFocusEvent).cmp, cntx)
-// }
+func reportMoveFocus(cntx *rprContext, evt *moveFocusEvent) {
+	if !evt.cmp.isInitialized() {
+		return
+	}
+	moveFocus(evt.cmp.layoutCmp.userComponent(), cntx)
+}
 
 func moveFocus(cmp Componenter, cntx *rprContext) {
+	if cmp == cntx.scr.focus.userComponent() {
+		return
+	}
 	fls, ok := cntx.scr.focus.userComponent().(FocusLooser)
 	if ok {
 		callback(cntx.scr.focus.userComponent(), cntx, fls.OnFocusLost)

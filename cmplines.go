@@ -19,6 +19,22 @@ package lines
 // space is spread equally over filler found in l.
 const LineFiller = string(rune(29))
 
+// ComponentLines provides the API to manipulate ui-aspects of a
+// component's lines like which line has the focus.  A component's lines
+// are accessed through its LL-property.  To manipulate content use the
+// writers provided by a component's Env(ironment) instance in a
+// listener callback.
+type ComponentLines struct {
+	c     *Component
+	Focus *LineFocus
+}
+
+func (cll *ComponentLines) By(idx int) *line { return (*cll.c.ll)[idx] }
+
+func newComponentLines(c *Component) *ComponentLines {
+	return &ComponentLines{c: c, Focus: &LineFocus{c: c, current: -1}}
+}
+
 type lines []*line
 
 // append given content lines to current content

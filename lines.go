@@ -79,6 +79,10 @@ type Componenter interface {
 	// embedded returns a reference to client-component's embedded
 	// Component-instance.
 	embedded() *Component
+
+	// backend to post Update and Focus events on a user Componenter
+	// implementation.
+	backend() interface{ Post(Eventer) error }
 }
 
 // TermKiosk returns an Events instance without registered Quitable feature,

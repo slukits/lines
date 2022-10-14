@@ -968,11 +968,11 @@ func execute(cntx *rprContext, usr Componenter, f FeatureMask) {
 	case DownScrollable:
 		usr.embedded().Scroll.Down()
 	case NextLineFocusable:
-		executeLineFocus(cntx, usr, usr.embedded().LLFocus.Next)
+		executeLineFocus(cntx, usr, usr.embedded().LL.Focus.Next)
 	case PreviousLineFocusable:
-		executeLineFocus(cntx, usr, usr.embedded().LLFocus.Previous)
+		executeLineFocus(cntx, usr, usr.embedded().LL.Focus.Previous)
 	case LineUnfocusable:
-		executeLineFocus(cntx, usr, usr.embedded().LLFocus.Reset)
+		executeLineFocus(cntx, usr, usr.embedded().LL.Focus.Reset)
 	case LineSelectable:
 		reportSelectedLine(cntx, usr)
 	}
@@ -981,7 +981,7 @@ func execute(cntx *rprContext, usr Componenter, f FeatureMask) {
 func executeLineFocus(
 	cntx *rprContext, usr Componenter, f func(bool) int,
 ) {
-	current := usr.embedded().LLFocus.Current()
+	current := usr.embedded().LL.Focus.Current()
 	rf := usr.embedded().ff.runeFeature(rune(0), ZeroModifier)
 	highlighted := rf&highlightedFocusable == highlightedFocusable
 	if current == f(highlighted) {
@@ -1000,7 +1000,7 @@ func reportLineFocus(cntx *rprContext, usr Componenter) {
 		return
 	}
 	callback(usr, cntx, lfCurry(
-		lf, usr.embedded().LLFocus.Current()))
+		lf, usr.embedded().LL.Focus.Current()))
 }
 
 func lsCurry(ls LineSelecter, idx int) func(*Env) {
@@ -1008,7 +1008,7 @@ func lsCurry(ls LineSelecter, idx int) func(*Env) {
 }
 
 func reportSelectedLine(cntx *rprContext, usr Componenter) {
-	if usr.embedded().LLFocus.Current() < 0 {
+	if usr.embedded().LL.Focus.Current() < 0 {
 		return
 	}
 	ls, ok := usr.(LineSelecter)
@@ -1016,5 +1016,5 @@ func reportSelectedLine(cntx *rprContext, usr Componenter) {
 		return
 	}
 	callback(usr, cntx, lsCurry(
-		ls, usr.embedded().LLFocus.Current()))
+		ls, usr.embedded().LL.Focus.Current()))
 }

@@ -16,13 +16,36 @@ type KeyRegistration func(Key, Modifier, Listener)
 // of a component to register specific runes to specific rune-listeners
 type RuneRegistration func(rune, Listener)
 
+// Listeners provide the API to register key and rune event listeners.
+// While lines will *not* panic if this API is used outside an
+// event-listener callback registering methods are not concurrency save.
 type Listeners struct {
 	c *Component
 }
 
+func (ll *Listeners) listeners() *listeners {
+	if ll.c.layoutCmp == nil {
+		return nil
+	}
+	wrapped := ll.c.layoutCmp.wrapped()
+	wrapped.ensureListeners()
+	return wrapped.lst
+}
+
 func (ll *Listeners) Key(k Key, m Modifier, l Listener) {
-	ll.c.ensureListeners()
-	ll.c.lst.key(k, m, l)
+	cll := ll.listeners()
+	if cll == nil {
+		return
+	}
+	cll.key(k, m, l)
+}
+
+func (ll *Listeners) Rune(r rune, m Modifier, l Listener) {
+	cll := ll.listeners()
+	if cll == nil {
+		return
+	}
+	cll.rune(r, m, l)
 }
 
 // listeners hold a components event-listers for particular key or rune

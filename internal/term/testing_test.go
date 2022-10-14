@@ -24,7 +24,7 @@ const exp = `upper left
 
 func (s *_testing) Reports_string_representation_of_screen(t *T) {
 	ui, tt := LstFixture(t.GoT(), nil, 0)
-	t.FatalOn(tt.PostResize(16, 5))
+	tt.PostResize(16, 5)
 
 	tt.Display(fx, api.Style{})
 	ui.Redraw()

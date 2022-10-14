@@ -93,8 +93,8 @@ func (u *UI) Quit() {
 	if u.listener != nil {
 		u.listener(&QuitEvent{})
 	}
-	close(u.waitForQuit)
 	u.lib.Fini()
+	close(u.waitForQuit)
 }
 
 type QuitEvent struct{}
@@ -106,20 +106,58 @@ func (q *QuitEvent) When() time.Time     { return time.Now() }
 func (u *UI) poll() {
 	for {
 		evt := u.lib.PollEvent()
+		if u.listener == nil {
+			if u.transactional.Load() != nil {
+				u.transactional.Load().(*transactional).polled()
+			}
+			return
+		}
 		switch evt := evt.(type) {
 		case nil:
 			return
-		default:
-			if u.listener == nil {
+		case api.Eventer:
+			u.listener(evt)
+		case *tcell.EventResize:
+			u.listener(&resize{evt: evt})
+		case *tcell.EventKey:
+			if evt.Key() == tcell.KeyRune {
+				u.listener(&runeEvent{evt: evt})
 				break
 			}
-			u.listener(evt.(api.Eventer))
+			u.listener(&keyEvent{evt: evt})
+		case *tcell.EventMouse:
+			u.listener(&mouseEvent{evt: evt})
+		case *tcell.EventPaste:
+			u.listener(&bracketPaste{evt: evt})
 		}
 		if u.transactional.Load() != nil {
 			u.transactional.Load().(*transactional).polled()
 		}
 	}
 }
+
+type resize struct{ evt *tcell.EventResize }
+
+func newResize(width, height int) api.ResizeEventer {
+	return &resize{evt: tcell.NewEventResize(
+		width, height,
+	)}
+}
+
+func (r *resize) Source() interface{} { return r.evt }
+func (r *resize) When() time.Time     { return r.evt.When() }
+func (r *resize) Size() (int, int)    { return r.evt.Size() }
+
+type bracketPaste struct{ evt *tcell.EventPaste }
+
+func newBracketPaste(start bool) *bracketPaste {
+	return &bracketPaste{evt: tcell.NewEventPaste(start)}
+}
+
+func (r *bracketPaste) Source() interface{} { return r.evt }
+func (r *bracketPaste) When() time.Time     { return r.evt.When() }
+func (r *bracketPaste) Start() bool         { return r.evt.Start() }
+func (r *bracketPaste) End() bool           { return r.evt.End() }
 
 func (u *UI) Post(evt api.Eventer) error {
 	if u.transactional.Load() == nil {

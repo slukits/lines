@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	. "github.com/slukits/gounit"
+	"github.com/slukits/lines"
 	"github.com/slukits/lines/internal/api"
 	"github.com/slukits/lines/internal/term"
 )
@@ -79,40 +80,40 @@ func (s *_testing) Reports_cells_of_screen_area(t *T) {
 	t.Eq(exp, str)
 }
 
-// func (s *_testing) Reports_style_information_falsy_if_out_of_bound(t *T) {
-// 	ui, tt := s.fx(t)
-// 	sty := api.Style{
-// 		FG: lines.Green, BG: lines.BlanchedAlmond, AA: api.Italic}
-// 	tt.Display(fx, sty)
-// 	ui.Redraw()
-// 	scr := tt.Cells().Trimmed()
-//
-// 	t.Not.True(
-// 		scr.HasFG(0, -1, lines.Green) ||
-// 			scr.HasFG(0, len(scr), lines.Green) ||
-// 			scr.HasFG(-1, 0, lines.Green) ||
-// 			scr.HasFG(len(scr[0]), 0, lines.Green) ||
-// 			scr.HasBG(0, -1, lines.BlanchedAlmond) ||
-// 			scr.HasBG(-1, 0, lines.BlanchedAlmond) ||
-// 			scr.HasAttr(0, -1, api.Italic) ||
-// 			scr.HasAttr(-1, 0, api.Italic),
-// 	)
-// }
-//
-// func (s *_testing) Reports_style_information_of_screen_cells(t *T) {
-// 	ui, tt := s.fx(t)
-// 	sty := api.Style{
-// 		FG: lines.Green, BG: lines.BlanchedAlmond, AA: api.Italic}
-// 	tt.Display(fx, sty)
-// 	ui.Redraw()
-// 	scr := tt.Cells().Trimmed()
-//
-// 	t.True(
-// 		scr.HasFG(0, 0, lines.Green) &&
-// 			scr.HasBG(0, 0, lines.BlanchedAlmond) &&
-// 			scr.HasAttr(0, 0, api.Italic),
-// 	)
-// }
+func (s *_testing) Reports_style_information_falsy_if_out_of_bound(t *T) {
+	ui, tt := s.fx(t)
+	sty := api.Style{
+		FG: lines.Green, BG: lines.BlanchedAlmond, AA: api.Italic}
+	tt.Display(fx, sty)
+	ui.Redraw()
+	scr := tt.Cells().Trimmed()
+
+	t.Not.True(
+		scr.HasFG(0, -1, lines.Green) ||
+			scr.HasFG(0, len(scr), lines.Green) ||
+			scr.HasFG(-1, 0, lines.Green) ||
+			scr.HasFG(len(scr[0]), 0, lines.Green) ||
+			scr.HasBG(0, -1, lines.BlanchedAlmond) ||
+			scr.HasBG(-1, 0, lines.BlanchedAlmond) ||
+			scr.HasAttr(0, -1, api.Italic) ||
+			scr.HasAttr(-1, 0, api.Italic),
+	)
+}
+
+func (s *_testing) Reports_style_information_of_screen_cells(t *T) {
+	ui, tt := s.fx(t)
+	sty := api.Style{
+		FG: lines.Green, BG: lines.BlanchedAlmond, AA: api.Italic}
+	tt.Display(fx, sty)
+	ui.Redraw()
+	scr := tt.Cells().Trimmed()
+
+	t.True(
+		scr.HasFG(0, 0, lines.Green) &&
+			scr.HasBG(0, 0, lines.BlanchedAlmond) &&
+			scr.HasAttr(0, 0, api.Italic),
+	)
+}
 
 func TestTesting(t *testing.T) {
 	t.Parallel()

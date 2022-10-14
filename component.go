@@ -31,6 +31,14 @@ type Component struct {
 	// selection API.
 	LLFocus *LineFocus
 
+	// LL provides an API for ui-aspects of a component's lines.  Use an
+	// reported event's Env-instance writers to manipulate their
+	// content.
+	LL *ComponentLines
+
+	// bcknd to post Update and Focus events
+	bcknd interface{ Post(Eventer) error }
+
 	// component provides properties/features of an Component.  A
 	// Component can't do it directly if it should panic if it is used
 	// outside an event reporting callback.  layoutCmp wraps the actual
@@ -79,8 +87,9 @@ func (c *Component) initialize(
 		return c.layoutCmp
 	}
 
+	c.bcknd = event
+
 	inner := &component{
-		backend: event,
 		dim:     lyt.DimFilling(1, 1),
 		ll:      &lines{},
 		global:  &global{tabWidth: 4},
@@ -91,7 +100,7 @@ func (c *Component) initialize(
 	}
 	c.FF = &Features{c: c}
 	c.Scroll = &Scroller{c: c}
-	c.LLFocus = &LineFocus{c: c, current: -1}
+	c.LL = newComponentLines(c)
 	c.Register = &Listeners{c: c}
 	switch userComponent.(type) {
 	case Stacker:
@@ -102,6 +111,10 @@ func (c *Component) initialize(
 		c.layoutCmp = inner
 	}
 	return c.layoutCmp
+}
+
+func (c *Component) backend() interface{ Post(Eventer) error } {
+	return c.bcknd
 }
 
 // enable component for client usage.
@@ -143,7 +156,6 @@ func (c *Component) embedded() *Component { return c }
 
 // component is the actual implementation of a lines-Component.
 type component struct {
-	backend     interface{ Post(Eventer) error }
 	userCmp     Componenter
 	global      *global
 	dim         *lyt.Dim
@@ -213,7 +225,7 @@ type stackingWrapper struct {
 func (sw *stackingWrapper) ForStacked(cb func(lyt.Dimer) bool) {
 	sw.userCmp.(Stacker).ForStacked(func(cmp Componenter) bool {
 		if !cmp.hasLayoutWrapper() {
-			cmp.initialize(cmp, sw.backend)
+			cmp.initialize(cmp, sw.userCmp.backend())
 		}
 		return cb(cmp.layoutComponent())
 	})
@@ -228,7 +240,7 @@ type chainingWrapper struct {
 func (cw *chainingWrapper) ForChained(cb func(lyt.Dimer) bool) {
 	cw.userCmp.(Chainer).ForChained(func(cmp Componenter) bool {
 		if !cmp.hasLayoutWrapper() {
-			cmp.initialize(cmp, cw.backend)
+			cmp.initialize(cmp, cw.userCmp.backend())
 		}
 		return cb(cmp.layoutComponent())
 	})

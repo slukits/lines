@@ -75,7 +75,7 @@ func (s *AnUI) Reports_a_key_eventer(t *T) {
 		}
 	}, 0)
 
-	t.FatalOn(tt.PostKey(api.Enter, api.ZeroModifier))
+	tt.PostKey(api.Enter, api.ZeroModifier)
 
 	t.True(eventReceived)
 }
@@ -91,7 +91,7 @@ func (s *AnUI) Reports_a_rune_eventer(t *T) {
 		}
 	}, 0)
 
-	t.FatalOn(tt.PostRune('x', api.ZeroModifier))
+	tt.PostRune('x', api.ZeroModifier)
 
 	t.True(eventReceived)
 }
@@ -131,7 +131,7 @@ func (s *AnUI) Reports_a_resize_eventer(t *T) {
 		}
 	}, 0)
 
-	t.FatalOn(tt.PostResize(42, 22))
+	tt.PostResize(42, 22)
 
 	t.FatalIfNot(t.Eq(2, reported))
 	uiWidth, uiHeight := ui.Size()

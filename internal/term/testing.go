@@ -44,9 +44,7 @@ func LstFixture(
 
 	tt := &Testing{
 		t: t, ui: ui, Width: tstWidth, Height: tstHeight}
-	if err := tt.PostResize(tstWidth, tstHeight); err != nil {
-		t.Fatalf("fixture: %v", err)
-	}
+	tt.PostResize(tstWidth, tstHeight)
 
 	return ui, tt
 }
@@ -81,9 +79,7 @@ func (tt *Testing) Listen(l func(api.Eventer)) {
 		return
 	}
 	tt.ui.listener = l
-	if err := tt.PostResize(tstWidth, tstHeight); err != nil {
-		tt.t.Fatalf("fixture: %v", err)
-	}
+	tt.PostResize(tstWidth, tstHeight)
 }
 
 func (tt *Testing) Display(s string, sty api.Style) {
@@ -97,12 +93,16 @@ func (tt *Testing) Display(s string, sty api.Style) {
 	}
 }
 
-func (tt *Testing) PostKey(k api.Key, m api.Modifier) error {
-	return tt.ui.Post(newKeyEvent(k, m))
+func (tt *Testing) PostKey(k api.Key, m api.Modifier) {
+	if err := tt.ui.Post(newKeyEvent(k, m)); err != nil {
+		tt.t.Fatalf("post: key: %v", err)
+	}
 }
 
-func (tt *Testing) PostRune(r rune, m api.Modifier) error {
-	return tt.ui.Post(newRuneEvent(r, m))
+func (tt *Testing) PostRune(r rune, m api.Modifier) {
+	if err := tt.ui.Post(newRuneEvent(r, m)); err != nil {
+		tt.t.Fatalf("post: rune: %v", err)
+	}
 }
 
 func (tt *Testing) PostMouse(
@@ -111,9 +111,27 @@ func (tt *Testing) PostMouse(
 	return tt.ui.Post(newMouseEvent(x, y, b, m))
 }
 
-func (tt *Testing) PostResize(width, height int) error {
+func (tt *Testing) PostBracketPaste(paste string) {
+	if len(paste) == 0 {
+		return
+	}
+	if err := tt.ui.Post(newBracketPaste(true)); err != nil {
+		tt.t.Fatalf("post: bracket paste: start: %v", err)
+	}
+	for _, r := range paste {
+		err := tt.ui.Post(newRuneEvent(r, api.ZeroModifier))
+		if err != nil {
+			tt.t.Fatalf("post: bracket paste: rune: %v", err)
+		}
+	}
+	if err := tt.ui.Post(newBracketPaste(false)); err != nil {
+		tt.t.Fatalf("post: bracket paste: end: %v", err)
+	}
+}
+
+func (tt *Testing) PostResize(width, height int) {
 	if width == 0 && height == 0 {
-		return nil
+		return
 	}
 	w, h := tt.ui.Size()
 	if width == 0 {
@@ -123,20 +141,10 @@ func (tt *Testing) PostResize(width, height int) error {
 		height = h
 	}
 	tt.ui.lib.(tcell.SimulationScreen).SetSize(width, height)
-	return tt.ui.Post(newResize(width, height))
+	if err := tt.ui.Post(newResize(width, height)); err != nil {
+		tt.t.Fatalf("post: resize: %v", err)
+	}
 }
-
-type resize struct{ evt *tcell.EventResize }
-
-func newResize(width, height int) api.ResizeEventer {
-	return &resize{evt: tcell.NewEventResize(
-		width, height,
-	)}
-}
-
-func (r *resize) Source() interface{} { return r.evt }
-func (r *resize) When() time.Time     { return r.evt.When() }
-func (r *resize) Size() (int, int)    { return r.evt.Size() }
 
 func (tt *Testing) Screen() api.StringScreen {
 	bld, screen := &strings.Builder{}, api.StringScreen{}

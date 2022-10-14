@@ -36,7 +36,7 @@ type backend = *term.Testing
 // callback.
 type Testing struct {
 	backend
-	ll         *Lines
+	LL         *Lines
 	terminated bool
 	syncAdd    chan bool
 	syncWait   chan (chan bool)
@@ -67,7 +67,7 @@ func TermFixture(
 	t *testing.T,
 	timeout time.Duration,
 	c Componenter,
-) (*Lines, *Testing) {
+) *Testing {
 	t.Helper()
 	ll := &Lines{}
 	ui, backend := term.Fixture(t, timeout)
@@ -75,18 +75,18 @@ func TermFixture(
 	ll.backend = ui
 	tt := &Testing{
 		backend: backend,
-		ll:      ll,
+		LL:      ll,
 		t:       t,
 	}
 	backend.Listen(ll.listen)
-	return ll, tt
+	return tt
 }
 
 func (tt *Testing) Root() Componenter {
-	if tt.ll.scr.lyt.Root == nil {
+	if tt.LL.scr.lyt.Root == nil {
 		tt.t.Fatal("testing: root: layout not initialized")
 	}
-	return tt.ll.scr.root().userComponent()
+	return tt.LL.scr.root().userComponent()
 }
 
 // FireResize posts a resize event and returns after this event
@@ -100,9 +100,7 @@ func (tt *Testing) FireResize(width, height int) {
 	if width == 0 && height == 0 {
 		return
 	}
-	if err := tt.PostResize(width, height); err != nil {
-		tt.t.Fatal(err)
-	}
+	tt.PostResize(width, height)
 }
 
 // FireRune posts given run-key-press event and returns after this event
@@ -111,8 +109,10 @@ func (tt *Testing) FireResize(width, height int) {
 // listening it is started before the event is fired.
 func (tt *Testing) FireRune(r rune, m ...Modifier) {
 	tt.t.Helper()
-	if err := tt.PostRune(r, api.ZeroModifier); err != nil {
-		tt.t.Fatal(err)
+	if len(m) == 0 {
+		tt.PostRune(r, api.ZeroModifier)
+	} else {
+		tt.PostRune(r, m[0])
 	}
 }
 
@@ -121,14 +121,10 @@ func (tt *Testing) FireRune(r rune, m ...Modifier) {
 // listening it is started before the event is fired.
 func (tt *Testing) FireKey(k api.Key, m ...Modifier) {
 	tt.t.Helper()
-	var err error
 	if len(m) == 0 {
-		err = tt.PostKey(k, api.ZeroModifier)
+		tt.PostKey(k, api.ZeroModifier)
 	} else {
-		err = tt.PostKey(k, m[0])
-	}
-	if err != nil {
-		tt.t.Fatal(err)
+		tt.PostKey(k, m[0])
 	}
 }
 
@@ -138,7 +134,7 @@ func (tt *Testing) FireKey(k api.Key, m ...Modifier) {
 // coordinates outside the available screen area the call is ignored.
 func (tt *Testing) FireClick(x, y int) {
 	tt.t.Helper()
-	width, height := tt.ll.scr.backend.Size()
+	width, height := tt.LL.scr.backend.Size()
 	if x < 0 || y < 0 || x >= width || y >= height {
 		return
 	}
@@ -152,7 +148,7 @@ func (tt *Testing) FireClick(x, y int) {
 // ignored.
 func (tt *Testing) FireContext(x, y int) {
 	tt.t.Helper()
-	width, height := tt.ll.scr.backend.Size()
+	width, height := tt.LL.scr.backend.Size()
 	if x < 0 || y < 0 || x >= width || y >= height {
 		return
 	}
@@ -167,7 +163,7 @@ func (tt *Testing) FireMouse(
 	x, y int, bm api.Button, mm api.Modifier,
 ) {
 	tt.t.Helper()
-	width, height := tt.ll.scr.backend.Size()
+	width, height := tt.LL.scr.backend.Size()
 	if x < 0 || y < 0 || x >= width || y >= height {
 		return
 	}
@@ -223,10 +219,11 @@ func isInside(dim *lyt.Dim, x, y int) (ox, oy int, ok bool) {
 }
 
 // ScreenOf provides a string representation of given component's
-// screen-portion, i.e.  including margins and without clippings.  The
+// screen-area, i.e. without margins and without clippings.  The
 // returned StringScreen is nil if given componenter is not part of the
-// layout or off-screen.  NOTE do not use this method inside an
-// Update-event listener.
+// layout or off-screen.  Note call ScreenArea(c.Dim().Rect()) inside an
+// Update-event callback to get the ScreenArea of a component including
+// layout margins.
 func (tt *Testing) ScreenOf(c Componenter) api.StringScreen {
 	if !c.hasLayoutWrapper() {
 		return nil
@@ -235,7 +232,7 @@ func (tt *Testing) ScreenOf(c Componenter) api.StringScreen {
 	if dim.IsOffScreen() {
 		return nil
 	}
-	return tt.ScreenArea(dim.Rect())
+	return tt.ScreenArea(dim.Area())
 }
 
 // CellsOf provides a lines of cells representation of given component's
@@ -243,7 +240,8 @@ func (tt *Testing) ScreenOf(c Componenter) api.StringScreen {
 // CellsScreen provides next to a string representation also style
 // information for each screen coordinate.  The returned CellsScreen is
 // nil if given componenter is not part of the layout or off-screen.
-// NOTE do not use this method inside an Update-event listener.
+// Note call CellsArea(c.Dim().Rect()) inside an Update-event callback
+// to get the ScreenArea of a component including layout margins.
 func (tt *Testing) CellsOf(c Componenter) api.CellsScreen {
 	if !c.hasLayoutWrapper() {
 		return nil
@@ -252,5 +250,5 @@ func (tt *Testing) CellsOf(c Componenter) api.CellsScreen {
 	if dim.IsOffScreen() {
 		return nil
 	}
-	return tt.CellsArea(dim.Rect())
+	return tt.CellsArea(dim.Area())
 }
