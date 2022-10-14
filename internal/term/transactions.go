@@ -48,5 +48,5 @@ func (t *transactional) postAndWait(evt api.Eventer) error {
 }
 
 func (t *transactional) polled() {
-	t.waiting <- t.count.Add(-1) <= 0
+	t.waiting <- t.count.Add(-1) == 0
 }

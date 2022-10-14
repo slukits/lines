@@ -15,6 +15,8 @@ import (
 
 type AnUI struct{ Suite }
 
+func (s *AnUI) SetUp(t *T) { t.Parallel() }
+
 func (s *AnUI) Has_initially_testing_s_width_and_height(t *T) {
 	ui, tt := LstFixture(t.GoT(), nil, 0)
 	width, height := ui.Size()
@@ -110,7 +112,7 @@ func (s *AnUI) Reports_a_mouse_eventer(t *T) {
 		}
 	}, 0)
 
-	t.FatalOn(tt.PostMouse(4, 2, api.Primary, api.ZeroModifier))
+	tt.PostMouse(4, 2, api.Primary, api.ZeroModifier)
 
 	t.True(eventReceived)
 }

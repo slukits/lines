@@ -106,15 +106,16 @@ func (q *QuitEvent) When() time.Time     { return time.Now() }
 func (u *UI) poll() {
 	for {
 		evt := u.lib.PollEvent()
+		if evt == nil {
+			return
+		}
 		if u.listener == nil {
 			if u.transactional.Load() != nil {
 				u.transactional.Load().(*transactional).polled()
 			}
-			return
+			continue
 		}
 		switch evt := evt.(type) {
-		case nil:
-			return
 		case api.Eventer:
 			u.listener(evt)
 		case *tcell.EventResize:
@@ -129,6 +130,8 @@ func (u *UI) poll() {
 			u.listener(&mouseEvent{evt: evt})
 		case *tcell.EventPaste:
 			u.listener(&bracketPaste{evt: evt})
+		default:
+			panic(fmt.Sprintf("unknown event type: %T", evt))
 		}
 		if u.transactional.Load() != nil {
 			u.transactional.Load().(*transactional).polled()

@@ -56,7 +56,6 @@ func LstFixture(
 // processed which were posted during p's processing.  Processing of p
 // times out after given timeout.  A zero-timeout defaults to 100ms.
 func Fixture(t *testing.T, timeout time.Duration) (*UI, *Testing) {
-
 	t.Helper()
 
 	if timeout == 0 {
@@ -94,12 +93,14 @@ func (tt *Testing) Display(s string, sty api.Style) {
 }
 
 func (tt *Testing) PostKey(k api.Key, m api.Modifier) {
+	tt.t.Helper()
 	if err := tt.ui.Post(newKeyEvent(k, m)); err != nil {
 		tt.t.Fatalf("post: key: %v", err)
 	}
 }
 
 func (tt *Testing) PostRune(r rune, m api.Modifier) {
+	tt.t.Helper()
 	if err := tt.ui.Post(newRuneEvent(r, m)); err != nil {
 		tt.t.Fatalf("post: rune: %v", err)
 	}
@@ -107,11 +108,15 @@ func (tt *Testing) PostRune(r rune, m api.Modifier) {
 
 func (tt *Testing) PostMouse(
 	x, y int, b api.Button, m api.Modifier,
-) error {
-	return tt.ui.Post(newMouseEvent(x, y, b, m))
+) {
+	tt.t.Helper()
+	if err := tt.ui.Post(newMouseEvent(x, y, b, m)); err != nil {
+		tt.t.Fatalf("post: mouse: %v", err)
+	}
 }
 
 func (tt *Testing) PostBracketPaste(paste string) {
+	tt.t.Helper()
 	if len(paste) == 0 {
 		return
 	}
@@ -130,6 +135,7 @@ func (tt *Testing) PostBracketPaste(paste string) {
 }
 
 func (tt *Testing) PostResize(width, height int) {
+	tt.t.Helper()
 	if width == 0 && height == 0 {
 		return
 	}
