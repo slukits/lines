@@ -219,7 +219,7 @@ func (c *bbbKBCmpFX) inner() *kbCmpFX {
 func (s *KB) Bubbles_keys(t *T) {
 	fx := &bbbKBCmpFX{}
 	tt := s.tt(t, fx)
-	t.FatalOn(fx.CC[0].(*kbCmpFX).Focus())
+	t.FatalOn(tt.Lines.Focus(fx.CC[0]))
 	tt.FireKey(F1)
 	t.True(fx.inner().HasKey())
 	t.True(fx.inner().len(keyListener) == 1)
@@ -230,7 +230,7 @@ func (s *KB) Bubbles_keys(t *T) {
 func (s *KB) Bubbles_runes(t *T) {
 	fx := &bbbKBCmpFX{}
 	tt := s.tt(t, fx)
-	t.FatalOn(fx.CC[0].(*kbCmpFX).Focus())
+	t.FatalOn(tt.Lines.Focus(fx.CC[0]))
 	tt.FireRune('A')
 	t.True(fx.inner().HasRune())
 	t.True(fx.inner().len(runeListener) == 1)
@@ -241,7 +241,7 @@ func (s *KB) Bubbles_runes(t *T) {
 func (s *KB) Event_bubbling_may_be_stopped(t *T) {
 	fx := &bbbKBCmpFX{}
 	tt := s.tt(t, fx)
-	t.FatalOn(fx.CC[0].(*kbCmpFX).Focus())
+	t.FatalOn(tt.Lines.Focus(fx.CC[0]))
 	fx.inner().stopBubblingKeys = true
 	fx.inner().stopBubblingOnKey = true
 	fx.inner().stopBubblingRunes = true

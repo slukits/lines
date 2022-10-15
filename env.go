@@ -46,9 +46,9 @@ type Env struct {
 
 	size func() (int, int)
 
-	// EE is the Events instance providing given environment
-	// instance.
-	EE *Lines
+	// Lines is the Lines instance providing given environment
+	// instance.  Use it to post Update or Focus events.
+	Lines *Lines
 
 	// Evt is the event which triggered the creation of the environment
 	// instance.  NOTE with Evt.Source() a backend event may be accessed.
@@ -131,7 +131,7 @@ func (e *Env) At(line, cell int, ff ...LineFlags) *locWriter {
 // ask your Events-instance (e.EE) for an update event of the focused
 // component if you want it to be changed.
 func (e *Env) Focused() Componenter {
-	return e.EE.scr.focus.userComponent()
+	return e.Lines.scr.focus.userComponent()
 }
 
 // StopBubbling prevents any further reporting of an mouse or key event
@@ -146,7 +146,7 @@ func (e *Env) StopBubbling() { e.flags |= envStopBubbling }
 func (e *Env) ScreenSize() (width, height int) { return e.size() }
 
 func (e *Env) reset() {
-	e.EE = nil
+	e.Lines = nil
 	e.Evt = nil
 	e.cmp = nil
 }

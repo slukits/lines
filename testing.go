@@ -36,7 +36,7 @@ type backend = *term.Testing
 // callback.
 type Testing struct {
 	backend
-	LL         *Lines
+	Lines      *Lines
 	terminated bool
 	syncAdd    chan bool
 	syncWait   chan (chan bool)
@@ -75,7 +75,7 @@ func TermFixture(
 	ll.backend = ui
 	tt := &Testing{
 		backend: backend,
-		LL:      ll,
+		Lines:   ll,
 		t:       t,
 	}
 	backend.Listen(ll.listen)
@@ -83,10 +83,10 @@ func TermFixture(
 }
 
 func (tt *Testing) Root() Componenter {
-	if tt.LL.scr.lyt.Root == nil {
+	if tt.Lines.scr.lyt.Root == nil {
 		tt.t.Fatal("testing: root: layout not initialized")
 	}
-	return tt.LL.scr.root().userComponent()
+	return tt.Lines.scr.root().userComponent()
 }
 
 // FireResize posts a resize event and returns after this event
@@ -134,7 +134,7 @@ func (tt *Testing) FireKey(k api.Key, m ...Modifier) {
 // coordinates outside the available screen area the call is ignored.
 func (tt *Testing) FireClick(x, y int) {
 	tt.t.Helper()
-	width, height := tt.LL.scr.backend.Size()
+	width, height := tt.Lines.scr.backend.Size()
 	if x < 0 || y < 0 || x >= width || y >= height {
 		return
 	}
@@ -148,7 +148,7 @@ func (tt *Testing) FireClick(x, y int) {
 // ignored.
 func (tt *Testing) FireContext(x, y int) {
 	tt.t.Helper()
-	width, height := tt.LL.scr.backend.Size()
+	width, height := tt.Lines.scr.backend.Size()
 	if x < 0 || y < 0 || x >= width || y >= height {
 		return
 	}
@@ -163,7 +163,7 @@ func (tt *Testing) FireMouse(
 	x, y int, bm api.Button, mm api.Modifier,
 ) {
 	tt.t.Helper()
-	width, height := tt.LL.scr.backend.Size()
+	width, height := tt.Lines.scr.backend.Size()
 	if x < 0 || y < 0 || x >= width || y >= height {
 		return
 	}

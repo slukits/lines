@@ -196,16 +196,16 @@ func (s *Mouse) Click_moves_focus_and_reports_to_focusable(t *T) {
 	fx := &nonZeroOriginFx{}
 	tt := s.tt(t, fx)
 	var fxX, fxY int
-	fx.cmp().Update(nil, func(e *Env) {
+	t.FatalOn(tt.Lines.Update(fx.cmp(), nil, func(e *Env) {
 		fx.cmp().FF.Add(Focusable)
 		t.Not.True(e.Focused() == fx.cmp())
 		// need an event callback to access component features
 		fxX, fxY = fx.cmp().Dim().X(), fx.cmp().Dim().Y()
-	})
+	}))
 	tt.FireClick(fxX+1, fxY+1)
-	fx.cmp().Update(nil, func(e *Env) {
+	t.FatalOn(tt.Lines.Update(fx.cmp(), nil, func(e *Env) {
 		t.True(e.Focused() == fx.cmp())
-	})
+	}))
 	t.True(fx.cmp().HasClick())
 }
 
@@ -213,16 +213,16 @@ func (s *Mouse) Context_moves_focus_and_reports_to_focusable(t *T) {
 	fx := &nonZeroOriginFx{}
 	tt := s.tt(t, fx)
 	var fxX, fxY int
-	fx.cmp().Update(nil, func(e *Env) {
+	t.FatalOn(tt.Lines.Update(fx.cmp(), nil, func(e *Env) {
 		fx.cmp().FF.Add(Focusable)
 		t.Not.True(e.Focused() == fx.cmp())
 		// need an event callback to access component features
 		fxX, fxY = fx.cmp().Dim().X(), fx.cmp().Dim().Y()
-	})
+	}))
 	tt.FireContext(fxX+1, fxY+1)
-	fx.cmp().Update(nil, func(e *Env) {
+	t.FatalOn(tt.Lines.Update(fx.cmp(), nil, func(e *Env) {
 		t.True(e.Focused() == fx.cmp())
-	})
+	}))
 	t.True(fx.cmp().HasContext())
 }
 
@@ -230,16 +230,16 @@ func (s *Mouse) Event_moves_focus_and_reports_to_focusable(t *T) {
 	fx := &nonZeroOriginFx{}
 	tt := s.tt(t, fx)
 	var fxX, fxY int
-	fx.cmp().Update(nil, func(e *Env) {
+	t.FatalOn(tt.Lines.Update(fx.cmp(), nil, func(e *Env) {
 		fx.cmp().FF.Add(Focusable)
 		t.Not.True(e.Focused() == fx.cmp())
 		// need an event callback to access component features
 		fxX, fxY = fx.cmp().Dim().X(), fx.cmp().Dim().Y()
-	})
+	}))
 	tt.FireMouse(fxX+1, fxY+1, Middle, ZeroModifier)
-	fx.cmp().Update(nil, func(e *Env) {
+	t.FatalOn(tt.Lines.Update(fx.cmp(), nil, func(e *Env) {
 		t.True(e.Focused() == fx.cmp())
-	})
+	}))
 	t.True(fx.cmp().HasMouse())
 }
 
@@ -259,10 +259,10 @@ func (s *Mouse) Event_coordinates_are_translated_into_component(t *T) {
 	// OnInit, OnUpdate, 2xOnClick, 2xOnContext, 4xOnMouse
 	tt := s.tt(t, fx)
 	var fxX, fxY int
-	fx.cmp().Update(nil, func(e *Env) {
+	t.FatalOn(tt.Lines.Update(fx.cmp(), nil, func(e *Env) {
 		fx.cmp().FF.Add(Focusable)
 		fxX, fxY = fx.cmp().Dim().X(), fx.cmp().Dim().Y()
-	})
+	}))
 	tt.FireClick(fxX+1, fxY+1)
 	tt.FireContext(fxX+1, fxY+1)
 	x, y := fx.cmp().ClickXY()
@@ -285,10 +285,10 @@ func (s *Mouse) Events_are_bubbling(t *T) {
 	fx := &nonZeroOriginFx{}
 	tt := s.tt(t, fx)
 	var fxX, fxY int
-	fx.cmp().Update(nil, func(e *Env) {
+	t.FatalOn(tt.Lines.Update(fx.cmp(), nil, func(e *Env) {
 		fx.cmp().FF.Add(Focusable)
 		fxX, fxY = fx.cmp().Dim().X(), fx.cmp().Dim().Y()
-	})
+	}))
 	tt.FireClick(fxX+1, fxY+1)
 	tt.FireContext(fxX+1, fxY+1)
 	tt.FireMouse(fxX+1, fxY+1, Middle, ZeroModifier)
@@ -305,10 +305,10 @@ func (s *Mouse) Event_bubbling_may_be_stopped(t *T) {
 	fx.cmp().stopBubblingContext = true
 	fx.cmp().stopBubblingMouse = true
 	var fxX, fxY int
-	fx.cmp().Update(nil, func(e *Env) {
+	t.FatalOn(tt.Lines.Update(fx.cmp(), nil, func(e *Env) {
 		fx.cmp().FF.Add(Focusable)
 		fxX, fxY = fx.cmp().Dim().X(), fx.cmp().Dim().Y()
-	})
+	}))
 	tt.FireClick(fxX+1, fxY+1)
 	tt.FireContext(fxX+1, fxY+1)
 	tt.FireMouse(fxX+1, fxY+1, Middle, ZeroModifier)

@@ -119,7 +119,7 @@ func reportUpdate(cntx *rprContext, evt *UpdateEvent) {
 	if !evt.cmp.isInitialized() {
 		return
 	}
-	upd, ok := evt.cmp.layoutCmp.userComponent().(Updater)
+	upd, ok := evt.cmp.layoutComponent().userComponent().(Updater)
 	if !ok {
 		return
 	}
@@ -130,16 +130,17 @@ func reportMoveFocus(cntx *rprContext, evt *moveFocusEvent) {
 	if !evt.cmp.isInitialized() {
 		return
 	}
-	moveFocus(evt.cmp.layoutCmp.userComponent(), cntx)
+	moveFocus(evt.cmp, cntx)
 }
 
 func moveFocus(cmp Componenter, cntx *rprContext) {
-	if cmp == cntx.scr.focus.userComponent() {
+	usrCmp := cntx.scr.focus.userComponent()
+	if cmp == usrCmp {
 		return
 	}
-	fls, ok := cntx.scr.focus.userComponent().(FocusLooser)
+	fls, ok := usrCmp.(FocusLooser)
 	if ok {
-		callback(cntx.scr.focus.userComponent(), cntx, fls.OnFocusLost)
+		callback(usrCmp, cntx, fls.OnFocusLost)
 	}
 	fcs, ok := cmp.(Focuser)
 	if ok {
@@ -207,10 +208,10 @@ func focusIfFocusable(cntx *rprContext, cmp layoutComponenter) bool {
 
 func cbEnv(cntx *rprContext, cmp Componenter) *Env {
 	return &Env{
-		cmp:  cmp,
-		EE:   cntx.ll,
-		Evt:  cntx.evt,
-		size: cntx.scr.backend.Size,
+		cmp:   cmp,
+		Lines: cntx.ll,
+		Evt:   cntx.evt,
+		size:  cntx.scr.backend.Size,
 	}
 }
 

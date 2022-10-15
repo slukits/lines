@@ -82,8 +82,10 @@ type updLstCmpFX struct {
 
 func (s *_lines) Reports_update_to_provided_listener(t *T) {
 	fx := &updLstCmpFX{}
-	s.tt(t, fx)
-	fx.Update(nil, func(_ *Env) { fx.reported = true })
+	tt := s.tt(t, fx)
+	t.FatalOn(tt.Lines.Update(fx, nil, func(_ *Env) {
+		fx.reported = true
+	}))
 	t.True(fx.reported)
 }
 
@@ -96,8 +98,8 @@ func (c *updCmpFX) OnUpdate(e *Env) { c.reported = true }
 
 func (s *_lines) Reports_update_without_listener_to_component(t *T) {
 	fx := &updCmpFX{}
-	s.tt(t, fx)
-	fx.Update(nil, nil)
+	tt := s.tt(t, fx)
+	t.FatalOn(tt.Lines.Update(fx, nil, nil))
 	t.True(fx.reported)
 }
 
@@ -126,16 +128,16 @@ func (c *fcsCmpFX) OnFocus(*Env) { c.gainedFocus = true }
 
 func (s *_lines) Reports_moved_focus_gaining_and_loosing(t *T) {
 	fx := &stackedCmpFX{cc: []Componenter{&fcsCmpFX{}}}
-	s.tt(t, fx)
-	t.FatalOn(fx.cc[0].(*fcsCmpFX).Focus())
+	tt := s.tt(t, fx)
+	t.FatalOn(tt.Lines.Focus(fx.cc[0]))
 	t.True(fx.lostFocus)
 	t.True(fx.cc[0].(*fcsCmpFX).gainedFocus)
 }
 
 func (s *_lines) Ignores_focus_on_focused_component(t *T) {
 	fx := &stackedCmpFX{cc: []Componenter{&fcsCmpFX{}}}
-	s.tt(t, fx)
-	t.FatalOn(fx.Focus())
+	tt := s.tt(t, fx)
+	t.FatalOn(tt.Lines.Focus(fx))
 	t.Not.True(fx.lostFocus)
 	t.Not.True(fx.cc[0].(*fcsCmpFX).gainedFocus)
 }

@@ -89,11 +89,11 @@ func (s *lineFocus) Focuses_first_focusable_line(t *T) {
 
 	tt.FireRune('j')
 
-	fx.Update(nil, func(e *Env) {
+	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
 		fx.LL.Focus.Reset(false)
 		fmt.Fprint(e.LL(0, NotFocusable), "first")
 		fmt.Fprint(e.LL(1), "second")
-	})
+	}))
 
 	tt.FireKey(Down)
 	t.Eq(2, fx.lfN)
@@ -138,11 +138,11 @@ func (s *lineFocus) Resets_if_no_next_focusable(t *T) {
 	tt.FireRune('j')
 	tt.FireRune('j')
 
-	fx.Update(nil, func(e *Env) {
+	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
 		t.Eq(-1, fx.LL.Focus.Current())
 		fmt.Fprint(e.LL(1, NotFocusable), "second")
 		fmt.Fprint(e.LL(2, NotFocusable), "third")
-	})
+	}))
 
 	tt.FireKey(Down)
 	tt.FireKey(Down)
@@ -171,11 +171,11 @@ func (s *lineFocus) Focuses_previous_focusable_line(t *T) {
 	tt.FireRune('j') // case 1
 	tt.FireRune('k') // case 2
 
-	fx.Update(nil, func(e *Env) {
+	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
 		fmt.Fprint(e.LL(0, NotFocusable), "first")
 		fmt.Fprint(e.LL(1), "second")
 		fmt.Fprint(e.LL(2), "third")
-	})
+	}))
 
 	tt.FireRune('j') // case 3
 	tt.FireRune('k') // case 4

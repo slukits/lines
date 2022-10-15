@@ -5,6 +5,8 @@
 package lines
 
 import (
+	"time"
+
 	"github.com/slukits/lines/internal/api"
 	"github.com/slukits/lines/internal/term"
 )
@@ -104,6 +106,43 @@ func (ee *Lines) Quit() { ee.backend.Quit() }
 // WaitForQuit blocks until given Lines-instance is quit.
 func (ee *Lines) WaitForQuit() { ee.backend.WaitForQuit() }
 
+// Update posts an update event into the event queue which is reported
+// either to given listener if not nil or to given componenter if given
+// listener is nil.  Given data will be provided by the reported Update
+// event.  Update is a no-op if componenter and listener are nil.
+func (ll *Lines) Update(
+	cmp Componenter, data interface{}, l Listener,
+) error {
+	if cmp == nil && l == nil {
+		return nil
+	}
+	return ll.backend.Post(&UpdateEvent{
+		when: time.Now(),
+		cmp:  cmp,
+		lst:  l,
+		Data: data,
+	})
+}
+
+// UpdateEvent is created by an Update call on Lines.  Its Data field
+// provides the data which was passed to that Update call.
+type UpdateEvent struct {
+	when time.Time
+	// NOTE we can not extract the componenter from the component
+	// without risking a race condition hence we leave it to the
+	// reporter to do so.
+	cmp Componenter
+	lst Listener
+
+	// Data provided to an update event listener
+	Data interface{}
+}
+
+// When of an update event is set to time.Now()
+func (u *UpdateEvent) When() time.Time { return u.when }
+
+func (u *UpdateEvent) Source() interface{} { return u }
+
 func (l *Lines) listen(evt api.Eventer) {
 	switch evt := evt.(type) {
 	case ResizeEventer:
@@ -120,3 +159,30 @@ func (l *Lines) listen(evt api.Eventer) {
 		l.scr.softSync(l)
 	}
 }
+
+// MoveFocus posts a new MoveFocus event into the event loop which once
+// it is polled calls the currently focused component's OnFocusLost
+// implementation while given component's OnFocus implementation is
+// executed.  Finally the focus is set to given component.  MoveFocus
+// fails if the event-loop is full returned error will wrap tcell's
+// *PostEvent* error.  MoveFocus is an no-op if Componenter is nil.
+func (c *Lines) Focus(cmp Componenter) error {
+	return c.backend.Post(&moveFocusEvent{
+		when: time.Now(),
+		cmp:  cmp,
+	})
+}
+
+// moveFocusEvent is posted by calling MoveFocus for a programmatically
+// change of focus.  This event-instance is not provided to the user.
+type moveFocusEvent struct {
+	when time.Time
+	// NOTE we can not extract the componenter from the component
+	// without risking a race condition hence we leave it to the
+	// reporter to do so.
+	cmp Componenter
+}
+
+func (e *moveFocusEvent) When() time.Time { return e.when }
+
+func (e *moveFocusEvent) Source() interface{} { return e }

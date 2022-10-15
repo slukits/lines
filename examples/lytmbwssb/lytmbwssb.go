@@ -52,7 +52,7 @@ func (c *WS) OnInit(e *lines.Env) {
 }
 
 func (c *WS) OnLayout(e *lines.Env) {
-	c.CC[0].(*Panel).Focus()
+	e.Lines.Focus(c.CC[0])
 }
 
 type Panel struct{ lines.Component }

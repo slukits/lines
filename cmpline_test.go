@@ -26,15 +26,15 @@ func (s *Line) Is_filled_at_line_fillers(t *T) {
 
 	t.Eq("a      b", tt.ScreenOf(fx).Trimmed().String())
 
-	fx.Update(nil, func(e *Env) {
+	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
 		fmt.Fprintf(e, "a%sb%[1]sc", LineFiller)
-	})
+	}))
 
 	t.Eq("a   b  c", tt.ScreenOf(fx).Trimmed().String())
 
-	fx.Update(nil, func(e *Env) {
+	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
 		fmt.Fprintf(e, "ab%scd%[1]sef%[1]sgh", LineFiller)
-	})
+	}))
 
 	t.Eq("ab cd ef", tt.ScreenOf(fx).Trimmed().String())
 }
