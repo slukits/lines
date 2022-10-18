@@ -37,19 +37,19 @@ type FmtWriter struct {
 
 // FG sets the next write's foreground color.
 func (w *FmtWriter) FG(color Color) *FmtWriter {
-	w.sty.FG = color
+	w.sty = w.sty.WithFG(color)
 	return w
 }
 
 // BG sets the next write's foreground color.
 func (w *FmtWriter) BG(color Color) *FmtWriter {
-	w.sty.BG = color
+	w.sty = w.sty.WithBG(color)
 	return w
 }
 
 // Attr sets the next write's style attributes like bold.
 func (w *FmtWriter) Attr(aa StyleAttribute) *FmtWriter {
-	w.sty.AA = aa
+	w.sty = w.sty.WithAA(aa)
 	return w
 }
 

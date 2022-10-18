@@ -143,14 +143,14 @@ func (l CellsLine) HasBG(x int, c Color) bool {
 	if !l.isValidCell(x) {
 		return false
 	}
-	return l[x].Sty.BG == c
+	return l[x].Sty.BG() == c
 }
 
 func (l CellsLine) HasFG(x int, c Color) bool {
 	if !l.isValidCell(x) {
 		return false
 	}
-	return l[x].Sty.FG == c
+	return l[x].Sty.FG() == c
 }
 
 // HasAttr returns true if given style attribute mask is set in the
@@ -159,7 +159,7 @@ func (l CellsLine) HasAttr(x int, aa StyleAttribute) bool {
 	if !l.isValidCell(x) {
 		return false
 	}
-	return l[x].Sty.AA&aa == aa
+	return l[x].Sty.AA()&aa == aa
 }
 
 func (l CellsLine) String() string {

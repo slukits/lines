@@ -75,9 +75,7 @@ type Componenter interface {
 	// initialize sets up the embedded *component instance and wraps it
 	// together with the client-instance in a layoutComponenter which is
 	// returned.
-	initialize(
-		Componenter, interface{ Post(Eventer) error },
-	) layoutComponenter
+	initialize(Componenter, api.UIer) layoutComponenter
 
 	// isInitialized returns true if embedded *component was wrapped
 	// into a layout component.
@@ -89,7 +87,7 @@ type Componenter interface {
 
 	// backend to post Update and Focus events on a user Componenter
 	// implementation.
-	backend() interface{ Post(Eventer) error }
+	backend() api.UIer
 }
 
 // TermKiosk returns an Events instance without registered Quitable feature,

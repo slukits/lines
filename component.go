@@ -5,6 +5,7 @@
 package lines
 
 import (
+	"github.com/slukits/lines/internal/api"
 	"github.com/slukits/lines/internal/lyt"
 )
 
@@ -33,7 +34,7 @@ type Component struct {
 	LL *ComponentLines
 
 	// bcknd to post Update and Focus events
-	bcknd interface{ Post(Eventer) error }
+	bcknd api.UIer
 
 	// component provides properties/features of an Component.  A
 	// Component can't do it directly if it should panic if it is used
@@ -76,20 +77,20 @@ const (
 )
 
 func (c *Component) initialize(
-	userComponent Componenter, event interface{ Post(Eventer) error },
+	userComponent Componenter, backend api.UIer,
 ) layoutComponenter {
 
 	if c.layoutCmp != nil {
 		return c.layoutCmp
 	}
 
-	c.bcknd = event
+	c.bcknd = backend
 
 	inner := &component{
 		dim:     lyt.DimFilling(1, 1),
 		ll:      &lines{},
 		global:  &global{tabWidth: 4},
-		fmt:     llFmt{sty: Style{}},
+		fmt:     llFmt{sty: backend.NewStyle()},
 		userCmp: userComponent,
 		mod:     Overwriting,
 		dirty:   true,
@@ -109,7 +110,7 @@ func (c *Component) initialize(
 	return c.layoutCmp
 }
 
-func (c *Component) backend() interface{ Post(Eventer) error } {
+func (c *Component) backend() api.UIer {
 	return c.bcknd
 }
 

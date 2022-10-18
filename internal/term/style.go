@@ -10,33 +10,43 @@ import (
 )
 
 func apiToTcellStyle(s api.Style) tcell.Style {
+	fg, bg := tcell.ColorDefault, tcell.ColorDefault
+	if s.FG() != api.DefaultColor {
+		fg = tcell.NewHexColor(int32(s.FG()))
+	}
+	if s.BG() != api.DefaultColor {
+		bg = tcell.NewHexColor(int32(s.BG()))
+	}
 	return tcell.StyleDefault.
-		Background(tcell.NewHexColor(int32(s.BG))).
-		Foreground(tcell.NewHexColor(int32(s.FG))).
-		Attributes(tcell.AttrMask(s.AA))
+		Foreground(fg).Background(bg).
+		Attributes(tcell.AttrMask(s.AA()))
+}
+
+func tcellToApiStyle(s tcell.Style) api.Style {
+	fg, bg := api.DefaultColor, api.DefaultColor
+	tfg, tbg, taa := s.Decompose()
+	if tfg != tcell.ColorDefault {
+		fg = api.Color(tfg.Hex())
+	}
+	if tbg != tcell.ColorDefault {
+		bg = api.Color(tbg.Hex())
+	}
+	return api.NewStyle(api.StyleAttribute(taa), fg, bg)
 }
 
 // tcellToApiStyleClosure keeps the last tcell-style conversion and
 // returns it until provided tcell style changes.
 func tcellToApiStyleClosure() func(tcell.Style) api.Style {
 	sty := tcell.StyleDefault
-	fg, bg, aa := sty.Decompose()
-	apiSty := api.Style{
-		AA: api.StyleAttribute(aa),
-		FG: api.Color(fg.Hex()),
-		BG: api.Color(bg.Hex()),
-	}
+	tfg, tbg, aa := sty.Decompose()
+	apiSty := tcellToApiStyle(sty)
 	return func(s tcell.Style) api.Style {
 		_fg, _bg, _aa := s.Decompose()
-		if _fg == fg && _bg == bg && _aa == aa {
+		if _fg == tfg && _bg == tbg && _aa == aa {
 			return apiSty
 		}
-		fg, bg, aa = _fg, _bg, _aa
-		apiSty = api.Style{
-			AA: api.StyleAttribute(aa),
-			FG: api.Color(fg.Hex()),
-			BG: api.Color(bg.Hex()),
-		}
+		tfg, tbg, aa = _fg, _bg, _aa
+		apiSty = tcellToApiStyle(s)
 		return apiSty
 	}
 }

@@ -27,7 +27,7 @@ func (c *component) Mod(cm ComponentMode) {
 
 // Sty replaces a component's style attributes like bold or dimmed.
 func (c *component) Sty(attr StyleAttribute) {
-	c.fmt.sty = c.fmt.sty.WithAttrs(attr)
+	c.fmt.sty = c.fmt.sty.WithAA(attr)
 }
 
 // FG replaces a component's foreground color.

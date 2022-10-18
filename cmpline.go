@@ -189,10 +189,10 @@ func (l *line) toScreenHighlighted(
 	}
 
 	var rvr Style
-	if l.sty.AA&Reverse == 0 {
-		rvr = l.sty.WithAttrsAdded(Reverse)
+	if l.sty.AA()&Reverse == 0 {
+		rvr = l.sty.WithAdded(Reverse)
 	} else {
-		rvr = l.sty.WithAttrsRemoved(Reverse)
+		rvr = l.sty.WithRemoved(Reverse)
 	}
 	for i, r := range s {
 		if i == width {

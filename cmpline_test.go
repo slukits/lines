@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	. "github.com/slukits/gounit"
+	"github.com/slukits/lines/internal/api"
 )
 
 type Line struct{ Suite }
@@ -41,7 +42,10 @@ func (s *Line) Is_filled_at_line_fillers(t *T) {
 
 func (s *Line) Uses_added_style_range_on_next_sync(t *T) {
 	var r Range
-	fxSR := SR{Range: *r.SetStart(2).SetEnd(5), Style: Style{BG: Red}}
+	fxSR := SR{
+		Range: *r.SetStart(2).SetEnd(5),
+		Style: api.NewDefaultStyle().WithBG(Red),
+	}
 	fx := &icmpFX{init: func(c *icmpFX, e *Env) {
 		c.Dim().SetHeight(1).SetWidth(8)
 		fmt.Fprintf(e, "12345678")
@@ -61,11 +65,13 @@ func (s *Line) Uses_added_style_range_on_next_sync(t *T) {
 
 func (s *Line) Adjusts_styles_on_centered(t *T) {
 	fxCnt := LineFiller + "ab" + LineFiller
-	fxSR := SR{Range: Range{1, 3}, Style: Style{BG: Red}}
 	expRng := Range{2, 4}
 	fx := &icmpFX{init: func(c *icmpFX, e *Env) {
 		fmt.Fprint(e, fxCnt)
-		e.AddStyleRange(0, fxSR)
+		e.AddStyleRange(0, SR{
+			Range: Range{1, 3},
+			Style: e.NewStyle().WithBG(Red),
+		})
 	}}
 	tt := s.tt(t, fx)
 	tt.FireResize(6, 1)
@@ -81,18 +87,18 @@ func (s *Line) Adjusts_styles_on_centered(t *T) {
 	}
 }
 
-func (s *Line) fxSR(x1, x2 int, c Color) SR {
+func fxSR(x1, x2 int, c Color) SR {
 	return SR{
 		Range: Range{x1, x2},
-		Style: Style{BG: c},
+		Style: api.NewDefaultStyle().WithBG(c),
 	}
 }
 
 func (s *Line) Adjusts_styles_on_evenly_distributed_line_filler(t *T) {
 	fxCnt := "a" + LineFiller + "bc" + LineFiller + "d"
-	fxR, fxG, fxB := s.fxSR(1, 2, Red), s.fxSR(2, 4, Green),
-		s.fxSR(5, 6, Blue)
-	dflt := Style{}
+	fxR, fxG, fxB := fxSR(1, 2, Red), fxSR(2, 4, Green),
+		fxSR(5, 6, Blue)
+	dflt := api.NewDefaultStyle()
 	expR, expG, expB := Range{1, 3}, Range{3, 5}, Range{7, 8}
 	fx := &icmpFX{init: func(c *icmpFX, e *Env) {
 		fmt.Fprint(e, fxCnt)
@@ -116,17 +122,17 @@ func (s *Line) Adjusts_styles_on_evenly_distributed_line_filler(t *T) {
 			t.True(gotCnt.HasBG(i, Blue))
 			continue
 		}
-		t.True(gotCnt.HasBG(i, dflt.BG))
+		t.True(gotCnt.HasBG(i, dflt.BG()))
 	}
 }
 
 func (s *Line) Adjusts_styles_on_unevenly_distributed_line_filler(t *T) {
 	fxCnt := "a" + LineFiller + "bc" + LineFiller + "d" + LineFiller + "ef"
-	fxR, fxG, fxB, fxY := s.fxSR(1, 2, Red), s.fxSR(2, 4, Green),
-		s.fxSR(5, 6, Blue), s.fxSR(7, 9, Yellow)
+	fxR, fxG, fxB, fxY := fxSR(1, 2, Red), fxSR(2, 4, Green),
+		fxSR(5, 6, Blue), fxSR(7, 9, Yellow)
 	expR, expG, expB, expY := Range{1, 3}, Range{3, 5}, Range{7, 8},
 		Range{9, 11}
-	dflt := Style{}
+	dflt := api.NewDefaultStyle()
 	fx := &icmpFX{init: func(c *icmpFX, e *Env) {
 		fmt.Fprint(e, fxCnt)
 		e.AddStyleRange(0, fxR, fxG, fxB, fxY)
@@ -153,14 +159,14 @@ func (s *Line) Adjusts_styles_on_unevenly_distributed_line_filler(t *T) {
 			t.True(gotCnt.HasBG(i, Yellow))
 			continue
 		}
-		t.True(gotCnt.HasBG(i, dflt.BG))
+		t.True(gotCnt.HasBG(i, dflt.BG()))
 	}
 }
 
 func (s *Line) Adjusts_styles_on_tab_expansion(t *T) {
 	fxCnt := "\t\tred"
-	fxR := s.fxSR(2, 5, Red)
-	expR, dflt := Range{8, 11}, Style{}
+	fxR := fxSR(2, 5, Red)
+	expR, dflt := Range{8, 11}, api.NewDefaultStyle()
 	fx := &icmpFX{init: func(c *icmpFX, e *Env) {
 		fmt.Fprint(e, fxCnt)
 		e.AddStyleRange(0, fxR)
@@ -175,16 +181,16 @@ func (s *Line) Adjusts_styles_on_tab_expansion(t *T) {
 			t.True(gotCnt.HasBG(i, Red))
 			continue
 		}
-		t.True(gotCnt.HasBG(i, dflt.BG))
+		t.True(gotCnt.HasBG(i, dflt.BG()))
 	}
 }
 
 func (s *Line) Adjusts_styles_on_tab_and_line_filler_expansion(t *T) {
 	fxCnt := "\tred" + LineFiller + "g" + LineFiller + "b"
-	fxR, fxG, fxB := s.fxSR(1, 4, Red), s.fxSR(5, 6, Green),
-		s.fxSR(7, 8, Blue)
+	fxR, fxG, fxB := fxSR(1, 4, Red), fxSR(5, 6, Green),
+		fxSR(7, 8, Blue)
 	expR, expG, expB := Range{4, 7}, Range{9, 10}, Range{11, 12}
-	dflt := Style{}
+	dflt := api.NewDefaultStyle()
 	fx := &icmpFX{init: func(c *icmpFX, e *Env) {
 		fmt.Fprint(e, fxCnt)
 		e.AddStyleRange(0, fxR, fxG, fxB)
@@ -207,7 +213,7 @@ func (s *Line) Adjusts_styles_on_tab_and_line_filler_expansion(t *T) {
 			t.True(gotCnt.HasBG(i, Blue))
 			continue
 		}
-		t.True(gotCnt.HasBG(i, dflt.BG))
+		t.True(gotCnt.HasBG(i, dflt.BG()))
 	}
 }
 

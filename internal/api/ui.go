@@ -6,11 +6,6 @@ package api
 
 import "time"
 
-// Color represents an rgb color.  Predefined colors are expressed in
-// the typical hex-format 0xRRGGBB whereas R, G and B are hex-digits,
-// i.e. red is 0xFF0000.
-type Color int32
-
 // StyleAttribute define the looks of a style, i.e. the looks of a print
 // to the screen.
 type StyleAttribute int32
@@ -30,43 +25,72 @@ const (
 // Style represents what a print to the screen should look like.
 type Style struct {
 	// AA is the style attribute mask providing set style attributes
-	AA StyleAttribute
+	aa StyleAttribute
 
 	// FG provides a style's foreground color
-	FG Color
+	fg Color
 
 	// BG provides a style's background color
-	BG Color
+	bg Color
 }
 
+// NewDefaultStyle returns a new style with no attributes and "default"
+// colors.  The semantics of the later is decided by the backend
+// implementation.
+func NewDefaultStyle() Style {
+	return Style{fg: DefaultColor, bg: DefaultColor}
+}
+
+func NewStyle(aa StyleAttribute, fg, bg Color) Style {
+	return Style{aa: aa, fg: fg, bg: bg}
+}
+
+func (s Style) AA() StyleAttribute { return s.aa }
+func (s Style) FG() Color          { return s.fg }
+func (s Style) BG() Color          { return s.bg }
+
+// Equals returns true if receiving style has the attributes and colors
+// as given other style; false otherwise
 func (s Style) Equals(other Style) bool {
-	return s.AA == other.AA && s.FG == other.FG && s.BG == other.BG
+	return s.aa == other.AA() && s.fg == other.FG() && s.bg == other.BG()
 }
 
-func (s Style) WithAttrsAdded(aa StyleAttribute) Style {
-	return Style{FG: s.FG, BG: s.BG, AA: s.AA | aa}
+// WithAdded returns given style with given attribute mask added.
+func (s Style) WithAdded(aa StyleAttribute) Style {
+	return Style{fg: s.fg, bg: s.bg, aa: s.aa | aa}
 }
 
-func (s Style) WithAttrsRemoved(aa StyleAttribute) Style {
-	return Style{FG: s.FG, BG: s.BG, AA: s.AA &^ aa}
+// WithRemoved returns given style without given attribute mask.
+func (s Style) WithRemoved(aa StyleAttribute) Style {
+	return Style{fg: s.fg, bg: s.bg, aa: s.aa &^ aa}
 }
 
-func (s Style) WithAttrs(aa StyleAttribute) Style {
-	return Style{FG: s.FG, BG: s.BG, AA: aa}
+// WithAA returns given style with its attributes set to given attribute
+// mask.
+func (s Style) WithAA(aa StyleAttribute) Style {
+	return Style{fg: s.fg, bg: s.bg, aa: aa}
 }
 
+// WithFG returns given style with its foreground color set to given
+// color.
 func (s Style) WithFG(c Color) Style {
-	return Style{FG: c, BG: s.BG, AA: s.AA}
+	return Style{fg: c, bg: s.bg, aa: s.aa}
 }
 
+// WithBG returns given style with its background color set to given
+// color.
 func (s Style) WithBG(c Color) Style {
-	return Style{FG: s.FG, BG: c, AA: s.AA}
+	return Style{fg: s.fg, bg: c, aa: s.aa}
 }
 
 // Displayer implementation provides the screen/a window as a set of
 // lines and cells to which a rune at a given position with a given
 // style can be written.
 type Displayer interface {
+
+	// NewStyle must be used to obtain a new style with backend specific
+	// defaults.
+	NewStyle() Style
 
 	// Display "writes" given run with given style at given coordinates
 	// to the screen.

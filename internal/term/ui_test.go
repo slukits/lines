@@ -142,7 +142,7 @@ func (s *AnUI) Displays_given_rune_at_given_position(t *T) {
 	ui, tt := LstFixture(t.GoT(), nil, 10*time.Minute)
 	tt.PostResize(3, 3)
 
-	ui.Display(1, 1, 'x', api.Style{})
+	ui.Display(1, 1, 'x', ui.NewStyle())
 	ui.Redraw()
 	t.Eq("x", tt.Screen().Trimmed().String())
 	t.Eq("x", tt.ScreenArea(1, 1, 1, 1).String())

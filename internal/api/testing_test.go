@@ -28,7 +28,7 @@ func (s *_testing) Reports_string_representation_of_screen(t *T) {
 	ui, tt := term.LstFixture(t.GoT(), nil, 0)
 	tt.PostResize(16, 5)
 
-	tt.Display(fx, api.Style{})
+	tt.Display(fx, ui.NewStyle())
 	ui.Redraw()
 	t.Eq(fx, tt.Screen().String())
 }
@@ -42,7 +42,7 @@ func (s *_testing) fx(t *T) (*term.UI, *term.Testing) {
 func (s *_testing) Reports_trimmed_string_representation_of_screen(t *T) {
 	ui, tt := s.fx(t)
 
-	tt.Display(fx, api.Style{})
+	tt.Display(fx, ui.NewStyle())
 	ui.Redraw()
 	t.Eq(exp, tt.Screen().Trimmed().String())
 }
@@ -50,7 +50,7 @@ func (s *_testing) Reports_trimmed_string_representation_of_screen(t *T) {
 func (s *_testing) Reports_string_of_given_screen_area(t *T) {
 	ui, tt := s.fx(t)
 
-	tt.Display(fx, api.Style{})
+	tt.Display(fx, ui.NewStyle())
 	ui.Redraw()
 	t.Eq(exp, tt.ScreenArea(3, 1, 13, 3).String())
 }
@@ -58,7 +58,7 @@ func (s *_testing) Reports_string_of_given_screen_area(t *T) {
 func (s *_testing) Reports_cells_of_screen(t *T) {
 	ui, tt := s.fx(t)
 
-	tt.Display(fx, api.Style{})
+	tt.Display(fx, ui.NewStyle())
 	ui.Redraw()
 	t.Eq(fx, tt.Cells().String())
 }
@@ -66,7 +66,7 @@ func (s *_testing) Reports_cells_of_screen(t *T) {
 func (s *_testing) Reports_trimmed_cells_of_screen(t *T) {
 	ui, tt := s.fx(t)
 
-	tt.Display(fx, api.Style{})
+	tt.Display(fx, ui.NewStyle())
 	ui.Redraw()
 	t.Eq(exp, tt.Cells().Trimmed().String())
 }
@@ -74,7 +74,7 @@ func (s *_testing) Reports_trimmed_cells_of_screen(t *T) {
 func (s *_testing) Reports_cells_of_screen_area(t *T) {
 	ui, tt := s.fx(t)
 
-	tt.Display(fx, api.Style{})
+	tt.Display(fx, ui.NewStyle())
 	ui.Redraw()
 	str := tt.CellsArea(3, 1, 13, 3).String()
 	t.Eq(exp, str)
@@ -82,8 +82,7 @@ func (s *_testing) Reports_cells_of_screen_area(t *T) {
 
 func (s *_testing) Reports_style_information_falsy_if_out_of_bound(t *T) {
 	ui, tt := s.fx(t)
-	sty := api.Style{
-		FG: lines.Green, BG: lines.BlanchedAlmond, AA: api.Italic}
+	sty := api.NewStyle(api.Italic, lines.Green, lines.BlanchedAlmond)
 	tt.Display(fx, sty)
 	ui.Redraw()
 	scr := tt.Cells().Trimmed()
@@ -102,8 +101,7 @@ func (s *_testing) Reports_style_information_falsy_if_out_of_bound(t *T) {
 
 func (s *_testing) Reports_style_information_of_screen_cells(t *T) {
 	ui, tt := s.fx(t)
-	sty := api.Style{
-		FG: lines.Green, BG: lines.BlanchedAlmond, AA: api.Italic}
+	sty := api.NewStyle(api.Italic, lines.Green, lines.BlanchedAlmond)
 	tt.Display(fx, sty)
 	ui.Redraw()
 	scr := tt.Cells().Trimmed()

@@ -27,6 +27,8 @@ type UI struct {
 	// case of testing
 	lib tcell.Screen
 
+	defaultStyle api.Style
+
 	// styler avoids unnecessary api-style conversions if a sequence of
 	// runes is requested to be displayed with the same style
 	styler func(api.Style) tcell.Style
@@ -65,11 +67,12 @@ func initUI(lib tcell.Screen, l func(api.Eventer)) *UI {
 	lib.EnableMouse()
 	lib.EnablePaste()
 	ui := &UI{
-		lib:         lib,
-		Mutex:       &sync.Mutex{},
-		styler:      apiToTcellStyleClosure(),
-		waitForQuit: make(chan struct{}),
-		listener:    l,
+		lib:          lib,
+		Mutex:        &sync.Mutex{},
+		defaultStyle: api.NewDefaultStyle(),
+		styler:       apiToTcellStyleClosure(),
+		waitForQuit:  make(chan struct{}),
+		listener:     l,
 	}
 	go ui.poll()
 	return ui
@@ -205,3 +208,8 @@ func (u *UI) Display(x, y int, r rune, s api.Style) {
 func (u *UI) Redraw() { u.lib.Sync() }
 
 func (u *UI) Update() { u.lib.Show() }
+
+// NewStyle returns a new style corresponding to tcell's default style.
+func (u *UI) NewStyle() api.Style {
+	return u.defaultStyle
+}
