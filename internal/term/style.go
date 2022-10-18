@@ -10,8 +10,9 @@ import (
 )
 
 func apiToTcellStyle(s api.Style) tcell.Style {
-	return tcell.StyleDefault.Background(tcell.Color(s.BG)).
-		Foreground(tcell.Color(s.FG)).
+	return tcell.StyleDefault.
+		Background(tcell.NewHexColor(int32(s.BG))).
+		Foreground(tcell.NewHexColor(int32(s.FG))).
 		Attributes(tcell.AttrMask(s.AA))
 }
 
@@ -22,8 +23,8 @@ func tcellToApiStyleClosure() func(tcell.Style) api.Style {
 	fg, bg, aa := sty.Decompose()
 	apiSty := api.Style{
 		AA: api.StyleAttribute(aa),
-		FG: api.Color(fg),
-		BG: api.Color(bg),
+		FG: api.Color(fg.Hex()),
+		BG: api.Color(bg.Hex()),
 	}
 	return func(s tcell.Style) api.Style {
 		_fg, _bg, _aa := s.Decompose()
@@ -33,8 +34,8 @@ func tcellToApiStyleClosure() func(tcell.Style) api.Style {
 		fg, bg, aa = _fg, _bg, _aa
 		apiSty = api.Style{
 			AA: api.StyleAttribute(aa),
-			FG: api.Color(fg),
-			BG: api.Color(bg),
+			FG: api.Color(fg.Hex()),
+			BG: api.Color(bg.Hex()),
 		}
 		return apiSty
 	}

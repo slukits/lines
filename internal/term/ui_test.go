@@ -15,7 +15,7 @@ import (
 
 type AnUI struct{ Suite }
 
-// func (s *AnUI) SetUp(t *T) { t.Parallel() }
+func (s *AnUI) SetUp(t *T) { t.Parallel() }
 
 func (s *AnUI) Has_initially_testing_s_width_and_height(t *T) {
 	ui, tt := LstFixture(t.GoT(), nil, 0)
