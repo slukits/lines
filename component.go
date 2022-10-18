@@ -27,10 +27,6 @@ type Component struct {
 	// Scroll provides a component's API for scrolling.
 	Scroll *Scroller
 
-	// LLFocus provides a component's line highlighting and line
-	// selection API.
-	LLFocus *LineFocus
-
 	// LL provides an API for ui-aspects of a component's lines.  Use an
 	// reported event's Env-instance writers to manipulate their
 	// content.

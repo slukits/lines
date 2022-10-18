@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/slukits/lines/internal/api"
+	"github.com/slukits/lines/internal/lyt"
 	"github.com/slukits/lines/internal/term"
 )
 
@@ -19,6 +20,10 @@ type QuitEventer = api.QuitEventer
 
 // ResizeEventer is reported when the Lines-display was resized.
 type ResizeEventer = api.ResizeEventer
+
+// Dimer provides dimensions of a component in the layout.  Note each
+// type embedding [lines.Component] type implements the Dimer interface.
+type Dimer = lyt.Dimer
 
 type Lines struct {
 	// scr to report resize events to screen components.
@@ -102,6 +107,10 @@ func TermKiosk(cmp Componenter) {
 
 // Quit quits given lines instance's backend and unblocks WaitForQuit.
 func (ee *Lines) Quit() { ee.backend.Quit() }
+
+// OnQuit registers given function to be called on quitting
+// event-polling and -reporting.
+func (ll *Lines) OnQuit(listener func()) { ll.backend.OnQuit(listener) }
 
 // WaitForQuit blocks until given Lines-instance is quit.
 func (ee *Lines) WaitForQuit() { ee.backend.WaitForQuit() }

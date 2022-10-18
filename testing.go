@@ -13,6 +13,17 @@ import (
 	"github.com/slukits/lines/internal/term"
 )
 
+// StringScreen is the string representation of the screen lines at a
+// particular point in time.
+type StringScreen = api.StringScreen
+
+// CellsScreen is a screen representation at a specific point in time of
+// lines of cells which also provide information about their styling.
+type CellsScreen = api.CellsScreen
+
+// CellsLine represents a line of a [lines.CellsScreen].
+type CellsLine = api.CellsLine
+
 // backend prevents the backend testing instance from being a public
 // property of an lines.Testing instance.
 type backend = *term.Testing

@@ -9,7 +9,7 @@ import (
 	"fmt"
 )
 
-// Dimer must be implemented by each layouted component to provide
+// Dimer must be implemented by each component of the layout to provide
 // the information for layout calculations which accordingly updates
 // this information.
 type Dimer interface {

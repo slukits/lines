@@ -108,9 +108,8 @@ func (c *component) Reset(idx int, ff ...LineFlags) {
 // hardSync clears the screen area of receiving component before its
 // content is written to the screen.
 func (c *component) hardSync(rw runeWriter) {
-	c.clear(rw)
-	if c.dirty {
-		c.dirty = false
+	if !c.dirty {
+		c.dirty = true
 	}
 	c.sync(rw)
 }
@@ -124,8 +123,15 @@ func (c *component) sync(rw runeWriter) {
 	if c.dirty {
 		c.clear(rw)
 		c.dirty = false
+		c.ll.For(c.first, func(i int, l *line) (stop bool) {
+			if i >= sh {
+				return true
+			}
+			l.sync(sx, sy+i, sw, rw)
+			return false
+		})
 	}
-	c.ll.For(c.first, func(i int, l *line) (stop bool) {
+	c.ll.ForDirty(c.first, func(i int, l *line) (stop bool) {
 		if i >= sh {
 			return true
 		}

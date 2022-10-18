@@ -96,6 +96,9 @@ type EventProcessor interface {
 
 	// WaitForQuit blocks until the backend was quit.
 	WaitForQuit()
+
+	// OnQuit registers given function to be called on quitting.
+	OnQuit(listener func())
 }
 
 // An UIer implementation provides the functionality lines needs to

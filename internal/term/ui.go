@@ -10,6 +10,7 @@ package term
 
 import (
 	"fmt"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -38,6 +39,10 @@ type UI struct {
 	waitForQuit chan struct{}
 
 	transactional atomic.Value
+
+	*sync.Mutex
+
+	quitter []func()
 }
 
 func New(listener func(api.Eventer)) *UI {
@@ -61,6 +66,7 @@ func initUI(lib tcell.Screen, l func(api.Eventer)) *UI {
 	lib.EnablePaste()
 	ui := &UI{
 		lib:         lib,
+		Mutex:       &sync.Mutex{},
 		styler:      apiToTcellStyleClosure(),
 		waitForQuit: make(chan struct{}),
 		listener:    l,
@@ -75,6 +81,13 @@ func (u *UI) WaitForQuit() {
 	<-u.waitForQuit
 }
 
+// OnQuit registers given function to be called on quitting.
+func (u *UI) OnQuit(listener func()) {
+	u.Lock()
+	defer u.Unlock()
+	u.quitter = append(u.quitter, listener)
+}
+
 // EnableEventTransactions guarantees that an event-post p not returns
 // before all other posted events during the processing of p have been
 // processed.
@@ -86,22 +99,25 @@ func (u *UI) EnableTransactionalEventPosts(timeout time.Duration) {
 // Size returns the ui's screen size.
 func (u *UI) Size() (int, int) { return u.lib.Size() }
 
+// Quit polling and reporting events, inform all listeners about about
+// it and reset the terminal screen.
 func (u *UI) Quit() {
 	if !u.hasQuit.CompareAndSwap(false, true) {
 		return
 	}
-	if u.listener != nil {
-		u.listener(&QuitEvent{})
+	u.Lock()
+	defer u.Unlock()
+	for _, l := range u.quitter {
+		l()
 	}
 	u.lib.Fini()
-	close(u.waitForQuit)
+	select {
+	case <-u.waitForQuit:
+		// non-blocking i.e. must be closed already
+	default:
+		close(u.waitForQuit)
+	}
 }
-
-type QuitEvent struct{}
-
-func (q *QuitEvent) Quitting()           {}
-func (q *QuitEvent) Source() interface{} { return q }
-func (q *QuitEvent) When() time.Time     { return time.Now() }
 
 func (u *UI) poll() {
 	for {
@@ -109,15 +125,15 @@ func (u *UI) poll() {
 		if evt == nil {
 			return
 		}
+		if evt, ok := evt.(*screenEvent); ok {
+			u.handleScreenEvent(evt)
+			continue
+		}
 		if u.listener == nil {
-			if u.transactional.Load() != nil {
-				u.transactional.Load().(*transactional).polled()
-			}
+			u.handleTransactional()
 			continue
 		}
 		switch evt := evt.(type) {
-		case api.Eventer:
-			u.listener(evt)
 		case *tcell.EventResize:
 			u.listener(&resize{evt: evt})
 		case *tcell.EventKey:
@@ -131,12 +147,25 @@ func (u *UI) poll() {
 		case *tcell.EventPaste:
 			u.listener(&bracketPaste{evt: evt})
 		default:
-			panic(fmt.Sprintf("unknown event type: %T", evt))
+			e, ok := evt.(api.Eventer)
+			if !ok {
+				panic(fmt.Sprintf("unknown event type: %T", evt))
+			}
+			u.listener(e)
 		}
-		if u.transactional.Load() != nil {
-			u.transactional.Load().(*transactional).polled()
-		}
+		u.handleTransactional()
 	}
+}
+
+func (u *UI) handleTransactional() {
+	if u.transactional.Load() != nil {
+		u.transactional.Load().(*transactional).polled()
+	}
+}
+
+func (u *UI) handleScreenEvent(evt *screenEvent) {
+	evt.grab()
+	u.handleTransactional()
 }
 
 type resize struct{ evt *tcell.EventResize }

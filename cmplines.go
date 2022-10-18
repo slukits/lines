@@ -87,12 +87,14 @@ func (ll lines) IsDirty() bool {
 }
 
 // ForDirty calls back for every dirty line.
-func (ll lines) ForDirty(cb func(int, *line)) {
-	for i, l := range ll {
+func (ll lines) ForDirty(offset int, cb func(int, *line) (stop bool)) {
+	for i, l := range ll[offset:] {
 		if !l.dirty {
+			continue
+		}
+		if cb(i, l) {
 			return
 		}
-		cb(i, l)
 	}
 }
 

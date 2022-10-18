@@ -39,15 +39,6 @@ type FocusLooser interface {
 	OnFocusLost(*Env)
 }
 
-// Quitter is implemented by components which want to be informed when
-// the event-loop ends.
-type Quitter interface {
-
-	// OnQuit is reported to all components implementing this interface not
-	// only to the one having the focus before the event loop ends.
-	OnQuit()
-}
-
 // Updater is implemented by components which want to be informed about
 // update events.  NOTE an Update event reaches only an Updater
 // interface if the Update-call on Events was NOT provided with an
@@ -95,8 +86,6 @@ func report(
 	cntx := &rprContext{evt: evt, ll: ee, scr: scr}
 
 	switch evt := evt.(type) {
-	case QuitEventer:
-		reportQuit(cntx)
 	case *UpdateEvent:
 		reportUpdate(cntx, evt)
 	case *moveFocusEvent:
@@ -233,19 +222,4 @@ func callback(
 	env.reset()
 
 	return env.flags
-}
-
-func reportQuit(cntx *rprContext) {
-	reported := false
-	cntx.scr.forComponent(func(c Componenter) {
-		if qtt, ok := c.(Quitter); ok {
-			qtt.OnQuit()
-			if !reported {
-				reported = true
-			}
-		}
-	})
-	if !reported {
-		return
-	}
 }

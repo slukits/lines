@@ -138,12 +138,12 @@ func (e *Env) Focused() Componenter {
 // after the listener calling StopBubbling returns.
 func (e *Env) StopBubbling() { e.flags |= envStopBubbling }
 
-// ScreenSize provides the currently available screen size.  This might
-// be useful during the OnInit event to do some layout
-// calculations/settings before the layout manager layouts the
+// DisplaySize provides the currently total available size on the
+// display.  This might be useful during the OnInit event to do some
+// layout calculations/settings before the layout manager layouts the
 // components.  Or to investigate how a component's layout relates to
-// the screen.
-func (e *Env) ScreenSize() (width, height int) { return e.size() }
+// the total available size on the display.
+func (e *Env) DisplaySize() (width, height int) { return e.size() }
 
 func (e *Env) reset() {
 	e.Lines = nil

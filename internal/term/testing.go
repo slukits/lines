@@ -41,6 +41,7 @@ func LstFixture(
 	ui := initUI(tcell.NewSimulationScreen("UTF-8"), listener)
 	t.Cleanup(func() { ui.Quit() })
 	ui.EnableTransactionalEventPosts(timeout)
+	close(ui.waitForQuit)
 
 	tt := &Testing{
 		t: t, ui: ui, Width: tstWidth, Height: tstHeight}
@@ -64,6 +65,7 @@ func Fixture(t *testing.T, timeout time.Duration) (*UI, *Testing) {
 	ui := initUI(tcell.NewSimulationScreen("UTF-8"), nil)
 	t.Cleanup(func() { ui.Quit() })
 	ui.EnableTransactionalEventPosts(timeout)
+	close(ui.waitForQuit)
 
 	tt := &Testing{
 		t: t, ui: ui, Width: tstWidth, Height: tstHeight}
@@ -154,44 +156,60 @@ func (tt *Testing) PostResize(width, height int) {
 
 func (tt *Testing) Screen() api.StringScreen {
 	bld, screen := &strings.Builder{}, api.StringScreen{}
-	b, w, _ := tt.ui.lib.(tcell.SimulationScreen).GetContents()
-	for i, c := range b {
-		bld.WriteRune(c.Runes[0])
-		if (i+1)%w == 0 {
-			screen = append(screen, bld.String())
-			bld.Reset()
+	err := tt.ui.Post(&screenEvent{when: time.Now(), grab: func() {
+		b, w, _ := tt.ui.lib.(tcell.SimulationScreen).GetContents()
+		for i, c := range b {
+			bld.WriteRune(c.Runes[0])
+			if (i+1)%w == 0 {
+				screen = append(screen, bld.String())
+				bld.Reset()
+			}
 		}
+	}})
+	if err != nil {
+		tt.t.Fatalf("testing: cells-are: screen-event: %v", err)
 	}
 	return screen
 }
 
 func (tt *Testing) ScreenArea(x, y, width, height int) api.StringScreen {
 	bld, screen := &strings.Builder{}, api.StringScreen{}
-	tt.screenArea(x, y, width, height, func(line []tcell.SimCell) {
-		for _, c := range line {
-			bld.WriteRune(c.Runes[0])
-		}
-		screen = append(screen, bld.String())
-		bld.Reset()
-	})
+	err := tt.ui.Post(&screenEvent{when: time.Now(), grab: func() {
+		tt.screenArea(x, y, width, height, func(line []tcell.SimCell) {
+			for _, c := range line {
+				bld.WriteRune(c.Runes[0])
+			}
+			screen = append(screen, bld.String())
+			bld.Reset()
+		})
+	}})
+	if err != nil {
+		tt.t.Fatalf("testing: cells-are: screen-event: %v", err)
+	}
 	return screen
 }
 
 func (tt *Testing) Cells() api.CellsScreen {
-	b, w, _ := tt.ui.lib.(tcell.SimulationScreen).GetContents()
-	if w == 0 {
-		return api.CellsScreen{}
-	}
 	cs, line := api.CellsScreen{api.CellsLine{}}, 0
-	styler := tcellToApiStyleClosure()
-	for i, c := range b {
-		cs[line] = append(cs[line], api.TestCell{
-			Rune: c.Runes[0], Sty: styler(c.Style),
-		})
-		if (i+1)%w == 0 && i+1 < len(b) {
-			line++
-			cs = append(cs, api.CellsLine{})
+	err := tt.ui.Post(&screenEvent{when: time.Now(), grab: func() {
+		b, w, _ := tt.ui.lib.(tcell.SimulationScreen).GetContents()
+		if w == 0 {
+			cs = api.CellsScreen{}
+			return
 		}
+		styler := tcellToApiStyleClosure()
+		for i, c := range b {
+			cs[line] = append(cs[line], api.TestCell{
+				Rune: c.Runes[0], Sty: styler(c.Style),
+			})
+			if (i+1)%w == 0 && i+1 < len(b) {
+				line++
+				cs = append(cs, api.CellsLine{})
+			}
+		}
+	}})
+	if err != nil {
+		tt.t.Fatalf("testing: cells-are: screen-event: %v", err)
 	}
 	return cs
 }
@@ -199,16 +217,37 @@ func (tt *Testing) Cells() api.CellsScreen {
 func (tt *Testing) CellsArea(x, y, width, height int) api.CellsScreen {
 	cs, line := api.CellsScreen{}, -1
 	styler := tcellToApiStyleClosure()
-	tt.screenArea(x, y, width, height, func(l []tcell.SimCell) {
-		line++
-		cs = append(cs, api.CellsLine{})
-		for _, c := range l {
-			cs[line] = append(cs[line], api.TestCell{
-				Rune: c.Runes[0], Sty: styler(c.Style),
-			})
-		}
-	})
+	err := tt.ui.Post(&screenEvent{when: time.Now(), grab: func() {
+		tt.screenArea(x, y, width, height, func(l []tcell.SimCell) {
+			line++
+			cs = append(cs, api.CellsLine{})
+			for _, c := range l {
+				cs[line] = append(cs[line], api.TestCell{
+					Rune: c.Runes[0], Sty: styler(c.Style),
+				})
+			}
+		})
+	}})
+	if err != nil {
+		tt.t.Fatalf("testing: cells-are: screen-event: %v", err)
+	}
 	return cs
+}
+
+// screenEvent is used to read the content of a simulation screen while
+// making sure no other event is writing to it.
+type screenEvent struct {
+	when time.Time
+	grab func()
+}
+
+func (e *screenEvent) When() time.Time     { return e.when }
+func (e *screenEvent) Source() interface{} { return e }
+
+// Size returns the number of available lines (height) and the number of
+// runes per line (width) off the terminal screen/display.
+func (tt *Testing) Size() (width, height int) {
+	return tt.ui.lib.Size()
 }
 
 func (tt *Testing) screenArea(

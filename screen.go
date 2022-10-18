@@ -44,18 +44,13 @@ type screen struct {
 
 func newScreen(backend api.UIer, cmp Componenter) *screen {
 	scr := &screen{backend: backend}
-	if cmp != nil {
-		lc := cmp.initialize(cmp, backend)
-		lc.wrapped().ensureFeatures()
-		scr.lyt = &lyt.Manager{Root: lc}
-		scr.focus = lc
-	} else {
-		cmp := &Component{}
-		lc := cmp.initialize(cmp, backend)
-		lc.wrapped().ensureFeatures()
-		scr.lyt = &lyt.Manager{Root: lc}
-		scr.focus = lc
+	if cmp == nil {
+		cmp = &Component{}
 	}
+	lc := cmp.initialize(cmp, backend)
+	lc.wrapped().ensureFeatures()
+	scr.lyt = &lyt.Manager{Root: lc}
+	scr.focus = lc
 	return scr
 }
 

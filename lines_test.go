@@ -31,32 +31,17 @@ func (s *_lines) Initializes_initially_given_component(t *T) {
 	t.Eq(expInit, tt.Screen().Trimmed().String())
 }
 
-type quitCmpFX struct {
-	Component
-	quitReported bool
-}
-
-func (c *quitCmpFX) OnQuit() { c.quitReported = true }
-
-type twoQuittersFX struct {
-	Component
-	q1, q2 *quitCmpFX
-}
-
-func (x *twoQuittersFX) ForStacked(cb func(Componenter) (stop bool)) {
-	cb(x.q1)
-	cb(x.q2)
-}
-
 func (s *_lines) Reports_quit_key_events_to_all_quitter(t *T) {
 	for _, k := range defaultFeatures.keysOf(Quitable) {
-		fx := &twoQuittersFX{q1: &quitCmpFX{}, q2: &quitCmpFX{}}
-		tt := s.tt(t, fx)
+		q1, q2 := false, false
+		tt := s.tt(t, &cmpFX{})
+		tt.Lines.OnQuit(func() { q1 = true })
+		tt.Lines.OnQuit(func() { q2 = true })
 
 		tt.FireKey(k.Key, k.Mod)
 
-		t.True(fx.q1.quitReported)
-		t.True(fx.q2.quitReported)
+		t.True(q1)
+		t.True(q2)
 	}
 }
 

@@ -8,6 +8,10 @@ import (
 // functionality for testing.
 type Tester interface {
 
+	// Size returns the number of available lines (height) and the number of
+	// runes per line (width) as reported by an backend.
+	Size() (width, height int)
+
 	// String returns a string representation of the screen/window
 	// content.
 	Screen() StringScreen
@@ -29,12 +33,17 @@ type Tester interface {
 	// Display brings given string in given style to the screen.
 	Display(string, Style)
 
+	// PostKey emulates a user-key-input with underlying backend.
 	PostKey(Key, Modifier) error
 
+	// PostKey emulates a user-rune-input with underlying backend.
 	PostRune(rune, Modifier) error
 
+	// PostKey emulates a user-mouse-input with underlying backend.
 	PostMouse(x, y int, _ Button, _ Modifier) error
 
+	// PostKey emulates a resize event of the available display area
+	// with underlying backend.
 	PostResize(width, height int) error
 }
 
@@ -64,8 +73,12 @@ func (l StringLine) indentWidth() (int, int) {
 	return indent, len(strings.TrimSpace(string(l)))
 }
 
+// StringScreen is the string representation of the screen lines at a
+// particular point in time.
 type StringScreen []string
 
+// String joins the lines of given screen string representation with
+// line breaks and returns resulting string.
 func (ss StringScreen) String() string {
 	return strings.Join(ss, "\n")
 }
@@ -119,7 +132,7 @@ type TestCell struct {
 	Sty  Style
 }
 
-// CellsLine represents a line of a [lines.TestScreen].
+// CellsLine represents a line of a [lines.CellsScreen].
 type CellsLine []TestCell
 
 func (l CellsLine) isValidCell(x int) bool {
@@ -189,6 +202,8 @@ func (l CellsLine) indentWidth() (int, int) {
 	return indent, len(l) - indent - rightBlanks
 }
 
+// CellsScreen is a screen representation at a specific point in time of
+// lines of cells which also provide information about their styling.
 type CellsScreen []CellsLine
 
 func (cs CellsScreen) String() string {

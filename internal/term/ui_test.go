@@ -15,7 +15,7 @@ import (
 
 type AnUI struct{ Suite }
 
-func (s *AnUI) SetUp(t *T) { t.Parallel() }
+// func (s *AnUI) SetUp(t *T) { t.Parallel() }
 
 func (s *AnUI) Has_initially_testing_s_width_and_height(t *T) {
 	ui, tt := LstFixture(t.GoT(), nil, 0)
@@ -40,11 +40,8 @@ func (s *AnUI) Reports_a_resize_event_as_first_event(t *T) {
 
 func (s *AnUI) Reports_a_quit_event_when_quitting(t *T) {
 	quitted := false
-	ui, _ := LstFixture(t.GoT(), func(evt api.Eventer) {
-		if _, ok := evt.(api.QuitEventer); ok {
-			quitted = true
-		}
-	}, 0)
+	ui, _ := LstFixture(t.GoT(), nil, 0)
+	ui.OnQuit(func() { quitted = true })
 
 	ui.Quit()
 	t.True(quitted)
@@ -142,7 +139,7 @@ func (s *AnUI) Reports_a_resize_eventer(t *T) {
 }
 
 func (s *AnUI) Displays_given_rune_at_given_position(t *T) {
-	ui, tt := LstFixture(t.GoT(), nil, 0)
+	ui, tt := LstFixture(t.GoT(), nil, 10*time.Minute)
 	tt.PostResize(3, 3)
 
 	ui.Display(1, 1, 'x', api.Style{})
