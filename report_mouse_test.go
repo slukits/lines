@@ -167,7 +167,7 @@ type Mouse struct{ Suite }
 
 func (s *Mouse) SetUp(t *T) { t.Parallel() }
 
-func (s *Mouse) tt(t *T, cmp Componenter) *Testing {
+func (s *Mouse) tt(t *T, cmp Componenter) *Fixture {
 	return TermFixture(t.GoT(), 0, cmp)
 }
 

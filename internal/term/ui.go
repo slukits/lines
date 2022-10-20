@@ -69,7 +69,7 @@ func initUI(lib tcell.Screen, l func(api.Eventer)) *UI {
 	ui := &UI{
 		lib:          lib,
 		Mutex:        &sync.Mutex{},
-		defaultStyle: api.NewDefaultStyle(),
+		defaultStyle: api.DefaultStyle,
 		styler:       apiToTcellStyleClosure(),
 		waitForQuit:  make(chan struct{}),
 		listener:     l,

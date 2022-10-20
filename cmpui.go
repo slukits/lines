@@ -25,21 +25,25 @@ func (c *component) Mod(cm ComponentMode) {
 	}
 }
 
-// Sty replaces a component's style attributes like bold or dimmed.
-func (c *component) Sty(attr StyleAttribute) {
+// AA replaces a component's style attributes like bold or dimmed.
+func (c *component) AA(attr StyleAttributeMask) *component {
+	c.dirty = true
 	c.fmt.sty = c.fmt.sty.WithAA(attr)
+	return c
 }
 
 // FG replaces a component's foreground color.
-func (c *component) FG(color Color) {
+func (c *component) FG(color Color) *component {
 	c.dirty = true
 	c.fmt.sty = c.fmt.sty.WithFG(color)
+	return c
 }
 
 // BG replaces a component's background color.
-func (c *component) BG(color Color) {
+func (c *component) BG(color Color) *component {
 	c.dirty = true
 	c.fmt.sty = c.fmt.sty.WithBG(color)
+	return c
 }
 
 // Len returns the number of lines currently stored in a component.
@@ -52,10 +56,7 @@ func (c *component) Len() int {
 // IsDirty is true if this component is flagged dirty or one of its
 // lines.
 func (c *component) IsDirty() bool {
-	if c.Len() == 0 {
-		return c.dirty
-	}
-	return c.ll.IsDirty() || c.dirty
+	return c.ll.IsDirty() || c.gg.isDirty() || c.dirty
 }
 
 // SetDirty flags a component as dirty having the effect that at the
@@ -116,20 +117,25 @@ func (c *component) hardSync(rw runeWriter) {
 
 // sync writes receiving components lines to the screen.
 func (c *component) sync(rw runeWriter) {
+	if c.dim.IsOffScreen() {
+		if !c.dirty {
+			c.dirty = true
+		}
+		return
+	}
 	sx, sy, sw, sh := c.dim.Area()
 	if c.mod&Tailing == Tailing && c.Len() >= sh {
 		c.setFirst(c.Len() - sh)
 	}
 	if c.dirty {
-		c.clear(rw)
-		c.dirty = false
-		c.ll.For(c.first, func(i int, l *line) (stop bool) {
-			if i >= sh {
-				return true
-			}
-			l.sync(sx, sy+i, sw, rw)
-			return false
-		})
+		c.syncCleared(rw)
+		return
+	}
+	if c.gg != nil && c.gg.isDirty() {
+		sx, sy, sw, sh = c.gg.sync(sx, sy, sw, sh, rw)
+	}
+	if sw <= 0 || sh <= 0 {
+		return
 	}
 	c.ll.ForDirty(c.first, func(i int, l *line) (stop bool) {
 		if i >= sh {
@@ -141,13 +147,28 @@ func (c *component) sync(rw runeWriter) {
 }
 
 // clear fills the receiving component's printable area with spaces.
-func (c *component) clear(rw runeWriter) {
+func (c *component) syncCleared(rw runeWriter) {
 	sx, sy, sw, sh := c.dim.Rect()
 	for y := sy; y < sy+sh; y++ {
 		for x := sx; x < sx+sw; x++ {
 			rw.Display(x, y, ' ', c.fmt.sty)
 		}
 	}
+	c.dirty = false
+	sx, sy, sw, sh = c.dim.Area()
+	if c.gg != nil {
+		sx, sy, sw, sh = c.gg.sync(sx, sy, sw, sh, rw)
+	}
+	if sw <= 0 || sh <= 0 {
+		return
+	}
+	c.ll.For(c.first, func(i int, l *line) (stop bool) {
+		if i >= sh {
+			return true
+		}
+		l.sync(sx, sy+i, sw, rw)
+		return false
+	})
 }
 
 // setFirst sets the first displayed line and in case it changes given

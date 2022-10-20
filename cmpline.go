@@ -6,6 +6,8 @@ package lines
 
 import (
 	"strings"
+
+	"github.com/slukits/lines/internal/api"
 )
 
 type line struct {
@@ -13,7 +15,7 @@ type line struct {
 	dirty bool
 	// stale if not zero contains the content at the last screen update.
 	stale string
-	// content is alines current content if stale is not zero the
+	// content is a line's current content if stale is not zero the
 	// content has not been written to the screen yet.
 	content string
 
@@ -26,7 +28,7 @@ type line struct {
 
 	sty Style
 
-	ss lineStyles
+	ss styleRanges
 
 	ff LineFlags
 }
@@ -48,7 +50,7 @@ func (l *line) reset(sty Style, ff LineFlags) *line {
 
 func (l *line) addStyleRange(sr SR, rr ...SR) {
 	if l.ss == nil {
-		l.ss = lineStyles{}
+		l.ss = styleRanges{}
 	}
 	l.ss[sr.Range] = sr.Style
 	for _, r := range rr {
@@ -90,7 +92,7 @@ func (l *line) replaceAt(
 		return
 	}
 	if l.ss == nil {
-		l.ss = lineStyles{}
+		l.ss = styleRanges{}
 	}
 	l.ss[Range{cell, cell + len(content)}] = s
 	if len(l.content) < cell {
@@ -156,7 +158,7 @@ func (l *line) toScreen(x, y, width int, rw runeWriter) {
 		if i == width {
 			break
 		}
-		rw.Display(x+i, y, r, ss.of(i, l.sty))
+		rw.Display(x+i, y, r, ss.ofDflt(i, l.sty))
 	}
 
 	if forScrLen >= width {
@@ -215,7 +217,7 @@ func (l *line) toScreenHighlighted(
 // forScreen calculates from the line's content the string which should
 // be written to the screen as well as the styles by expanding leading
 // tabs and line filler.
-func (l *line) forScreen(width int) (string, lineStyles) {
+func (l *line) forScreen(width int) (string, styleRanges) {
 	if len(l.content) == 0 {
 		return "", l.ss
 	}
@@ -356,20 +358,56 @@ type SR struct {
 	Style
 }
 
-type lineStyles map[Range]Style
+var zeroRange = Range{0, 0}
 
-func (s lineStyles) copy() lineStyles {
+type styleRanges map[Range]Style
+
+func newStyleRanges(dflt Style) styleRanges {
+	return styleRanges{zeroRange: dflt}
+}
+
+func (s styleRanges) defaultStyle() Style {
+	if _, ok := s[zeroRange]; !ok {
+		return api.DefaultStyle
+	}
+	return s[zeroRange]
+}
+
+func (s styleRanges) withAA(aa StyleAttributeMask) {
+	s[zeroRange] = s[zeroRange].WithAA(aa)
+}
+
+func (s styleRanges) withFG(c Color) {
+	s[zeroRange] = s[zeroRange].WithFG(c)
+}
+
+func (s styleRanges) withBG(c Color) {
+	s[zeroRange] = s[zeroRange].WithBG(c)
+}
+
+func (s styleRanges) copy() styleRanges {
 	if s == nil {
 		return nil
 	}
-	cp := lineStyles{}
+	cp := styleRanges{}
 	for r, s := range s {
 		cp[r.copy()] = s
 	}
 	return cp
 }
 
-func (s lineStyles) expand(at, by int) {
+func (s styleRanges) copyWithDefault(dflt Style) styleRanges {
+	cp := s.copy()
+	if cp == nil {
+		return styleRanges{zeroRange: dflt}
+	}
+	if _, ok := cp[zeroRange]; !ok {
+		cp[zeroRange] = dflt
+	}
+	return cp
+}
+
+func (s styleRanges) expand(at, by int) {
 	if s == nil {
 		return
 	}
@@ -393,17 +431,17 @@ func (s lineStyles) expand(at, by int) {
 	}
 }
 
-func (s lineStyles) contract(at, by int) {
+func (s styleRanges) contract(at, by int) {
 	s.expand(at, -by)
 }
 
-// of returns the style for given line-cell.  Note style ranges are
+// ofDflt returns the style for given line-cell.  Note style ranges are
 // defined relative to a lines origin; i.e. the first cell's style is
 //
-//	s.of(0, dflt)
-func (s lineStyles) of(cell int, dflt Style) Style {
+//	s.ofDflt(0, dflt)
+func (s styleRanges) ofDflt(cell int, dflt Style) Style {
 
-	if s == nil {
+	if len(s) == 0 {
 		return dflt
 	}
 	for r := range s {
@@ -413,4 +451,25 @@ func (s lineStyles) of(cell int, dflt Style) Style {
 		return s[r]
 	}
 	return dflt
+}
+
+// ofDflt returns the style for given line-cell.  Note style ranges are
+// defined relative to a lines origin; i.e. the first cell's style is
+//
+//	s.ofDflt(0, dflt)
+func (s styleRanges) of(cell int) Style {
+
+	if len(s) == 0 {
+		return api.DefaultStyle
+	}
+	for r := range s {
+		if !r.Contains(cell) {
+			continue
+		}
+		return s[r]
+	}
+	if s, ok := s[zeroRange]; ok {
+		return s
+	}
+	return api.DefaultStyle
 }

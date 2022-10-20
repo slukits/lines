@@ -77,6 +77,9 @@ func (ll *lines) replaceAt(
 
 // IsDirty returns true if on of the lines is dirty.
 func (ll lines) IsDirty() bool {
+	if len(ll) == 0 {
+		return false
+	}
 	for _, l := range ll {
 		if !l.dirty {
 			continue

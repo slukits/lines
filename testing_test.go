@@ -36,7 +36,7 @@ func (c *clickFX) OnContext(_ *Env, rx, ry int) {
 	c.rx, c.ry = rx, ry
 }
 
-func (s *_Testing) tt(t *T, cmp Componenter) *Testing {
+func (s *_Testing) tt(t *T, cmp Componenter) *Fixture {
 	return TermFixture(t.GoT(), 0, cmp)
 }
 

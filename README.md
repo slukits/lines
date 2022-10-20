@@ -1,8 +1,7 @@
 # Overview
 
-lines provides an unopinionated, well tested and documented,
-terminal UI library which does the heavy lifting for you when it
-comes to
+lines provides an unopinionated simple UI library which does the heavy
+lifting for you when it comes to
 
 * concurrency safety
 * event handling
@@ -10,10 +9,6 @@ comes to
 * content/format handling
 * feature handling
 * testing
-
-The motivation is to provide an UI-library with a small API and few
-powerful features that lets its users quickly implement an terminal
-ui exactly as needed.
 
 ```go
     package main
@@ -26,28 +21,19 @@ ui exactly as needed.
 
     type Cmp struct { lines.Component }
 
-    func (c *Cmp) OnInit(e *lines.Env) { // Env: component environment
-        fmt.Fprint(e, "hello world")
-    }
+    func (c *Cmp) OnInit(e *lines.Env) { fmt.Fprint(e, "hello world") }
 
-    func main() { lines.New(&Cmp{}).Listen() } // blocking
+    func main() { lines.Term(&Cmp{}).WaitForQuit() }
 ```
 
-New provides an Events-instance reporting user input and
-programmatically posted events to listener implementations of client
-provided components.  While client listener implementations print to
-an provided environment which is associated with the component's
-portion of the screen.
-
-lines wraps the package [tcell](https://github.com/gdamore/tcell)
-which does the heavy lifting on the terminal side.  I didn't see a
-point in making something well done worse hence I didn't wrap the
-constants and types which are defined by tcell and are used for
-event-handling and styling.  I.e. you will have to make yourself
-acquainted with tcell's Key, ModeMap, ButtonMask and AttrMask
-constants as well as its Style and Color type as needed.  I also
-tried to take care that lines doesn't "remove" features that tcell
-provides.
+Term provides an Lines-instance with a terminal backend.  It reports
+user input and programmatically posted events to listener
+implementations of client provided components.  While client listener
+implementations print to an provided environment which is associated
+with the component's portion of the screen.  lines is designed to easily
+add further backends like "Shiny" of "Fine" for graphical displays.  As
+of now lines has only a terminal backend which wraps the package
+[tcell](https://github.com/gdamore/tcell).
 
 # Concurrency safety
 
@@ -66,17 +52,18 @@ what does work
 
 ```go
     func (c *Cmp) OnInit(e *lines.Env) {
-        go func(ee *lines.Events) {
+        go func(ll *lines.Lines) {
             time.Sleep(1*time.Second)
             ee.Update(c, nil, func(e *lines.Env) {
                  fmt.Fprint(e, "awoken") // will not panic
             })
-        }(e.EE)
+        }(e.Lines)
     }
 ```
 
 Also using functionality or properties provided by embedded Component
-instance after a listener has returned doesn't work.
+instance in a function that doesn't return in the listener
+implementation doesn't work.
 
 ```go
     func (c *Cmp) OnInit(e *lines.Env) {
@@ -88,9 +75,9 @@ instance after a listener has returned doesn't work.
     }
 ```
 
-It is only save to pass (the initially created) events instance e.EE
+It is only save to pass (the initially created) Lines instance 
 on to a go routine where at the end provided update mechanisms of
-said Events-instance are used to report back to a component.
+said Lines-instance are used to report back to a component.
 
 # Event handling
 
@@ -122,27 +109,27 @@ the screen portion of the component the event is reported to.  Writing
 to the environment prints provided content to its screen portion.  Env's
 methods Fmt, Sty, BG, FG, LL, Pos give fine grained control of what is
 printed where and how.  Fmt stands for formatting like centered.  Sty
-refers to tcell's style attributes of type tcell.AttrMask.  Methods  FG,
+may be used to set a combination of lines.StyleAttribute.  Methods  FG,
 BG lets you set fore- and background color.  LL lets you address a
 specific line, Pos a line and a column.  Each of these methods return a
 writer implementation, i.e. we can do this
 
 ```go
 	fmt.Fprint(
-	    e.Fmt(lines.Centered).Sty(tcell.AttrBold).LL(5),
+	    e.Fmt(lines.Centered).Sty(lines.Bold).LL(5),
 	    "a centered bold line",
 	)
 ```
 
-The above prints "a centered bold line" centered in bold letters into the
-component's fifth line.  While the e-methods bind formatting and styles
-to the next printed text there is a similar API on component level
-provided by the embedded Component instance: Component.Fmt, .BG, .FG
-sets formatting directives for each printed content of a component.
-There is also the property Component.GG which makes optional gaps around
-a component accessible.  And the method Component.Mod controls if a
-component's content is overwritten or appended, or if it is shown
-tailed.
+The above prints "a centered bold line" centered in bold letters into
+the component's fifth line.  While the e-methods bind formatting and
+styles to the next printed text there is a similar API on component
+level provided by the embedded Component instance: Component.Fmt, .BG,
+.FG sets default formatting directives for each printed content of a
+component.  There is also the property Component.Gaps which makes optional
+gaps around a component accessible.  And the method Component.Mod
+controls if a component's content is overwritten or appended, or if it
+is shown tailed.
 
 
 # Feature handling
@@ -170,18 +157,14 @@ Workspace  chains two panel instances p1 and p2.
 
 If we now click into p2 we probably expect p2 to receive the focus.  But
 if we click into the statusbar will we also want sb to receive the
-focus? Maybe, maybe not.
-
-For lines all UI-components have the same semantics, i.e. for lines
-there is no difference between a working space's panel and a statusbar.
-Further more you were promised an unopinionated terminal ui-library.
-Hence the feature concept was implemented providing convenient and fine
-grained control over component behavior:
+focus? Maybe, maybe not.  To avoid opinionated default behavior lines
+implements the "Feature" concept whose API may be accessed by the
+FF-property of a embedded Component instance.
 
 ```go
     type MyComponent { lines.Component }
 
-    func (c *MyComponent) OnInit(_ *Env) {
+    func (c *MyComponent) OnInit(_ *lines.Env) {
         c.FF.Add(lines.Scrollable)
     }
 ```
@@ -191,8 +174,8 @@ doesn't fit (vertically) into c's screen area.  But we don't need to set
 each feature for each component separately:
 
 ```go
-    func (ws *Workspace) OnInit(e *Env) {
-        ws.FF.AddRecursively(Focusable)
+    func (ws *Workspace) OnInit(e *lines.Env) {
+        ws.FF.AddRecursively(lines.Focusable)
     }
 ```
 
@@ -211,52 +194,34 @@ lines comes with testing facilities:
         "github.com/slukits/lines"
     )
 
+    type CmpFixture struct { lines.Component }
 
-    type CmpFixture struct {
-        lines.Component
-        exp string
-    }
-
-
-    func (c *CmpFixture) OnInit(e *lines.Env) {
-        fmt.Fprint(e, c.exp)
-    }
-
-    func TestComponentInitialization(t *T) {
-        fx := &CmpFixture{ exp: "init-reported" }
-        ee, tt := lines.Test(t, fx, 1)
-        ee.Listen()
-        if fx.exp != tt.LastScreen.String() {
-            t.Errorf("expected: '%s'; got '%s'", fx.exp,
-                tt.LastScreen.String())
+    func TestUpdateListenerIsCalled(t *T) {
+        tt := lines.TermFixture(t, 0, &CmpFixture)
+        exp :=  "update listener called"
+        tt.Lines.Update(tt.Root(), nil, func(e *lines.Env) {
+            fmt.Fprint(e, exp)
+        })
+        if exp != tt.Screen().Trimmed().String() {
+            t.Errorf("expected: '%s'; got '%s'", exp,
+                tt.Screen().Trimmed().String())
         }
     }
 ```
 
-lines can be asked for a slightly modified Events instance augmented
-with a lines.Testing instance which provides some convenience for
-testing.  A testing Events instance's Listen method is not blocking
-and all Methods which post an event are guaranteed to return after
-that event and potentially subsequently triggered events were
-processed and the screen was synchronized.
+lines can be asked for a test fixture.  The main features of an
+Fixture-instance are:
 
-The main features of an Testing-instance are:
+* setting up and tearing down a corresponding Lines-instance whose
+  WaitForQuit method is not blocking.
 
-* an event-countdown which automatically terminates the event loop,
-* providing methods for firing user input events
-* providing the simulated terminal screen's content and its styles.
+* providing methods for emulating user input events
 
-All methods posting (user) events are guaranteed to return after the
-event and potentially subsequently triggered events were processed
-and the screen was synchronized.
+* guaranteeing that no event-triggering method returns before its event
+  and all subsequently triggered events have been processed and all
+  writes made it to the screen.  (The second argument of TermFixture is
+  a timeout within all such events need to be processed.)
 
-# TODO
-
-All examples and scenarios mentioned in this overview are implemented
-the API is frozen and the package is used in a production
-environment.  But there are still some features lacking which I'd
-like lines to have in order to be in some sense complete.  You can
-learn about these features by parsing the code base for "// TODO:
-implement".
+* providing the screen's content and its styles.
 
 Enjoy!

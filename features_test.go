@@ -38,7 +38,7 @@ func (s *_Features) Panic_outside_event_listener_callback(t *T) {
 }
 
 func (s *_Features) tt(t *T, test func(ff *Features)) (
-	*Testing, *cmpFFX,
+	*Fixture, *cmpFFX,
 ) {
 	fx := &cmpFFX{test: func(*Features) {}}
 	tt := TermFixture(t.GoT(), 0, fx)

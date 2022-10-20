@@ -22,7 +22,7 @@ const expInit = "component-fixture initialized"
 
 func (c *initFX) OnInit(e *Env) { fmt.Fprint(e, expInit) }
 
-func (s *_lines) tt(t *T, cmp Componenter) *Testing {
+func (s *_lines) tt(t *T, cmp Componenter) *Fixture {
 	return TermFixture(t.GoT(), 0, cmp)
 }
 

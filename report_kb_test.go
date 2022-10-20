@@ -168,7 +168,7 @@ func (fx *kbCmpFX) OnInit(e *Env) {
 
 type KB struct{ Suite }
 
-func (s *KB) tt(t *T, cmp Componenter) *Testing {
+func (s *KB) tt(t *T, cmp Componenter) *Fixture {
 	return TermFixture(t.GoT(), 0, cmp)
 }
 

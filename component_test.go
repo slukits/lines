@@ -24,7 +24,7 @@ func (s *_component) Access_panics_outside_event_processing(t *T) {
 	t.Panics(func() { cmp.Dim().SetHeight(20) })
 }
 
-func (s *_component) tt(t *T, c Componenter) *Testing {
+func (s *_component) tt(t *T, c Componenter) *Fixture {
 	return TermFixture(t.GoT(), 0, c)
 }
 
@@ -103,7 +103,7 @@ func (s *_component) Blanks_a_reset_line(t *T) {
 	t.Eq("second", tt.Screen().Trimmed().String())
 }
 
-func (s *_component) fxCmp(t *T) (*Testing, *cmpFX) {
+func (s *_component) fxCmp(t *T) (*Fixture, *cmpFX) {
 	cmp := &cmpFX{}
 	tt := TermFixture(t.GoT(), 0, cmp)
 	return tt, cmp

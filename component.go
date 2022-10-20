@@ -149,6 +149,13 @@ func (c *Component) layoutComponent() layoutComponenter {
 
 func (c *Component) embedded() *Component { return c }
 
+func (c *Component) Gaps(level int) *gapsWriter {
+	if c.gg == nil {
+		c.gg = newGaps(c.fmt.sty)
+	}
+	return newGapsWriter(level, c.gg)
+}
+
 // func (c *Component) component() *Component
 
 // component is the actual implementation of a lines-Component.
@@ -162,6 +169,7 @@ type component struct {
 	fmt         llFmt
 	lst         *listeners
 	ff          *features
+	gg          *gaps
 	dirty       bool
 
 	// first holds the index of the first displayed line

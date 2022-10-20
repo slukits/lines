@@ -16,7 +16,7 @@ type env struct{ Suite }
 
 // func (s *env) SetUp(t *T) { t.Parallel() }
 
-func (s *env) tt(t *T, cmp Componenter) *Testing {
+func (s *env) tt(t *T, cmp Componenter) *Fixture {
 	return TermFixture(t.GoT(), 0, cmp)
 }
 

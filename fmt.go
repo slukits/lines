@@ -48,7 +48,7 @@ func (w *FmtWriter) BG(color Color) *FmtWriter {
 }
 
 // Attr sets the next write's style attributes like bold.
-func (w *FmtWriter) Attr(aa StyleAttribute) *FmtWriter {
+func (w *FmtWriter) Attr(aa StyleAttributeMask) *FmtWriter {
 	w.sty = w.sty.WithAA(aa)
 	return w
 }

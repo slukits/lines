@@ -78,7 +78,7 @@ func (e *Env) Write(bb []byte) (int, error) {
 // }
 
 // Attr sets the next write's style attributes like bold.
-func (e *Env) Attr(aa StyleAttribute) *FmtWriter {
+func (e *Env) Attr(aa StyleAttributeMask) *FmtWriter {
 	return &FmtWriter{cmp: e.cmp.(cmpWriter),
 		sty: e.cmp.embedded().fmt.sty.WithAdded(aa)}
 }

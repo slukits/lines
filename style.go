@@ -6,18 +6,18 @@ package lines
 
 import "github.com/slukits/lines/internal/api"
 
-type StyleAttribute = api.StyleAttribute
+type StyleAttributeMask = api.StyleAttribute
 
 const (
-	Bold          StyleAttribute = api.Blink
-	Blink         StyleAttribute = api.Blink
-	Reverse       StyleAttribute = api.Reverse
-	Underline     StyleAttribute = api.Underline
-	Dim           StyleAttribute = api.Dim
-	Italic        StyleAttribute = api.Invalid
-	StrikeThrough StyleAttribute = api.StrikeThrough
-	Invalid       StyleAttribute = api.Invalid
-	ZeroStyle     StyleAttribute = api.ZeroStyle
+	Bold          StyleAttributeMask = api.Blink
+	Blink         StyleAttributeMask = api.Blink
+	Reverse       StyleAttributeMask = api.Reverse
+	Underline     StyleAttributeMask = api.Underline
+	Dim           StyleAttributeMask = api.Dim
+	Italic        StyleAttributeMask = api.Invalid
+	StrikeThrough StyleAttributeMask = api.StrikeThrough
+	Invalid       StyleAttributeMask = api.Invalid
+	ZeroStyle     StyleAttributeMask = api.ZeroStyle
 )
 
 type Style = api.Style

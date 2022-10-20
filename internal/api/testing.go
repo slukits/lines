@@ -83,6 +83,18 @@ func (ss StringScreen) String() string {
 	return strings.Join(ss, "\n")
 }
 
+// Column returns the content of the column with given index as string.
+func (ss StringScreen) Column(idx int) string {
+	if idx < 0 || len(ss) == 0 || idx >= len([]rune(ss[0])) {
+		return ""
+	}
+	rr := []rune{}
+	for _, s := range ss {
+		rr = append(rr, []rune(s)[idx])
+	}
+	return string(rr)
+}
+
 // Trimmed reduces given string to its minimum number of
 // non-empty lines whereas the lines are trimmed to contain all non
 // white space runes:
@@ -128,8 +140,8 @@ func (ss StringScreen) forReverse(cb func(l liner) (stop bool)) {
 }
 
 type TestCell struct {
-	Rune rune
-	Sty  Style
+	Rune  rune
+	Style Style
 }
 
 // CellsLine represents a line of a [lines.CellsScreen].
@@ -143,14 +155,14 @@ func (l CellsLine) HasBG(x int, c Color) bool {
 	if !l.isValidCell(x) {
 		return false
 	}
-	return l[x].Sty.BG() == c
+	return l[x].Style.BG() == c
 }
 
 func (l CellsLine) HasFG(x int, c Color) bool {
 	if !l.isValidCell(x) {
 		return false
 	}
-	return l[x].Sty.FG() == c
+	return l[x].Style.FG() == c
 }
 
 // HasAttr returns true if given style attribute mask is set in the
@@ -159,7 +171,7 @@ func (l CellsLine) HasAttr(x int, aa StyleAttribute) bool {
 	if !l.isValidCell(x) {
 		return false
 	}
-	return l[x].Sty.AA()&aa == aa
+	return l[x].Style.AA()&aa == aa
 }
 
 func (l CellsLine) String() string {

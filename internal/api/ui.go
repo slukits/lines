@@ -34,12 +34,10 @@ type Style struct {
 	bg Color
 }
 
-// NewDefaultStyle returns a new style with no attributes and "default"
-// colors.  The semantics of the later is decided by the backend
-// implementation.
-func NewDefaultStyle() Style {
-	return Style{fg: DefaultColor, bg: DefaultColor}
-}
+// DefaultStyle has no attributes and "default" colors.  The semantics
+// of the later is decided by the backend implementation.  Use the With*
+// methods to create new styles from the default style.
+var DefaultStyle = Style{fg: DefaultColor, bg: DefaultColor}
 
 func NewStyle(aa StyleAttribute, fg, bg Color) Style {
 	return Style{aa: aa, fg: fg, bg: bg}

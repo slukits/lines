@@ -12,7 +12,7 @@ import (
 
 type Register struct{ Suite }
 
-func (s *Register) tt(t *T, cmp Componenter) *Testing {
+func (s *Register) tt(t *T, cmp Componenter) *Fixture {
 	return TermFixture(t.GoT(), 0, cmp)
 }
 

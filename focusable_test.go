@@ -19,7 +19,7 @@ func (s *lineFocus) SetUp(t *T) { t.Parallel() }
 
 func (s *lineFocus) itt(
 	t *T, init func(*icmpFX, *Env),
-) (*Testing, *icmpFX) {
+) (*Fixture, *icmpFX) {
 	fx := &icmpFX{init: init}
 	tt := TermFixture(t.GoT(), 0, fx)
 	return tt, fx
@@ -63,7 +63,7 @@ func (s *lineFocus) lfFX(
 	t *T,
 	init func(*lfCmpFX, *Env),
 	onLf func(*lfCmpFX, *Env, int),
-) (*Testing, *lfCmpFX) {
+) (*Fixture, *lfCmpFX) {
 	fx := &lfCmpFX{
 		onInit: init,
 		onLf:   onLf,
@@ -329,7 +329,7 @@ func (s *lineFocus) slFX(t *T,
 	onIN func(*lsCmpFX, *Env),
 	onLF func(*lsCmpFX, *Env, int),
 	onLS func(*lsCmpFX, *Env, int),
-) (*Testing, *lsCmpFX) {
+) (*Fixture, *lsCmpFX) {
 	fx := &lsCmpFX{
 		onIN: onIN,
 		onLF: onLF,

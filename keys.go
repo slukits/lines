@@ -68,7 +68,7 @@ const (
 	Exit           Key = api.Exit
 	Clear          Key = api.Clear
 	Cancel         Key = api.Cancel
-	Print          Key = api.Print
+	PrintScr       Key = api.Print
 	Pause          Key = api.Pause
 	Backtab        Key = api.Backtab
 	F1             Key = api.F1

@@ -5,6 +5,7 @@
 package lines
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/slukits/lines/internal/api"
@@ -33,12 +34,13 @@ type Lines struct {
 	backend api.EventProcessor
 }
 
-// Term returns a Lines up with a terminal backend displaying and reporting
-// events to given componenter.  Given componenter has the Quitable
-// feature set to 'q', ctrl-c and ctrl-d.  The binding to 'q' may be
-// removed.  The bindings to ctrl-c and ctrl-d may not be removed.  Use
-// the TermKiosk constructor for an setup without any quit bindings.
-// Term panics if the terminal screen can't be obtained.
+// Term returns a Lines instance with a terminal backend displaying and
+// reporting events to given componenter and its nested components.
+// Given componenter has the Quitable feature set to 'q', ctrl-c and
+// ctrl-d.  The binding to 'q' may be removed.  The bindings to ctrl-c
+// and ctrl-d may not be removed.  Use the TermKiosk constructor for an
+// setup without any quit bindings.  Term panics if the terminal screen
+// can't be obtained.
 func Term(cmp Componenter) *Lines {
 	ll := Lines{}
 	ll.backend = term.New(ll.listen)
@@ -90,9 +92,9 @@ type Componenter interface {
 	backend() api.UIer
 }
 
-// TermKiosk returns an Events instance without registered Quitable feature,
-// i.e. the application can't be quit by the user.
-func TermKiosk(cmp Componenter) {
+// TermKiosk returns a Lines instance without registered Quitable feature,
+// i.e. the application can't be quit by the user by default.
+func TermKiosk(cmp Componenter) *Lines {
 	defaultFeatures = &features{
 		keys: map[Modifier]map[Key]FeatureMask{},
 		runes: map[Modifier]map[rune]FeatureMask{ZeroModifier: {
@@ -100,7 +102,7 @@ func TermKiosk(cmp Componenter) {
 		}},
 		buttons: map[Modifier]map[Button]FeatureMask{},
 	}
-	Term(cmp)
+	return Term(cmp)
 }
 
 // Quit quits given lines instance's backend and unblocks WaitForQuit.
@@ -110,7 +112,9 @@ func (ee *Lines) Quit() { ee.backend.Quit() }
 // event-polling and -reporting.
 func (ll *Lines) OnQuit(listener func()) { ll.backend.OnQuit(listener) }
 
-// WaitForQuit blocks until given Lines-instance is quit.
+// WaitForQuit blocks until given Lines-instance is quit.  (Except a
+// Lines instance provided by a [Fixture] in which case WaitForQuit is
+// not blocking.)
 func (ee *Lines) WaitForQuit() { ee.backend.WaitForQuit() }
 
 // Update posts an update event into the event queue which is reported
@@ -193,3 +197,26 @@ type moveFocusEvent struct {
 func (e *moveFocusEvent) When() time.Time { return e.when }
 
 func (e *moveFocusEvent) Source() interface{} { return e }
+
+// AtWriter is for printing runes at specific screen cells commonly used
+// to define differentiated stylings.
+type AtWriter interface {
+	WriteAt(rr []rune)
+}
+
+// Print to an AtWriter.  The most common AtWriter of lines are provided
+// by Env and Gaps instances.
+func Print(w AtWriter, rr interface{}) {
+	if rr == nil {
+		return
+	}
+	switch rr := rr.(type) {
+	case rune:
+		w.WriteAt([]rune{rr})
+	case []rune:
+		w.WriteAt(rr)
+	default:
+		panic(fmt.Sprintf(
+			"lines: print: expected rune/rune-slice; got %T", rr))
+	}
+}

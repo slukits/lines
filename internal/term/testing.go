@@ -200,7 +200,7 @@ func (tt *Testing) Cells() api.CellsScreen {
 		styler := tcellToApiStyleClosure()
 		for i, c := range b {
 			cs[line] = append(cs[line], api.TestCell{
-				Rune: c.Runes[0], Sty: styler(c.Style),
+				Rune: c.Runes[0], Style: styler(c.Style),
 			})
 			if (i+1)%w == 0 && i+1 < len(b) {
 				line++
@@ -223,7 +223,7 @@ func (tt *Testing) CellsArea(x, y, width, height int) api.CellsScreen {
 			cs = append(cs, api.CellsLine{})
 			for _, c := range l {
 				cs[line] = append(cs[line], api.TestCell{
-					Rune: c.Runes[0], Sty: styler(c.Style),
+					Rune: c.Runes[0], Style: styler(c.Style),
 				})
 			}
 		})

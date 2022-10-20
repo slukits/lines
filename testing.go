@@ -28,24 +28,18 @@ type CellsLine = api.CellsLine
 // property of an lines.Testing instance.
 type backend = *term.Testing
 
-// Testing augments lines.Events instance created by *Test* with useful
-// features for testing like firing an event or getting the current
-// screen content as string.
+// Fixture augments lines.Lines instance created by a *Fixture
+// constructor with useful features for testing like emulating user
+// input or getting the current screen content.
 //
-// An Events/Testing-instances may not be used concurrently.
+// The [Lines.WaitForQuit] method provided by a Fixture instance is
+// non-blocking.
 //
-// An Events.Listen-method becomes non-blocking and starts the
-// event-loop in its own go-routine.
-//
-// All event triggering methods start event-listening if it is not
-// already started.
-//
-// It is guaranteed that all methods of an Events/Testing-instances
-// which trigger an event do not return before the event is processed
-// and any writes to environments are printed to the screen.  This holds
-// also true if an event triggering method is called within a listener
-// callback.
-type Testing struct {
+// It is guaranteed that all methods of an Fixture/Lines-instances which
+// trigger an event do not return before the event and all subsequently
+// triggered events are processed and any writes to environments are
+// printed to the screen.
+type Fixture struct {
 	backend
 	Lines      *Lines
 	terminated bool
@@ -78,13 +72,13 @@ func TermFixture(
 	t *testing.T,
 	timeout time.Duration,
 	c Componenter,
-) *Testing {
+) *Fixture {
 	t.Helper()
 	ll := &Lines{}
 	ui, backend := term.Fixture(t, timeout)
 	ll.scr = newScreen(ui, c)
 	ll.backend = ui
-	tt := &Testing{
+	tt := &Fixture{
 		backend: backend,
 		Lines:   ll,
 		t:       t,
@@ -93,7 +87,7 @@ func TermFixture(
 	return tt
 }
 
-func (tt *Testing) Root() Componenter {
+func (tt *Fixture) Root() Componenter {
 	if tt.Lines.scr.lyt.Root == nil {
 		tt.t.Fatal("testing: root: layout not initialized")
 	}
@@ -106,7 +100,7 @@ func (tt *Testing) Root() Componenter {
 // not reported, i.e. the event countdown is not reduced through this
 // event.  But subsequently triggered OnInit or OnLayout events are
 // counting down if reported.
-func (tt *Testing) FireResize(width, height int) {
+func (tt *Fixture) FireResize(width, height int) {
 	tt.t.Helper()
 	if width == 0 && height == 0 {
 		return
@@ -118,7 +112,7 @@ func (tt *Testing) FireResize(width, height int) {
 // has been processed.  Note modifier keys are ignored for
 // rune-triggered key-events.  Is associated Events instance not
 // listening it is started before the event is fired.
-func (tt *Testing) FireRune(r rune, m ...Modifier) {
+func (tt *Fixture) FireRune(r rune, m ...Modifier) {
 	tt.t.Helper()
 	if len(m) == 0 {
 		tt.PostRune(r, api.ZeroModifier)
@@ -130,7 +124,7 @@ func (tt *Testing) FireRune(r rune, m ...Modifier) {
 // FireKey posts given special-key event and returns after this
 // event has been processed.  Is associated Events instance not
 // listening it is started before the event is fired.
-func (tt *Testing) FireKey(k api.Key, m ...Modifier) {
+func (tt *Fixture) FireKey(k api.Key, m ...Modifier) {
 	tt.t.Helper()
 	if len(m) == 0 {
 		tt.PostKey(k, api.ZeroModifier)
@@ -143,7 +137,7 @@ func (tt *Testing) FireKey(k api.Key, m ...Modifier) {
 // after this event has been processed.  Is associated Events instance
 // not listening it is started before the event is fired.  Are given
 // coordinates outside the available screen area the call is ignored.
-func (tt *Testing) FireClick(x, y int) {
+func (tt *Fixture) FireClick(x, y int) {
 	tt.t.Helper()
 	width, height := tt.Lines.scr.backend.Size()
 	if x < 0 || y < 0 || x >= width || y >= height {
@@ -157,7 +151,7 @@ func (tt *Testing) FireClick(x, y int) {
 // instance not listening it is started before the event is fired.  Are
 // given coordinates outside the available screen area the call is
 // ignored.
-func (tt *Testing) FireContext(x, y int) {
+func (tt *Fixture) FireContext(x, y int) {
 	tt.t.Helper()
 	width, height := tt.Lines.scr.backend.Size()
 	if x < 0 || y < 0 || x >= width || y >= height {
@@ -170,7 +164,7 @@ func (tt *Testing) FireContext(x, y int) {
 // after this event has been processed.  Is associated Events instance
 // not listening it is started before the event is fired.  Are given
 // coordinates outside the available screen area the call is ignored.
-func (tt *Testing) FireMouse(
+func (tt *Fixture) FireMouse(
 	x, y int, bm api.Button, mm api.Modifier,
 ) {
 	tt.t.Helper()
@@ -186,7 +180,7 @@ func (tt *Testing) FireMouse(
 // started before the event is fired.  Note if x or y are outside the
 // component's screen area or the component is not part of the layout no
 // click will be fired.
-func (tt *Testing) FireComponentClick(c Componenter, x, y int) {
+func (tt *Fixture) FireComponentClick(c Componenter, x, y int) {
 	tt.t.Helper()
 	if !c.hasLayoutWrapper() {
 		return
@@ -203,7 +197,7 @@ func (tt *Testing) FireComponentClick(c Componenter, x, y int) {
 // listening it is started before the event is fired.  Note if x or y
 // are outside the component's screen area or the component is not part
 // of the layout no click will be fired.
-func (tt *Testing) FireComponentContext(c Componenter, x, y int) {
+func (tt *Fixture) FireComponentContext(c Componenter, x, y int) {
 	tt.t.Helper()
 	if !c.hasLayoutWrapper() {
 		return
@@ -235,7 +229,7 @@ func isInside(dim *lyt.Dim, x, y int) (ox, oy int, ok bool) {
 // layout or off-screen.  Note call ScreenArea(c.Dim().Rect()) inside an
 // Update-event callback to get the ScreenArea of a component including
 // layout margins.
-func (tt *Testing) ScreenOf(c Componenter) api.StringScreen {
+func (tt *Fixture) ScreenOf(c Componenter) api.StringScreen {
 	if !c.hasLayoutWrapper() {
 		return nil
 	}
@@ -253,7 +247,7 @@ func (tt *Testing) ScreenOf(c Componenter) api.StringScreen {
 // nil if given componenter is not part of the layout or off-screen.
 // Note call CellsArea(c.Dim().Rect()) inside an Update-event callback
 // to get the ScreenArea of a component including layout margins.
-func (tt *Testing) CellsOf(c Componenter) api.CellsScreen {
+func (tt *Fixture) CellsOf(c Componenter) api.CellsScreen {
 	if !c.hasLayoutWrapper() {
 		return nil
 	}

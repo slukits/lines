@@ -14,7 +14,7 @@ import (
 
 type Line struct{ Suite }
 
-func (s *Line) tt(t *T, c Componenter) *Testing {
+func (s *Line) tt(t *T, c Componenter) *Fixture {
 	return TermFixture(t.GoT(), 0, c)
 }
 
@@ -44,7 +44,7 @@ func (s *Line) Uses_added_style_range_on_next_sync(t *T) {
 	var r Range
 	fxSR := SR{
 		Range: *r.SetStart(2).SetEnd(5),
-		Style: api.NewDefaultStyle().WithBG(Red),
+		Style: api.DefaultStyle.WithBG(Red),
 	}
 	fx := &icmpFX{init: func(c *icmpFX, e *Env) {
 		c.Dim().SetHeight(1).SetWidth(8)
@@ -90,7 +90,7 @@ func (s *Line) Adjusts_styles_on_centered(t *T) {
 func fxSR(x1, x2 int, c Color) SR {
 	return SR{
 		Range: Range{x1, x2},
-		Style: api.NewDefaultStyle().WithBG(c),
+		Style: api.DefaultStyle.WithBG(c),
 	}
 }
 
@@ -98,7 +98,7 @@ func (s *Line) Adjusts_styles_on_evenly_distributed_line_filler(t *T) {
 	fxCnt := "a" + LineFiller + "bc" + LineFiller + "d"
 	fxR, fxG, fxB := fxSR(1, 2, Red), fxSR(2, 4, Green),
 		fxSR(5, 6, Blue)
-	dflt := api.NewDefaultStyle()
+	dflt := api.DefaultStyle
 	expR, expG, expB := Range{1, 3}, Range{3, 5}, Range{7, 8}
 	fx := &icmpFX{init: func(c *icmpFX, e *Env) {
 		fmt.Fprint(e, fxCnt)
@@ -132,7 +132,7 @@ func (s *Line) Adjusts_styles_on_unevenly_distributed_line_filler(t *T) {
 		fxSR(5, 6, Blue), fxSR(7, 9, Yellow)
 	expR, expG, expB, expY := Range{1, 3}, Range{3, 5}, Range{7, 8},
 		Range{9, 11}
-	dflt := api.NewDefaultStyle()
+	dflt := api.DefaultStyle
 	fx := &icmpFX{init: func(c *icmpFX, e *Env) {
 		fmt.Fprint(e, fxCnt)
 		e.AddStyleRange(0, fxR, fxG, fxB, fxY)
@@ -166,7 +166,7 @@ func (s *Line) Adjusts_styles_on_unevenly_distributed_line_filler(t *T) {
 func (s *Line) Adjusts_styles_on_tab_expansion(t *T) {
 	fxCnt := "\t\tred"
 	fxR := fxSR(2, 5, Red)
-	expR, dflt := Range{8, 11}, api.NewDefaultStyle()
+	expR, dflt := Range{8, 11}, api.DefaultStyle
 	fx := &icmpFX{init: func(c *icmpFX, e *Env) {
 		fmt.Fprint(e, fxCnt)
 		e.AddStyleRange(0, fxR)
@@ -190,7 +190,7 @@ func (s *Line) Adjusts_styles_on_tab_and_line_filler_expansion(t *T) {
 	fxR, fxG, fxB := fxSR(1, 4, Red), fxSR(5, 6, Green),
 		fxSR(7, 8, Blue)
 	expR, expG, expB := Range{4, 7}, Range{9, 10}, Range{11, 12}
-	dflt := api.NewDefaultStyle()
+	dflt := api.DefaultStyle
 	fx := &icmpFX{init: func(c *icmpFX, e *Env) {
 		fmt.Fprint(e, fxCnt)
 		e.AddStyleRange(0, fxR, fxG, fxB)
