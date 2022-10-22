@@ -31,7 +31,7 @@ func tcellToApiStyle(s tcell.Style) api.Style {
 	if tbg != tcell.ColorDefault {
 		bg = api.Color(tbg.Hex())
 	}
-	return api.NewStyle(api.StyleAttribute(taa), fg, bg)
+	return api.NewStyle(api.StyleAttributeMask(taa), fg, bg)
 }
 
 // tcellToApiStyleClosure keeps the last tcell-style conversion and

@@ -6,8 +6,6 @@ package lines
 
 import (
 	"strings"
-
-	"github.com/slukits/lines/internal/api"
 )
 
 type line struct {
@@ -147,7 +145,7 @@ func (l *line) IsFocusable() bool {
 
 func (l *line) toScreen(x, y, width int, rw runeWriter) {
 
-	forScr, ss := l.forScreen(width)
+	forScr, ss := l.forScreen(width, l.sty)
 	if l.ff&Highlighted > 0 {
 		l.toScreenHighlighted(forScr, x, y, width, rw)
 		return
@@ -158,7 +156,7 @@ func (l *line) toScreen(x, y, width int, rw runeWriter) {
 		if i == width {
 			break
 		}
-		rw.Display(x+i, y, r, ss.ofDflt(i, l.sty))
+		rw.Display(x+i, y, r, ss.of(i))
 	}
 
 	if forScrLen >= width {
@@ -217,13 +215,13 @@ func (l *line) toScreenHighlighted(
 // forScreen calculates from the line's content the string which should
 // be written to the screen as well as the styles by expanding leading
 // tabs and line filler.
-func (l *line) forScreen(width int) (string, styleRanges) {
+func (l *line) forScreen(width int, dflt Style) (string, styleRanges) {
 	if len(l.content) == 0 {
-		return "", l.ss
+		return "", l.ss.copyWithDefault(dflt)
 	}
 
 	content := l.content
-	ss := l.ss.copy()
+	ss := l.ss.copyWithDefault(dflt)
 
 	tt := 0 // leading tab expansion
 	for _, r := range content {
@@ -303,173 +301,3 @@ const (
 	NotFocusable LineFlags = 1 << iota
 	Highlighted
 )
-
-// Range is a two component array of which the first component should be
-// smaller than the second, i.e. r.Start() <= r.End() if r is a
-// Range-instance.
-type Range [2]int
-
-// Start index of a [lines.TestLine] style range.  Not the start index
-// is inclusive.
-func (r Range) Start() int { return r[0] }
-
-// End index of a [lines.TestLine] style range.  Note the end index is
-// exclusive.
-func (r Range) End() int { return r[1] }
-
-// SetStart sets given range's start index.
-func (r *Range) SetStart(s int) *Range {
-	(*r)[0] = s
-	return r
-}
-
-// copy returns a copy of given range.
-func (r Range) copy() Range {
-	return Range{r[0], r[1]}
-}
-
-// IncrementStart increments a ranges start value by one.
-func (r *Range) IncrementStart() { (*r)[0]++ }
-
-// IncrementEnd increments a ranges end value by one.
-func (r *Range) IncrementEnd() { (*r)[1]++ }
-
-// SetEnd sets given range's end index.
-func (r *Range) SetEnd(e int) *Range {
-	(*r)[1] = e
-	return r
-}
-
-// Shift increases start and and index by given s.
-func (r Range) Shift(s int) Range {
-	return Range{r[0] + s, r[1] + s}
-}
-
-// Contains returns true if given i is in the style range r
-// [r.Start,r.End[.
-func (r Range) Contains(i int) bool {
-	return r.Start() <= i && i < r.End()
-}
-
-// SR represents a ranged style which may be set for a line see
-// [Env.AddStyleRange].
-type SR struct {
-	Range
-	Style
-}
-
-var zeroRange = Range{0, 0}
-
-type styleRanges map[Range]Style
-
-func newStyleRanges(dflt Style) styleRanges {
-	return styleRanges{zeroRange: dflt}
-}
-
-func (s styleRanges) defaultStyle() Style {
-	if _, ok := s[zeroRange]; !ok {
-		return api.DefaultStyle
-	}
-	return s[zeroRange]
-}
-
-func (s styleRanges) withAA(aa StyleAttributeMask) {
-	s[zeroRange] = s[zeroRange].WithAA(aa)
-}
-
-func (s styleRanges) withFG(c Color) {
-	s[zeroRange] = s[zeroRange].WithFG(c)
-}
-
-func (s styleRanges) withBG(c Color) {
-	s[zeroRange] = s[zeroRange].WithBG(c)
-}
-
-func (s styleRanges) copy() styleRanges {
-	if s == nil {
-		return nil
-	}
-	cp := styleRanges{}
-	for r, s := range s {
-		cp[r.copy()] = s
-	}
-	return cp
-}
-
-func (s styleRanges) copyWithDefault(dflt Style) styleRanges {
-	cp := s.copy()
-	if cp == nil {
-		return styleRanges{zeroRange: dflt}
-	}
-	if _, ok := cp[zeroRange]; !ok {
-		cp[zeroRange] = dflt
-	}
-	return cp
-}
-
-func (s styleRanges) expand(at, by int) {
-	if s == nil {
-		return
-	}
-	update := map[Range]Range{}
-	for r := range s {
-		if r.End() <= at {
-			continue
-		}
-		switch {
-		case r.Contains(at):
-			update[r] = Range{r.Start(), r.End() + by}
-		default:
-			update[r] = r.Shift(by)
-		}
-	}
-	for k, u := range update {
-		if u.Start() < u.End() {
-			s[u] = s[k]
-		}
-		delete(s, k)
-	}
-}
-
-func (s styleRanges) contract(at, by int) {
-	s.expand(at, -by)
-}
-
-// ofDflt returns the style for given line-cell.  Note style ranges are
-// defined relative to a lines origin; i.e. the first cell's style is
-//
-//	s.ofDflt(0, dflt)
-func (s styleRanges) ofDflt(cell int, dflt Style) Style {
-
-	if len(s) == 0 {
-		return dflt
-	}
-	for r := range s {
-		if !r.Contains(cell) {
-			continue
-		}
-		return s[r]
-	}
-	return dflt
-}
-
-// ofDflt returns the style for given line-cell.  Note style ranges are
-// defined relative to a lines origin; i.e. the first cell's style is
-//
-//	s.ofDflt(0, dflt)
-func (s styleRanges) of(cell int) Style {
-
-	if len(s) == 0 {
-		return api.DefaultStyle
-	}
-	for r := range s {
-		if !r.Contains(cell) {
-			continue
-		}
-		return s[r]
-	}
-	if s, ok := s[zeroRange]; ok {
-		return s
-	}
-	return api.DefaultStyle
-}

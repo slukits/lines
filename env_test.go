@@ -147,7 +147,7 @@ func (s *env) Changes_line_style_for_a_range_of_runes(t *T) {
 	l0, exp := tt.Cells()[0], Range{4, 7}
 	str := l0.String()
 	for i := range str {
-		if exp.Contains(i) {
+		if exp.contains(i) {
 			t.True(l0.HasBG(i, Red))
 			continue
 		}

@@ -167,7 +167,7 @@ func (l CellsLine) HasFG(x int, c Color) bool {
 
 // HasAttr returns true if given style attribute mask is set in the
 // style at given cell.
-func (l CellsLine) HasAttr(x int, aa StyleAttribute) bool {
+func (l CellsLine) HasAttr(x int, aa StyleAttributeMask) bool {
 	if !l.isValidCell(x) {
 		return false
 	}
@@ -246,7 +246,7 @@ func (cs CellsScreen) HasBG(x, y int, c Color) bool {
 	return cs[y].HasBG(x, c)
 }
 
-func (cs CellsScreen) HasAttr(x, y int, aa StyleAttribute) bool {
+func (cs CellsScreen) HasAttr(x, y int, aa StyleAttributeMask) bool {
 	if !cs.isValidLine(y) {
 		return false
 	}

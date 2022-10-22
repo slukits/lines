@@ -7,8 +7,6 @@ package lines
 import (
 	"sort"
 	"strings"
-
-	"github.com/slukits/lines/internal/api"
 )
 
 type gapLine struct {
@@ -22,25 +20,23 @@ func (l *gapLine) setDefaultStyle(s Style) {
 	l.ss = newStyleRanges(s)
 }
 
-func (l *gapLine) withAA(aa StyleAttributeMask) {
+func (l *gapLine) ensureStyleRanges() styleRanges {
 	if l.ss == nil {
-		l.ss = newStyleRanges(api.DefaultStyle.WithAA(aa))
+		l.ss = newStyleRanges(DefaultStyle)
 	}
-	l.ss.withAA(aa)
+	return l.ss
+}
+
+func (l *gapLine) withAA(aa StyleAttributeMask) {
+	l.ensureStyleRanges().withAA(aa)
 }
 
 func (l *gapLine) withFG(c Color) {
-	if l.ss == nil {
-		l.ss = newStyleRanges(api.DefaultStyle.WithFG(c))
-	}
-	l.ss.withFG(c)
+	l.ensureStyleRanges().withFG(c)
 }
 
 func (l *gapLine) withBG(c Color) {
-	if l.ss == nil {
-		l.ss = newStyleRanges(api.DefaultStyle.WithBG(c))
-	}
-	l.ss.withBG(c)
+	l.ensureStyleRanges().withBG(c)
 }
 
 func (l *gapLine) set(s string) {

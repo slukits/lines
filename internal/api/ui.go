@@ -6,12 +6,12 @@ package api
 
 import "time"
 
-// StyleAttribute define the looks of a style, i.e. the looks of a print
-// to the screen.
-type StyleAttribute int32
+// StyleAttributeMask defines the looks of a style, i.e. the looks of a print
+// to the screen/window.
+type StyleAttributeMask int32
 
 const (
-	Bold StyleAttribute = 1 << iota
+	Bold StyleAttributeMask = 1 << iota
 	Blink
 	Reverse
 	Underline
@@ -19,13 +19,13 @@ const (
 	Italic
 	StrikeThrough
 	Invalid
-	ZeroStyle StyleAttribute = 0
+	ZeroStyle StyleAttributeMask = 0
 )
 
 // Style represents what a print to the screen should look like.
 type Style struct {
 	// AA is the style attribute mask providing set style attributes
-	aa StyleAttribute
+	aa StyleAttributeMask
 
 	// FG provides a style's foreground color
 	fg Color
@@ -39,13 +39,13 @@ type Style struct {
 // methods to create new styles from the default style.
 var DefaultStyle = Style{fg: DefaultColor, bg: DefaultColor}
 
-func NewStyle(aa StyleAttribute, fg, bg Color) Style {
+func NewStyle(aa StyleAttributeMask, fg, bg Color) Style {
 	return Style{aa: aa, fg: fg, bg: bg}
 }
 
-func (s Style) AA() StyleAttribute { return s.aa }
-func (s Style) FG() Color          { return s.fg }
-func (s Style) BG() Color          { return s.bg }
+func (s Style) AA() StyleAttributeMask { return s.aa }
+func (s Style) FG() Color              { return s.fg }
+func (s Style) BG() Color              { return s.bg }
 
 // Equals returns true if receiving style has the attributes and colors
 // as given other style; false otherwise
@@ -54,18 +54,18 @@ func (s Style) Equals(other Style) bool {
 }
 
 // WithAdded returns given style with given attribute mask added.
-func (s Style) WithAdded(aa StyleAttribute) Style {
+func (s Style) WithAdded(aa StyleAttributeMask) Style {
 	return Style{fg: s.fg, bg: s.bg, aa: s.aa | aa}
 }
 
 // WithRemoved returns given style without given attribute mask.
-func (s Style) WithRemoved(aa StyleAttribute) Style {
+func (s Style) WithRemoved(aa StyleAttributeMask) Style {
 	return Style{fg: s.fg, bg: s.bg, aa: s.aa &^ aa}
 }
 
 // WithAA returns given style with its attributes set to given attribute
 // mask.
-func (s Style) WithAA(aa StyleAttribute) Style {
+func (s Style) WithAA(aa StyleAttributeMask) Style {
 	return Style{fg: s.fg, bg: s.bg, aa: aa}
 }
 

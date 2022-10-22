@@ -41,9 +41,8 @@ func (s *Line) Is_filled_at_line_fillers(t *T) {
 }
 
 func (s *Line) Uses_added_style_range_on_next_sync(t *T) {
-	var r Range
 	fxSR := SR{
-		Range: *r.SetStart(2).SetEnd(5),
+		Range: Range{2, 5},
 		Style: api.DefaultStyle.WithBG(Red),
 	}
 	fx := &icmpFX{init: func(c *icmpFX, e *Env) {
@@ -55,7 +54,7 @@ func (s *Line) Uses_added_style_range_on_next_sync(t *T) {
 
 	l0 := tt.CellsOf(fx)[0]
 	for i := range l0 {
-		if fxSR.Contains(i) {
+		if fxSR.contains(i) {
 			t.True(l0.HasBG(i, Red))
 			continue
 		}
@@ -79,7 +78,7 @@ func (s *Line) Adjusts_styles_on_centered(t *T) {
 	gotCnt := tt.Cells()[0]
 	t.Eq("  ab  ", gotCnt.String())
 	for i := range gotCnt {
-		if expRng.Contains(i) {
+		if expRng.contains(i) {
 			t.True(gotCnt.HasBG(i, Red))
 			continue
 		}
@@ -110,15 +109,15 @@ func (s *Line) Adjusts_styles_on_evenly_distributed_line_filler(t *T) {
 	gotCnt := tt.Cells()[0]
 	t.Eq("a  bc  d", gotCnt.String())
 	for i := range gotCnt {
-		if expR.Contains(i) {
+		if expR.contains(i) {
 			t.True(gotCnt.HasBG(i, Red))
 			continue
 		}
-		if expG.Contains(i) {
+		if expG.contains(i) {
 			t.True(gotCnt.HasBG(i, Green))
 			continue
 		}
-		if expB.Contains(i) {
+		if expB.contains(i) {
 			t.True(gotCnt.HasBG(i, Blue))
 			continue
 		}
@@ -143,19 +142,19 @@ func (s *Line) Adjusts_styles_on_unevenly_distributed_line_filler(t *T) {
 	gotCnt := tt.Cells()[0]
 	t.Eq("a  bc  d ef", gotCnt.String())
 	for i := range gotCnt {
-		if expR.Contains(i) {
+		if expR.contains(i) {
 			t.True(gotCnt.HasBG(i, Red))
 			continue
 		}
-		if expG.Contains(i) {
+		if expG.contains(i) {
 			t.True(gotCnt.HasBG(i, Green))
 			continue
 		}
-		if expB.Contains(i) {
+		if expB.contains(i) {
 			t.True(gotCnt.HasBG(i, Blue))
 			continue
 		}
-		if expY.Contains(i) {
+		if expY.contains(i) {
 			t.True(gotCnt.HasBG(i, Yellow))
 			continue
 		}
@@ -177,7 +176,7 @@ func (s *Line) Adjusts_styles_on_tab_expansion(t *T) {
 	gotCnt := tt.Cells()[0]
 	t.Eq("        red", gotCnt.String())
 	for i := range gotCnt {
-		if expR.Contains(i) {
+		if expR.contains(i) {
 			t.True(gotCnt.HasBG(i, Red))
 			continue
 		}
@@ -201,15 +200,15 @@ func (s *Line) Adjusts_styles_on_tab_and_line_filler_expansion(t *T) {
 	gotCnt := tt.Cells()[0]
 	t.Eq("    red  g b", gotCnt.String())
 	for i := range gotCnt {
-		if expR.Contains(i) {
+		if expR.contains(i) {
 			t.True(gotCnt.HasBG(i, Red))
 			continue
 		}
-		if expG.Contains(i) {
+		if expG.contains(i) {
 			t.True(gotCnt.HasBG(i, Green))
 			continue
 		}
-		if expB.Contains(i) {
+		if expB.contains(i) {
 			t.True(gotCnt.HasBG(i, Blue))
 			continue
 		}
