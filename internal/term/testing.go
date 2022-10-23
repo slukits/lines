@@ -15,7 +15,7 @@ import (
 
 const tstWidth, tstHeight = 80, 25
 
-type Testing struct {
+type Fixture struct {
 	t      *testing.T
 	ui     *UI
 	Width  int
@@ -31,7 +31,7 @@ type Testing struct {
 // processed.  Listener may be nil and a zero-timeout defaults to 100ms.
 func LstFixture(
 	t *testing.T, listener func(api.Eventer), timeout time.Duration,
-) (*UI, *Testing) {
+) (*UI, *Fixture) {
 
 	t.Helper()
 
@@ -43,20 +43,20 @@ func LstFixture(
 	ui.EnableTransactionalEventPosts(timeout)
 	close(ui.waitForQuit)
 
-	tt := &Testing{
+	tt := &Fixture{
 		t: t, ui: ui, Width: tstWidth, Height: tstHeight}
 	tt.PostResize(tstWidth, tstHeight)
 
 	return ui, tt
 }
 
-// Fixture instantiates a new UI with an simulation screen and an
+// NewFixture instantiates a new UI with an simulation screen and an
 // testing instance.  In order to receive events [Testing.Listen] must
 // be called additionally.  The ui is setup for transactional events,
 // i.e. an event-post p returns not before all event-posts have been
 // processed which were posted during p's processing.  Processing of p
 // times out after given timeout.  A zero-timeout defaults to 100ms.
-func Fixture(t *testing.T, timeout time.Duration) (*UI, *Testing) {
+func NewFixture(t *testing.T, timeout time.Duration) (*UI, *Fixture) {
 	t.Helper()
 
 	if timeout == 0 {
@@ -67,7 +67,7 @@ func Fixture(t *testing.T, timeout time.Duration) (*UI, *Testing) {
 	ui.EnableTransactionalEventPosts(timeout)
 	close(ui.waitForQuit)
 
-	tt := &Testing{
+	tt := &Fixture{
 		t: t, ui: ui, Width: tstWidth, Height: tstHeight}
 
 	return ui, tt
@@ -75,7 +75,7 @@ func Fixture(t *testing.T, timeout time.Duration) (*UI, *Testing) {
 
 // Listen sets the listener and posts initial resize event.  Listen is an
 // no-op if already a listener is set.
-func (tt *Testing) Listen(l func(api.Eventer)) {
+func (tt *Fixture) Listen(l func(api.Eventer)) {
 	if tt.ui.listener != nil {
 		return
 	}
@@ -83,7 +83,7 @@ func (tt *Testing) Listen(l func(api.Eventer)) {
 	tt.PostResize(tstWidth, tstHeight)
 }
 
-func (tt *Testing) Display(s string, sty api.Style) {
+func (tt *Fixture) Display(s string, sty api.Style) {
 	if len(s) == 0 {
 		return
 	}
@@ -94,21 +94,21 @@ func (tt *Testing) Display(s string, sty api.Style) {
 	}
 }
 
-func (tt *Testing) PostKey(k api.Key, m api.Modifier) {
+func (tt *Fixture) PostKey(k api.Key, m api.Modifier) {
 	tt.t.Helper()
 	if err := tt.ui.Post(newKeyEvent(k, m)); err != nil {
 		tt.t.Fatalf("post: key: %v", err)
 	}
 }
 
-func (tt *Testing) PostRune(r rune, m api.Modifier) {
+func (tt *Fixture) PostRune(r rune, m api.Modifier) {
 	tt.t.Helper()
 	if err := tt.ui.Post(newRuneEvent(r, m)); err != nil {
 		tt.t.Fatalf("post: rune: %v", err)
 	}
 }
 
-func (tt *Testing) PostMouse(
+func (tt *Fixture) PostMouse(
 	x, y int, b api.Button, m api.Modifier,
 ) {
 	tt.t.Helper()
@@ -117,7 +117,7 @@ func (tt *Testing) PostMouse(
 	}
 }
 
-func (tt *Testing) PostBracketPaste(paste string) {
+func (tt *Fixture) PostBracketPaste(paste string) {
 	tt.t.Helper()
 	if len(paste) == 0 {
 		return
@@ -136,7 +136,7 @@ func (tt *Testing) PostBracketPaste(paste string) {
 	}
 }
 
-func (tt *Testing) PostResize(width, height int) {
+func (tt *Fixture) PostResize(width, height int) {
 	tt.t.Helper()
 	if width == 0 && height == 0 {
 		return
@@ -154,7 +154,7 @@ func (tt *Testing) PostResize(width, height int) {
 	}
 }
 
-func (tt *Testing) Screen() api.StringScreen {
+func (tt *Fixture) Screen() api.StringScreen {
 	bld, screen := &strings.Builder{}, api.StringScreen{}
 	err := tt.ui.Post(&screenEvent{when: time.Now(), grab: func() {
 		b, w, _ := tt.ui.lib.(tcell.SimulationScreen).GetContents()
@@ -172,7 +172,7 @@ func (tt *Testing) Screen() api.StringScreen {
 	return screen
 }
 
-func (tt *Testing) ScreenArea(x, y, width, height int) api.StringScreen {
+func (tt *Fixture) ScreenArea(x, y, width, height int) api.StringScreen {
 	bld, screen := &strings.Builder{}, api.StringScreen{}
 	err := tt.ui.Post(&screenEvent{when: time.Now(), grab: func() {
 		tt.screenArea(x, y, width, height, func(line []tcell.SimCell) {
@@ -189,7 +189,7 @@ func (tt *Testing) ScreenArea(x, y, width, height int) api.StringScreen {
 	return screen
 }
 
-func (tt *Testing) Cells() api.CellsScreen {
+func (tt *Fixture) Cells() api.CellsScreen {
 	cs, line := api.CellsScreen{api.CellsLine{}}, 0
 	err := tt.ui.Post(&screenEvent{when: time.Now(), grab: func() {
 		b, w, _ := tt.ui.lib.(tcell.SimulationScreen).GetContents()
@@ -214,7 +214,7 @@ func (tt *Testing) Cells() api.CellsScreen {
 	return cs
 }
 
-func (tt *Testing) CellsArea(x, y, width, height int) api.CellsScreen {
+func (tt *Fixture) CellsArea(x, y, width, height int) api.CellsScreen {
 	cs, line := api.CellsScreen{}, -1
 	styler := tcellToApiStyleClosure()
 	err := tt.ui.Post(&screenEvent{when: time.Now(), grab: func() {
@@ -246,11 +246,11 @@ func (e *screenEvent) Source() interface{} { return e }
 
 // Size returns the number of available lines (height) and the number of
 // runes per line (width) off the terminal screen/display.
-func (tt *Testing) Size() (width, height int) {
+func (tt *Fixture) Size() (width, height int) {
 	return tt.ui.lib.Size()
 }
 
-func (tt *Testing) screenArea(
+func (tt *Fixture) screenArea(
 	x, y, width, height int,
 	cb func(line []tcell.SimCell),
 ) {

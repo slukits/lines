@@ -12,13 +12,13 @@ import (
 	"github.com/slukits/lines/internal/api"
 )
 
-type Line struct{ Suite }
+type CmpLine struct{ Suite }
 
-func (s *Line) tt(t *T, c Componenter) *Fixture {
+func (s *CmpLine) tt(t *T, c Componenter) *Fixture {
 	return TermFixture(t.GoT(), 0, c)
 }
 
-func (s *Line) Is_filled_at_line_fillers(t *T) {
+func (s *CmpLine) Is_filled_at_line_fillers(t *T) {
 	fx := &icmpFX{init: func(c *icmpFX, e *Env) {
 		c.Dim().SetHeight(1).SetWidth(8)
 		fmt.Fprintf(e, "a%sb", LineFiller)
@@ -40,7 +40,7 @@ func (s *Line) Is_filled_at_line_fillers(t *T) {
 	t.Eq("ab cd ef", tt.ScreenOf(fx).Trimmed().String())
 }
 
-func (s *Line) Uses_added_style_range_on_next_sync(t *T) {
+func (s *CmpLine) Uses_added_style_range_on_next_sync(t *T) {
 	fxSR := SR{
 		Range: Range{2, 5},
 		Style: api.DefaultStyle.WithBG(Red),
@@ -62,7 +62,7 @@ func (s *Line) Uses_added_style_range_on_next_sync(t *T) {
 	}
 }
 
-func (s *Line) Adjusts_styles_on_centered(t *T) {
+func (s *CmpLine) Adjusts_styles_on_centered(t *T) {
 	fxCnt := LineFiller + "ab" + LineFiller
 	expRng := Range{2, 4}
 	fx := &icmpFX{init: func(c *icmpFX, e *Env) {
@@ -93,7 +93,7 @@ func fxSR(x1, x2 int, c Color) SR {
 	}
 }
 
-func (s *Line) Adjusts_styles_on_evenly_distributed_line_filler(t *T) {
+func (s *CmpLine) Adjusts_styles_on_evenly_distributed_line_filler(t *T) {
 	fxCnt := "a" + LineFiller + "bc" + LineFiller + "d"
 	fxR, fxG, fxB := fxSR(1, 2, Red), fxSR(2, 4, Green),
 		fxSR(5, 6, Blue)
@@ -125,7 +125,7 @@ func (s *Line) Adjusts_styles_on_evenly_distributed_line_filler(t *T) {
 	}
 }
 
-func (s *Line) Adjusts_styles_on_unevenly_distributed_line_filler(t *T) {
+func (s *CmpLine) Adjusts_styles_on_unevenly_distributed_line_filler(t *T) {
 	fxCnt := "a" + LineFiller + "bc" + LineFiller + "d" + LineFiller + "ef"
 	fxR, fxG, fxB, fxY := fxSR(1, 2, Red), fxSR(2, 4, Green),
 		fxSR(5, 6, Blue), fxSR(7, 9, Yellow)
@@ -162,7 +162,7 @@ func (s *Line) Adjusts_styles_on_unevenly_distributed_line_filler(t *T) {
 	}
 }
 
-func (s *Line) Adjusts_styles_on_tab_expansion(t *T) {
+func (s *CmpLine) Adjusts_styles_on_tab_expansion(t *T) {
 	fxCnt := "\t\tred"
 	fxR := fxSR(2, 5, Red)
 	expR, dflt := Range{8, 11}, api.DefaultStyle
@@ -184,7 +184,7 @@ func (s *Line) Adjusts_styles_on_tab_expansion(t *T) {
 	}
 }
 
-func (s *Line) Adjusts_styles_on_tab_and_line_filler_expansion(t *T) {
+func (s *CmpLine) Adjusts_styles_on_tab_and_line_filler_expansion(t *T) {
 	fxCnt := "\tred" + LineFiller + "g" + LineFiller + "b"
 	fxR, fxG, fxB := fxSR(1, 4, Red), fxSR(5, 6, Green),
 		fxSR(7, 8, Blue)
@@ -217,5 +217,5 @@ func (s *Line) Adjusts_styles_on_tab_and_line_filler_expansion(t *T) {
 }
 
 func TestLineRun(t *testing.T) {
-	Run(&Line{}, t)
+	Run(&CmpLine{}, t)
 }

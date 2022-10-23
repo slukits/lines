@@ -26,7 +26,7 @@ type CellsLine = api.CellsLine
 
 // backend prevents the backend testing instance from being a public
 // property of an lines.Testing instance.
-type backend = *term.Testing
+type backend = *term.Fixture
 
 // Fixture augments lines.Lines instance created by a *Fixture
 // constructor with useful features for testing like emulating user
@@ -75,7 +75,7 @@ func TermFixture(
 ) *Fixture {
 	t.Helper()
 	ll := &Lines{}
-	ui, backend := term.Fixture(t, timeout)
+	ui, backend := term.NewFixture(t, timeout)
 	ll.scr = newScreen(ui, c)
 	ll.backend = ui
 	tt := &Fixture{

@@ -137,7 +137,7 @@ func (c *component) sync(rw runeWriter) {
 	if sw <= 0 || sh <= 0 {
 		return
 	}
-	c.ll.ForDirty(c.first, func(i int, l *line) (stop bool) {
+	c.ll.ForDirty(c.first, func(i int, l *cmpLine) (stop bool) {
 		if i >= sh {
 			return true
 		}
@@ -162,7 +162,7 @@ func (c *component) syncCleared(rw runeWriter) {
 	if sw <= 0 || sh <= 0 {
 		return
 	}
-	c.ll.For(c.first, func(i int, l *line) (stop bool) {
+	c.ll.For(c.first, func(i int, l *cmpLine) (stop bool) {
 		if i >= sh {
 			return true
 		}
@@ -204,10 +204,10 @@ func (c *component) write(
 	return len(bb), nil
 }
 
-func (c *component) lineFactory() *line {
-	return &line{
+func (c *component) lineFactory() *cmpLine {
+	return &cmpLine{
 		sty:    c.fmt.sty,
 		dirty:  true,
-		global: c.global,
+		global: c.globals,
 	}
 }

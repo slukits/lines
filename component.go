@@ -89,7 +89,7 @@ func (c *Component) initialize(
 	inner := &component{
 		dim:     lyt.DimFilling(1, 1),
 		ll:      &lines{},
-		global:  &global{tabWidth: 4},
+		globals: &globals{tabWidth: 4},
 		fmt:     llFmt{sty: backend.NewStyle()},
 		userCmp: userComponent,
 		mod:     Overwriting,
@@ -161,7 +161,7 @@ func (c *Component) Gaps(level int) *gapsWriter {
 // component is the actual implementation of a lines-Component.
 type component struct {
 	userCmp     Componenter
-	global      *global
+	globals     *globals
 	dim         *lyt.Dim
 	mod         ComponentMode
 	initialized bool
@@ -205,8 +205,8 @@ func (c *component) ensureListeners() {
 	c.lst = &listeners{}
 }
 
-// global represents settings which apply for all lines of a component.
-type global struct {
+// globals represents settings which apply for all lines of a component.
+type globals struct {
 	tabWidth int
 }
 

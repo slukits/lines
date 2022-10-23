@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-type line struct {
+type cmpLine struct {
 	// dirty is set to true if the a line's content changes.
 	dirty bool
 	// stale if not zero contains the content at the last screen update.
@@ -22,7 +22,7 @@ type line struct {
 	fmt FmtMask
 
 	// settings coming from parent component's lines factory.
-	global *global
+	global *globals
 
 	sty Style
 
@@ -32,7 +32,7 @@ type line struct {
 }
 
 // Set updates the content of a line.
-func (l *line) reset(sty Style, ff LineFlags) *line {
+func (l *cmpLine) reset(sty Style, ff LineFlags) *cmpLine {
 	l.sty = sty
 	l.ss = nil
 	l.ff = ff
@@ -46,7 +46,7 @@ func (l *line) reset(sty Style, ff LineFlags) *line {
 	return l
 }
 
-func (l *line) addStyleRange(sr SR, rr ...SR) {
+func (l *cmpLine) addStyleRange(sr SR, rr ...SR) {
 	if l.ss == nil {
 		l.ss = styleRanges{}
 	}
@@ -59,7 +59,7 @@ func (l *line) addStyleRange(sr SR, rr ...SR) {
 	}
 }
 
-func (l *line) setFlags(ff LineFlags) {
+func (l *cmpLine) setFlags(ff LineFlags) {
 	l.ff = ff
 	if !l.dirty {
 		l.dirty = true
@@ -71,7 +71,7 @@ func (l *line) setFlags(ff LineFlags) {
 // line.  Is cell >= 0 the content is replaced starting at cell (padded
 // with blanks if necessary) and given style is set for the range
 // cell to len(content).  Is cell < -1 the call is ignored.
-func (l *line) replaceAt(
+func (l *cmpLine) replaceAt(
 	cell int, content string, s Style, ff LineFlags,
 ) {
 	if cell < -1 {
@@ -105,7 +105,7 @@ type runeWriter interface {
 	Display(x, y int, r rune, s Style)
 }
 
-func (l *line) sync(x, y, width int, rw runeWriter) {
+func (l *cmpLine) sync(x, y, width int, rw runeWriter) {
 	l.dirty = false
 	if l.fmt&onetimeFilled > 0 {
 		l.fill(x, y, width, rw)
@@ -115,7 +115,7 @@ func (l *line) sync(x, y, width int, rw runeWriter) {
 	l.stale = ""
 }
 
-func (l *line) fill(x, y, width int, rw runeWriter) {
+func (l *cmpLine) fill(x, y, width int, rw runeWriter) {
 	if width < 0 || x < 0 {
 		return
 	}
@@ -125,7 +125,7 @@ func (l *line) fill(x, y, width int, rw runeWriter) {
 	l.stale = ""
 }
 
-func (l *line) SwitchHighlighted() {
+func (l *cmpLine) SwitchHighlighted() {
 	if l.ff&Highlighted == Highlighted {
 		l.ff &^= Highlighted
 		l.fmt |= onetimeFilled
@@ -135,15 +135,15 @@ func (l *line) SwitchHighlighted() {
 	l.dirty = true
 }
 
-func (l *line) IsHighlighted() bool {
+func (l *cmpLine) IsHighlighted() bool {
 	return l.ff&Highlighted == Highlighted
 }
 
-func (l *line) IsFocusable() bool {
+func (l *cmpLine) IsFocusable() bool {
 	return l.ff&NotFocusable == 0
 }
 
-func (l *line) toScreen(x, y, width int, rw runeWriter) {
+func (l *cmpLine) toScreen(x, y, width int, rw runeWriter) {
 
 	forScr, ss := l.forScreen(width, l.sty)
 	if l.ff&Highlighted > 0 {
@@ -166,7 +166,7 @@ func (l *line) toScreen(x, y, width int, rw runeWriter) {
 	l.fill(x+forScrLen, y, width-forScrLen, rw)
 }
 
-func (l *line) toScreenHighlighted(
+func (l *cmpLine) toScreenHighlighted(
 	s string, x, y, width int, rw runeWriter,
 ) {
 
@@ -215,7 +215,7 @@ func (l *line) toScreenHighlighted(
 // forScreen calculates from the line's content the string which should
 // be written to the screen as well as the styles by expanding leading
 // tabs and line filler.
-func (l *line) forScreen(width int, dflt Style) (string, styleRanges) {
+func (l *cmpLine) forScreen(width int, dflt Style) (string, styleRanges) {
 	if len(l.content) == 0 {
 		return "", l.ss.copyWithDefault(dflt)
 	}

@@ -61,6 +61,12 @@ func (l *gapLine) setStyledAt(at int, rr []rune, sty Style) {
 	l.ss[Range{at, at + len(rr)}] = sty
 }
 
+func (l *gapLine) setFilling(at int, r rune) {
+	l.padTo(at)
+	l.rr = append(l.rr[:at], r)
+	l.fillAt = append(l.fillAt, at)
+}
+
 func (l *gapLine) setAtFilling(at int, r rune) {
 	l.padTo(at)
 	l.rr = append(l.rr[:at], r)

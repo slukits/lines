@@ -32,6 +32,10 @@ const (
 // style from a given style with given new properties.
 type Style = api.Style
 
+// NewStyle creates a new style with given style attribute, foreground
+// color and background color.
+var NewStyle = api.NewStyle
+
 // Range is a two component array of which the first component
 // represents the (inclusive) start of a range while the seconde is the
 // (exclusive) end of the range.

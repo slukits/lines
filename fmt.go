@@ -53,7 +53,7 @@ func (w *FmtWriter) Attr(aa StyleAttributeMask) *FmtWriter {
 	return w
 }
 
-func (w *FmtWriter) get(line int) *line {
+func (w *FmtWriter) get(line int) *cmpLine {
 	return (*w.cmp.(Componenter).embedded().ll)[line]
 }
 

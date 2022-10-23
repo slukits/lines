@@ -33,7 +33,7 @@ func (s *_testing) Reports_string_representation_of_screen(t *T) {
 	t.Eq(fx, tt.Screen().String())
 }
 
-func (s *_testing) fx(t *T) (*term.UI, *term.Testing) {
+func (s *_testing) fx(t *T) (*term.UI, *term.Fixture) {
 	ui, tt := term.LstFixture(t.GoT(), nil, 0)
 	tt.PostResize(16, 5)
 	return ui, tt

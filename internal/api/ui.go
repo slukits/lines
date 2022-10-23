@@ -39,6 +39,8 @@ type Style struct {
 // methods to create new styles from the default style.
 var DefaultStyle = Style{fg: DefaultColor, bg: DefaultColor}
 
+// NewStyle creates a new style with given style attribute, foreground
+// color and background color.
 func NewStyle(aa StyleAttributeMask, fg, bg Color) Style {
 	return Style{aa: aa, fg: fg, bg: bg}
 }
