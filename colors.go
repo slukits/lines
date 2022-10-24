@@ -152,5 +152,5 @@ const (
 	WhiteSmoke           Color = api.WhiteSmoke
 	YellowGreen          Color = api.YellowGreen
 
-	Default Color = -1
+	DefaultColor Color = api.DefaultColor
 )

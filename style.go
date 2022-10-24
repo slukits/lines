@@ -4,7 +4,11 @@
 
 package lines
 
-import "github.com/slukits/lines/internal/api"
+import (
+	"sort"
+
+	"github.com/slukits/lines/internal/api"
+)
 
 // StyleAttributeMask defines the looks of a style, i.e. the looks of a print
 // to the screen/window.
@@ -149,6 +153,45 @@ func (s styleRanges) copyWithDefault(dflt Style) styleRanges {
 		cp[zeroRange] = dflt
 	}
 	return cp
+}
+
+func (ss styleRanges) unstyled(start, end int) []Range {
+	if start >= end || start < 0 {
+		return nil
+	}
+	rr := []Range{{start, end}}
+	for _, r := range ss.orderedRanges() {
+		last := rr[len(rr)-1]
+		if r.Start() <= last.Start() && r.End() >= last.End() {
+			return rr[:len(rr)-1]
+		}
+		if r.Start() > last.Start() && r.End() < last.End() {
+			rr[len(rr)-1] = Range{last.Start(), r.Start()}
+			rr = append(rr, Range{r.End(), last.End()})
+			continue
+		}
+		if r.Start() <= last.Start() {
+			rr[len(rr)-1][0] = r.End()
+			continue
+		}
+		rr[len(rr)-1][1] = r.Start()
+		break
+	}
+	return rr
+}
+
+func (ss styleRanges) orderedRanges() []Range {
+	rr := []Range{}
+	for r := range ss {
+		if r == zeroRange {
+			continue
+		}
+		rr = append(rr, r)
+	}
+	sort.Slice(rr, func(i, j int) bool {
+		return rr[i].Start() < rr[j].Start()
+	})
+	return rr
 }
 
 // expand finds in given style ranges s the style range containing point

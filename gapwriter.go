@@ -99,7 +99,6 @@ type allGapsWriter struct{ ggw *gapsWriter }
 func (agg *allGapsWriter) Write(bb []byte) (int, error) {
 	for _, g := range selectGaps(agg.ggw.gg, top|right|bottom|left) {
 		g.set(agg.ggw.level, string(bb))
-		g.filling(agg.ggw.level, true)
 	}
 	return len(bb), nil
 }
@@ -117,7 +116,6 @@ func (w *gapWriter) Write(bb []byte) (int, error) {
 	}
 	write := func(g *gap) {
 		g.set(w.level, string(bb))
-		g.filling(w.level, w.gm&filling != 0)
 	}
 	for _, g := range selectGaps(w.ggw.gg, w.gm) {
 		write(g)
@@ -152,11 +150,6 @@ func (g *gapWriter) At(idx int) *gapAtWriter {
 		level: g.level,
 		at:    idx,
 	}
-}
-
-func (g *gapWriter) Filling() *gapWriter {
-	g.gm |= filling
-	return g
 }
 
 func (g *gapWriter) initStyle(sty Style) {
@@ -232,7 +225,6 @@ func (aw *gapAtWriter) WriteAt(rr []rune) {
 					aw.level, aw.at, rr[0], aw.sty)
 			}
 		}
-		g.filling(aw.level, false)
 	}
 	for _, g := range selectGaps(aw.ggw.gg, aw.gm) {
 		write(g)

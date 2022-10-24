@@ -29,6 +29,7 @@ func (c *component) Mod(cm ComponentMode) {
 func (c *component) AA(attr StyleAttributeMask) *component {
 	c.dirty = true
 	c.fmt.sty = c.fmt.sty.WithAA(attr)
+	c.globals.style = c.globals.style.WithAA(attr)
 	return c
 }
 
@@ -36,6 +37,7 @@ func (c *component) AA(attr StyleAttributeMask) *component {
 func (c *component) FG(color Color) *component {
 	c.dirty = true
 	c.fmt.sty = c.fmt.sty.WithFG(color)
+	c.globals.style = c.globals.style.WithFG(color)
 	return c
 }
 
@@ -43,6 +45,7 @@ func (c *component) FG(color Color) *component {
 func (c *component) BG(color Color) *component {
 	c.dirty = true
 	c.fmt.sty = c.fmt.sty.WithBG(color)
+	c.globals.style = c.globals.style.WithBG(color)
 	return c
 }
 
@@ -80,12 +83,12 @@ const All = -1
 // lines index is -1 (see All-constant) Rest scrolls to the top,
 // truncates its lines to the screen-area-height and resets the
 // remaining lines.
-func (c *component) Reset(idx int, ff ...LineFlags) {
+func (c *component) Reset(idx int, ff ...LineFlagsZZZ) {
 	if idx < -1 || idx >= c.Len() {
 		return
 	}
 
-	_ff := LineFlags(0)
+	_ff := LineFlagsZZZ(0)
 	for _, f := range ff {
 		_ff |= f
 	}
@@ -132,7 +135,7 @@ func (c *component) sync(rw runeWriter) {
 		return
 	}
 	if c.gg != nil && c.gg.isDirty() {
-		sx, sy, sw, sh = c.gg.sync(sx, sy, sw, sh, rw)
+		sx, sy, sw, sh = c.gg.sync(sx, sy, sw, sh, rw, c.globals)
 	}
 	if sw <= 0 || sh <= 0 {
 		return
@@ -157,7 +160,7 @@ func (c *component) syncCleared(rw runeWriter) {
 	c.dirty = false
 	sx, sy, sw, sh = c.dim.Area()
 	if c.gg != nil {
-		sx, sy, sw, sh = c.gg.sync(sx, sy, sw, sh, rw)
+		sx, sy, sw, sh = c.gg.sync(sx, sy, sw, sh, rw, c.globals)
 	}
 	if sw <= 0 || sh <= 0 {
 		return
@@ -186,7 +189,7 @@ func (c *component) setFirst(f int) {
 }
 
 func (c *component) write(
-	bb []byte, line, cell int, ff LineFlags, sty Style,
+	bb []byte, line, cell int, ff LineFlagsZZZ, sty Style,
 ) (int, error) {
 	switch {
 	case c.mod&(Appending|Tailing) != 0:

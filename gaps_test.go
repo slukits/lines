@@ -167,8 +167,8 @@ func (s *_gaps) Prints_filling(t *T) {
 	exp := " ---- \n|    |\n|    |\n ---- "
 
 	tt.Lines.Update(tt.Root(), nil, func(e *Env) {
-		fmt.Fprint(cmp.Gaps(0).Horizontal.Filling(), "-")
-		fmt.Fprint(cmp.Gaps(0).Vertical.Filling(), "|")
+		Print(cmp.Gaps(0).Horizontal.At(0).Filling(), '-')
+		Print(cmp.Gaps(0).Vertical.At(0).Filling(), '|')
 	})
 
 	t.Contains(tt.ScreenOf(cmp), exp)
@@ -176,10 +176,10 @@ func (s *_gaps) Prints_filling(t *T) {
 	exp = " tttt \nl    r\nl    r\n bbbb "
 	tt.Lines.Update(tt.Root(), nil, func(e *Env) {
 		cmp.SetDirty()
-		fmt.Fprint(cmp.Gaps(0).Top.Filling(), "t")
-		fmt.Fprint(cmp.Gaps(0).Right.Filling(), "r")
-		fmt.Fprint(cmp.Gaps(0).Bottom.Filling(), "b")
-		fmt.Fprint(cmp.Gaps(0).Left.Filling(), "l")
+		Print(cmp.Gaps(0).Top.At(0).Filling(), 't')
+		Print(cmp.Gaps(0).Right.At(0).Filling(), 'r')
+		Print(cmp.Gaps(0).Bottom.At(0).Filling(), 'b')
+		Print(cmp.Gaps(0).Left.At(0).Filling(), 'l')
 	})
 
 	t.Contains(tt.ScreenOf(cmp), exp)
@@ -192,7 +192,7 @@ func (s *_gaps) Prints_reset_gap_filling(t *T) {
 	exp := " -- "
 
 	tt.Lines.Update(tt.Root(), nil, func(e *Env) {
-		fmt.Fprint(cmp.Gaps(0).Top.Filling(), "-")
+		Print(cmp.Gaps(0).Top.At(0).Filling(), '-')
 	})
 
 	t.Eq(exp, tt.ScreenOf(cmp))
@@ -222,14 +222,14 @@ func (s *_gaps) Frame_its_component_s_content(t *T) {
 	exp := strings.TrimSpace(framed)
 
 	tt.Lines.Update(cmp, nil, func(e *Env) {
-		fmt.Fprint(cmp.Gaps(0).Horizontal.Filling(), "x")
-		fmt.Fprint(cmp.Gaps(0).Vertical.Filling(), "x")
+		Print(cmp.Gaps(0).Horizontal.At(0).Filling(), 'x')
+		Print(cmp.Gaps(0).Vertical.At(0).Filling(), 'x')
 		fmt.Fprint(cmp.Gaps(0).Corners, "*")
-		fmt.Fprint(cmp.Gaps(1).Horizontal.Filling(), "-")
-		fmt.Fprint(cmp.Gaps(1).Vertical.Filling(), "|")
+		Print(cmp.Gaps(1).Horizontal.At(0).Filling(), '-')
+		Print(cmp.Gaps(1).Vertical.At(0).Filling(), '|')
 		fmt.Fprint(cmp.Gaps(1).Corners, "+")
-		fmt.Fprint(cmp.Gaps(2).Horizontal.Filling(), " ")
-		fmt.Fprint(cmp.Gaps(2).Vertical.Filling(), " ")
+		Print(cmp.Gaps(2).Horizontal.At(0).Filling(), ' ')
+		Print(cmp.Gaps(2).Vertical.At(0).Filling(), ' ')
 		fmt.Fprint(cmp.Gaps(2).Corners, " ")
 		fmt.Fprint(e, "size\n10x8")
 	})
@@ -274,7 +274,7 @@ func (s *_gaps) At_prints_reset_gap_filling(t *T) {
 	exp := " -- "
 
 	tt.Lines.Update(tt.Root(), nil, func(e *Env) {
-		fmt.Fprint(cmp.Gaps(0).Top.Filling(), "-")
+		Print(cmp.Gaps(0).Top.At(0).Filling(), '-')
 	})
 
 	t.Eq(exp, tt.ScreenOf(cmp))
@@ -439,8 +439,8 @@ func (s *_gaps) Adapt_fillers_on_layout_change(t *T) {
 		Print(cmp.Gaps(0).Top.At(0).AA(Bold).Filling(), '•')
 		Print(cmp.Gaps(0).Top.At(1).AA(Blink), []rune("top"))
 		Print(cmp.Gaps(0).Top.At(4).AA(Bold).Filling(), '•')
-		fmt.Fprint(cmp.Gaps(0).Vertical.AA(Dim).Filling(), "•")
-		fmt.Fprint(cmp.Gaps(0).Bottom.AA(Dim).Filling(), "•")
+		Print(cmp.Gaps(0).Vertical.AA(Dim).At(0).Filling(), '•')
+		Print(cmp.Gaps(0).Bottom.AA(Dim).At(0).Filling(), '•')
 	})
 
 	t.Eq(strings.TrimSpace(lytInit), tt.ScreenOf(cmp))

@@ -40,7 +40,7 @@ type lines []*cmpLine
 // append given content lines to current content
 func (ll *lines) append(
 	lnFactory func() *cmpLine,
-	ff LineFlags,
+	ff LineFlagsZZZ,
 	sty Style,
 	cc ...[]byte,
 ) {
@@ -59,7 +59,7 @@ func (ll *lines) append(
 func (ll *lines) replaceAt(
 	lnFactory func() *cmpLine,
 	idx, cell int,
-	ff LineFlags,
+	ff LineFlagsZZZ,
 	sty Style,
 	cc ...[]byte,
 ) {

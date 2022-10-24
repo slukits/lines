@@ -28,11 +28,11 @@ type cmpLine struct {
 
 	ss styleRanges
 
-	ff LineFlags
+	ff LineFlagsZZZ
 }
 
 // Set updates the content of a line.
-func (l *cmpLine) reset(sty Style, ff LineFlags) *cmpLine {
+func (l *cmpLine) reset(sty Style, ff LineFlagsZZZ) *cmpLine {
 	l.sty = sty
 	l.ss = nil
 	l.ff = ff
@@ -59,7 +59,7 @@ func (l *cmpLine) addStyleRange(sr SR, rr ...SR) {
 	}
 }
 
-func (l *cmpLine) setFlags(ff LineFlags) {
+func (l *cmpLine) setFlags(ff LineFlagsZZZ) {
 	l.ff = ff
 	if !l.dirty {
 		l.dirty = true
@@ -72,7 +72,7 @@ func (l *cmpLine) setFlags(ff LineFlags) {
 // with blanks if necessary) and given style is set for the range
 // cell to len(content).  Is cell < -1 the call is ignored.
 func (l *cmpLine) replaceAt(
-	cell int, content string, s Style, ff LineFlags,
+	cell int, content string, s Style, ff LineFlagsZZZ,
 ) {
 	if cell < -1 {
 		return
@@ -126,27 +126,27 @@ func (l *cmpLine) fill(x, y, width int, rw runeWriter) {
 }
 
 func (l *cmpLine) SwitchHighlighted() {
-	if l.ff&Highlighted == Highlighted {
-		l.ff &^= Highlighted
+	if l.ff&HighlightedZZZ == HighlightedZZZ {
+		l.ff &^= HighlightedZZZ
 		l.fmt |= onetimeFilled
 	} else {
-		l.ff |= Highlighted
+		l.ff |= HighlightedZZZ
 	}
 	l.dirty = true
 }
 
 func (l *cmpLine) IsHighlighted() bool {
-	return l.ff&Highlighted == Highlighted
+	return l.ff&HighlightedZZZ == HighlightedZZZ
 }
 
 func (l *cmpLine) IsFocusable() bool {
-	return l.ff&NotFocusable == 0
+	return l.ff&NotFocusableZZZ == 0
 }
 
 func (l *cmpLine) toScreen(x, y, width int, rw runeWriter) {
 
 	forScr, ss := l.forScreen(width, l.sty)
-	if l.ff&Highlighted > 0 {
+	if l.ff&HighlightedZZZ > 0 {
 		l.toScreenHighlighted(forScr, x, y, width, rw)
 		return
 	}
@@ -295,9 +295,9 @@ func (l *cmpLine) forScreen(width int, dflt Style) (string, styleRanges) {
 	return b.String(), ss
 }
 
-type LineFlags uint64
+type LineFlagsZZZ uint64
 
 const (
-	NotFocusable LineFlags = 1 << iota
-	Highlighted
+	NotFocusableZZZ LineFlagsZZZ = 1 << iota
+	HighlightedZZZ
 )

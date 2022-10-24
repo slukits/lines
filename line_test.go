@@ -16,7 +16,7 @@ type lineFX struct {
 	api.Displayer
 	line
 	w, h int
-	dflt Style
+	gg   *globals
 }
 
 func (x *lineFX) width() int {
@@ -34,12 +34,29 @@ func (x *lineFX) height() int {
 }
 
 func (x *lineFX) redraw(tt *term.Fixture) api.CellsLine {
-	rr, ss := x.display(x.width(), x.dflt)
+	rr, ss := x.display(x.width(), x.gg)
 	for i, r := range rr {
 		x.Display(i, 0, r, ss.of(i))
 	}
 	x.Redraw()
 	return tt.CellsArea(0, 0, x.width(), 1)[0]
+}
+
+func (x *lineFX) highlighted(s Style) Style {
+	if x.gg.highlight.AA() != 0 {
+		if s.AA()&x.gg.highlight.AA() == 0 {
+			s = s.WithAdded(x.gg.highlight.AA())
+		} else {
+			s = s.WithRemoved(x.gg.highlight.AA())
+		}
+	}
+	if x.gg.highlight.FG() != DefaultColor {
+		s = s.WithFG(x.gg.highlight.FG())
+	}
+	if x.gg.highlight.BG() != DefaultColor {
+		s = s.WithBG(x.gg.highlight.BG())
+	}
+	return s
 }
 
 // NOTE since the point here is to determine what a line provides for
@@ -48,12 +65,16 @@ func (x *lineFX) redraw(tt *term.Fixture) api.CellsLine {
 func fx(t *T) (*term.Fixture, *lineFX) {
 	ui, tt := term.LstFixture(t.GoT(), nil, 0)
 	tt.PostResize(20, 1)
-	return tt, &lineFX{Displayer: ui, dflt: DefaultStyle}
+	return tt, &lineFX{Displayer: ui, gg: &globals{
+		style:     DefaultStyle,
+		highlight: DefaultStyle.WithAA(Reverse),
+		tabWidth:  4,
+	}}
 }
 
 func fxDflt(t *T, s Style) (*term.Fixture, *lineFX) {
 	tt, fx := fx(t)
-	fx.dflt = s
+	fx.gg.style = s
 	return tt, fx
 }
 
@@ -127,7 +148,7 @@ func (s *ALine) Has_updated_default_background_color(t *T) {
 func (s *ALine) Displays_set_content_space_padded_to_line_width(t *T) {
 	_, fx := fx(t)
 	fx.set("0123456789")
-	got, _ := fx.display(fx.width(), fx.dflt)
+	got, _ := fx.display(fx.width(), fx.gg)
 	t.Eq("0123456789", string(got[:10]))
 	t.Eq("          ", string(got[10:]))
 }
@@ -135,7 +156,7 @@ func (s *ALine) Displays_set_content_space_padded_to_line_width(t *T) {
 func (s *ALine) Truncates_line_with_width_overflowing_content(t *T) {
 	_, fx := fx(t)
 	fx.set("01234567890123456789012")
-	got, _ := fx.display(fx.width(), fx.dflt)
+	got, _ := fx.display(fx.width(), fx.gg)
 	t.Eq("01234567890123456789", string(got))
 }
 
@@ -147,7 +168,7 @@ func (s *ALine) Displays_content_with_set_style(t *T) {
 	for _, c := range scrLine {
 		switch c.Rune {
 		case ' ':
-			t.True(c.Style.Equals(fx.dflt))
+			t.True(c.Style.Equals(fx.gg.style))
 		default:
 			t.True(c.Style.Equals(exp))
 		}
@@ -157,7 +178,7 @@ func (s *ALine) Displays_content_with_set_style(t *T) {
 func (s *ALine) Has_content_set_at_zero_position(t *T) {
 	_, fx := fx(t)
 	fx.setAt(0, []rune("0123456789"))
-	got, _ := fx.display(fx.width(), fx.dflt)
+	got, _ := fx.display(fx.width(), fx.gg)
 	t.Eq("0123456789", string(got[:10]))
 	t.Eq("          ", string(got[10:]))
 }
@@ -165,7 +186,7 @@ func (s *ALine) Has_content_set_at_zero_position(t *T) {
 func (s *ALine) Has_content_set_at_given_position_space_padded(t *T) {
 	_, fx := fx(t)
 	fx.setAt(10, []rune("0123456789"))
-	got, _ := fx.display(fx.width(), fx.dflt)
+	got, _ := fx.display(fx.width(), fx.gg)
 	t.Eq("          ", string(got[:10]))
 	t.Eq("0123456789", string(got[10:]))
 }
@@ -178,7 +199,7 @@ func (s *ALine) Styles_content_set_at_given_position(t *T) {
 	for _, c := range scrLine {
 		switch c.Rune {
 		case ' ':
-			t.True(c.Style.Equals(fx.dflt))
+			t.True(c.Style.Equals(fx.gg.style))
 		default:
 			t.True(c.Style.Equals(exp))
 		}
@@ -188,11 +209,11 @@ func (s *ALine) Styles_content_set_at_given_position(t *T) {
 func (s *ALine) Overwrites_content_after_given_position(t *T) {
 	_, fx := fx(t)
 	fx.set("0123456789")
-	got, _ := fx.display(10, fx.dflt)
+	got, _ := fx.display(10, fx.gg)
 	t.Eq("0123456789", string(got))
 
 	fx.setAt(2, []rune("42"))
-	got, _ = fx.display(10, fx.dflt)
+	got, _ = fx.display(10, fx.gg)
 	t.Eq("0142      ", string(got))
 }
 
@@ -200,25 +221,25 @@ func (s *ALine) Fills_remaining_space_with_a_filling_rune(t *T) {
 	_, fx := fx(t)
 	fx.setAtFilling(0, 'a')
 	fx.setAt(1, []rune("0123456789"))
-	got, _ := fx.display(fx.width(), fx.dflt)
+	got, _ := fx.display(fx.width(), fx.gg)
 	t.Eq("aaaaaaaaaa0123456789", string(got))
 	fx.set("01234")
 	fx.setAtFilling(5, 'a')
 	fx.setAt(6, []rune("56789"))
-	got, _ = fx.display(fx.width(), fx.dflt)
+	got, _ = fx.display(fx.width(), fx.gg)
 	t.Eq("01234aaaaaaaaaa56789", string(got))
 	fx.setAt(0, []rune("0123456789")) // test filler truncation
 	fx.setAtFilling(10, 'a')
-	got, _ = fx.display(fx.width(), fx.dflt)
+	got, _ = fx.display(fx.width(), fx.gg)
 	t.Eq("0123456789aaaaaaaaaa", string(got))
 }
 
-func (s *ALine) Styles_filling_runes_with_set_style(t *T) {
+func (s *ALine) Expands_filler_style_preserving(t *T) {
 	s1, s2 := NewStyle(Blink, Yellow, Blue), NewStyle(Dim, Green, Red)
 	_, fx := fx(t)
 	fx.setStyledAtFilling(0, 'a', s1)
 	fx.setAt(1, []rune("0123456789"))
-	_, ss := fx.display(fx.width(), fx.dflt)
+	_, ss := fx.display(fx.width(), fx.gg)
 	for r, s := range ss {
 		switch r.End() {
 		case 10:
@@ -226,18 +247,18 @@ func (s *ALine) Styles_filling_runes_with_set_style(t *T) {
 			s.Equals(s1)
 		case 20:
 			t.Eq(10, r.Start())
-			s.Equals(fx.dflt)
+			s.Equals(fx.gg.style)
 		}
 	}
 	fx.set("01234")
 	fx.setStyledAtFilling(5, 'a', s1)
 	fx.setStyledAt(6, []rune("56789"), s2)
-	_, ss = fx.display(fx.width(), fx.dflt)
+	_, ss = fx.display(fx.width(), fx.gg)
 	for r, s := range ss {
 		switch r.End() {
 		case 5:
 			t.Eq(0, r.Start())
-			s.Equals(fx.dflt)
+			s.Equals(fx.gg.style)
 		case 15:
 			t.Eq(5, r.Start())
 			s.Equals(s1)
@@ -248,15 +269,153 @@ func (s *ALine) Styles_filling_runes_with_set_style(t *T) {
 	}
 	fx.setAt(0, []rune("0123456789"))
 	fx.setStyledAtFilling(10, 'a', s1)
-	_, ss = fx.display(fx.width(), fx.dflt)
+	_, ss = fx.display(fx.width(), fx.gg)
 	for r, s := range ss {
 		switch r.End() {
 		case 10:
 			t.Eq(0, r.Start())
-			s.Equals(fx.dflt)
+			s.Equals(fx.gg.style)
 		case 20:
 			t.Eq(10, r.Start())
 			s.Equals(s1)
+		}
+	}
+}
+
+func (s *ALine) Expands_leading_tabs_style_preserving(t *T) {
+	s1, s2 := NewStyle(Blink, Yellow, Blue), NewStyle(Dim, Green, Red)
+	tt, fx := fx(t)
+	fx.gg.tabWidth = 5
+	fx.setStyledAt(0, []rune{'\t', '\t'}, s1)
+	fx.setStyledAt(2, []rune("0123456789"), s2)
+
+	l := fx.redraw(tt)
+
+	t.Eq("          0123456789", l.String())
+	for _, c := range l {
+		switch c.Rune {
+		case ' ':
+			t.True(c.Style.Equals(s1))
+		default:
+			t.True(c.Style.Equals(s2))
+		}
+	}
+}
+
+func (s *ALine) Is_highlighted_if_highlight_flag_set(t *T) {
+	tt, fx := fx(t)
+	fx.Switch(Highlighted)
+	fx.gg.style = fx.gg.style.WithAA(Dim)
+	fx.gg.highlight = NewStyle(Dim, RebeccaPurple, DarkGoldenrod)
+	l, hStyle := fx.redraw(tt), fx.highlighted(fx.gg.style)
+	t.Not.True(fx.gg.style.Equals(hStyle))
+	for _, c := range l {
+		t.True(c.Style.Equals(hStyle))
+	}
+	fx.Switch(Highlighted | TrimmedHighlighted)
+	l = fx.redraw(tt)
+	for _, c := range l {
+		t.True(c.Style.Equals(hStyle))
+	}
+}
+
+func (s *ALine) Is_highlighted_trimmed_if_corresponding_flag_set(t *T) {
+	tt, fx := fx(t)
+	fx.Switch(TrimmedHighlighted)
+	fx.setAt(4, []rune("0123456789"))
+	l, hStyle := fx.redraw(tt), fx.highlighted(fx.gg.style)
+	t.Not.True(fx.gg.style.Equals(hStyle))
+	for _, c := range l {
+		switch c.Rune {
+		case ' ':
+			c.Style.Equals(fx.gg.style)
+		default:
+			c.Style.Equals(hStyle)
+		}
+	}
+}
+
+func (s *ALine) Adapts_styles_overlapping_trimmed_highlighted_range(t *T) {
+	s1, s2 := NewStyle(Blink, Yellow, Blue), NewStyle(Dim, Green, Red)
+	tt, fx := fx(t)
+	fx.Switch(TrimmedHighlighted)
+	fx.setStyledAt(2, []rune("  012"), s1)
+	fx.setAt(7, []rune("3456"))
+	fx.setStyledAt(11, []rune("789  "), s2)
+	hs, hs1, hs2 := fx.highlighted(fx.gg.style), fx.highlighted(s1),
+		fx.highlighted(s2)
+	l := fx.redraw(tt)
+	for i, c := range l {
+		switch i {
+		case 0, 1:
+			t.True(c.Style.Equals(fx.gg.style))
+		case 2, 3:
+			t.True(c.Style.Equals(s1))
+		case 4, 5, 6:
+			t.True(c.Style.Equals(hs1))
+		case 7, 8, 9, 10:
+			t.True(c.Style.Equals(hs))
+		case 11, 12, 13:
+			t.True(c.Style.Equals(hs2))
+		case 14, 15:
+			t.True(c.Style.Equals(s2))
+		default:
+			t.True(c.Style.Equals(fx.gg.style))
+		}
+	}
+}
+
+func (s *ALine) Adapts_enclosed_styles_in_trimmed_highlighted(t *T) {
+	s1, s2 := NewStyle(Blink, Yellow, Blue), NewStyle(Dim, Green, Red)
+	tt, fx := fx(t)
+	fx.Switch(TrimmedHighlighted)
+	fx.setAt(4, []rune("01"))
+	fx.setStyledAt(6, []rune("23"), s1)
+	fx.setAt(8, []rune("456"))
+	fx.setStyledAt(11, []rune("78"), s2)
+	fx.setAt(13, []rune("9"))
+	hs, hs1, hs2 := fx.highlighted(fx.gg.style), fx.highlighted(s1),
+		fx.highlighted(s2)
+	l := fx.redraw(tt)
+	for i, c := range l {
+		switch i {
+		case 0, 1, 2, 3:
+			t.True(c.Style.Equals(fx.gg.style))
+		case 4, 5:
+			t.True(c.Style.Equals(hs))
+		case 6, 7:
+			t.True(c.Style.Equals(hs1))
+		case 8, 9, 10:
+			t.True(c.Style.Equals(hs))
+		case 11, 12:
+			t.True(c.Style.Equals(hs2))
+		case 13:
+			t.True(c.Style.Equals(hs))
+		default:
+			t.True(c.Style.Equals(fx.gg.style))
+		}
+	}
+}
+
+func (s *ALine) Adapts_enclosing_style_of_trimmed_highlighted(t *T) {
+	s1 := NewStyle(Blink, Yellow, Blue)
+	tt, fx := fx(t)
+	fx.Switch(TrimmedHighlighted)
+	fx.setStyledAt(3, []rune(" 0123456789 "), s1)
+	hs1 := fx.highlighted(s1)
+	l := fx.redraw(tt)
+	for i, c := range l {
+		switch i {
+		case 0, 1, 2:
+			t.True(c.Style.Equals(fx.gg.style))
+		case 3:
+			t.True(c.Style.Equals(s1))
+		case 4, 5, 6, 7, 8, 9, 10, 11, 12, 13:
+			t.True(c.Style.Equals(hs1))
+		case 14:
+			t.True(c.Style.Equals(s1))
+		default:
+			t.True(c.Style.Equals(fx.gg.style))
 		}
 	}
 }

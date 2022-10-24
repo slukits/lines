@@ -16,16 +16,16 @@ const (
 
 type gap struct {
 	gm    gapMask
-	ll    []gapLine
+	ll    []line
 	dirty bool
 }
 
-func (g *gap) ensureLevel(l int) *gapLine {
+func (g *gap) ensureLevel(l int) *line {
 	if len(g.ll) > l {
 		return &g.ll[l]
 	}
 	for i := len(g.ll); i <= l; i++ {
-		g.ll = append(g.ll, gapLine{})
+		g.ll = append(g.ll, line{})
 	}
 	return &g.ll[l]
 }
@@ -95,15 +95,8 @@ func (g *gap) setStyledAtFilling(level, at int, r rune, sty *Style) {
 	g.ensureLevel(level).setStyledAtFilling(at, r, *sty)
 }
 
-func (g *gap) filling(level int, is bool) {
-	if level < 0 || level >= len(g.ll) {
-		return
-	}
-	g.ll[level].filling = is
-}
-
 func (g *gap) sync(
-	x, y, width, height int, rw runeWriter, dflt Style,
+	x, y, width, height int, rw runeWriter, gg *globals,
 ) int {
 
 	if g.dirty {
@@ -112,27 +105,27 @@ func (g *gap) sync(
 
 	switch g.gm & (top | right | bottom | left) {
 	case top:
-		return g.syncTop(x, y, width, height, rw, dflt)
+		return g.syncTop(x, y, width, height, rw, gg)
 	case bottom:
-		return g.syncBottom(x, y, width, height, rw, dflt)
+		return g.syncBottom(x, y, width, height, rw, gg)
 	case left:
-		return g.syncLeft(x, y, width, height, rw, dflt)
+		return g.syncLeft(x, y, width, height, rw, gg)
 	case right:
-		return g.syncRight(x, y, width, height, rw, dflt)
+		return g.syncRight(x, y, width, height, rw, gg)
 	}
 
 	return 0
 }
 
 func (g *gap) syncTop(
-	x, y, width, height int, rw runeWriter, dflt Style,
+	x, y, width, height int, rw runeWriter, gg *globals,
 ) int {
 
 	for i, l := range g.ll {
 		if width <= 0 || i == height {
 			return i
 		}
-		rr, ss := l.display(width, dflt)
+		rr, ss := l.display(width, gg)
 		for j, r := range rr {
 			if j == width {
 				break
@@ -147,13 +140,13 @@ func (g *gap) syncTop(
 }
 
 func (g *gap) syncBottom(
-	x, y, width, height int, rw runeWriter, dflt Style,
+	x, y, width, height int, rw runeWriter, gg *globals,
 ) int {
 	for i, l := range g.ll {
 		if width <= 0 || i == height {
 			return i
 		}
-		rr, ss := l.display(width, dflt)
+		rr, ss := l.display(width, gg)
 		for j, r := range rr {
 			if j == width {
 				break
@@ -168,13 +161,13 @@ func (g *gap) syncBottom(
 }
 
 func (g *gap) syncLeft(
-	x, y, width, height int, rw runeWriter, dflt Style,
+	x, y, width, height int, rw runeWriter, gg *globals,
 ) int {
 	for i, l := range g.ll {
 		if height <= 0 || i == width {
 			return i
 		}
-		rr, ss := l.display(height, dflt)
+		rr, ss := l.display(height, gg)
 		for j, r := range rr {
 			if j == height {
 				break
@@ -188,13 +181,13 @@ func (g *gap) syncLeft(
 }
 
 func (g *gap) syncRight(
-	x, y, width, height int, rw runeWriter, dflt Style,
+	x, y, width, height int, rw runeWriter, gg *globals,
 ) int {
 	for i, l := range g.ll {
 		if height <= 0 || i == width {
 			return i
 		}
-		rr, ss := l.display(height, dflt)
+		rr, ss := l.display(height, gg)
 		for j, r := range rr {
 			if j == height {
 				break

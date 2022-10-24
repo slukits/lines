@@ -73,8 +73,8 @@ func (w *FmtWriter) has(line int) bool {
 
 // LL returns a writer which writes to the line and its following lines
 // at given index.
-func (w *FmtWriter) LL(idx int, ff ...LineFlags) *locWriter {
-	_ff := LineFlags(0)
+func (w *FmtWriter) LL(idx int, ff ...LineFlagsZZZ) *locWriter {
+	_ff := LineFlagsZZZ(0)
 	for _, f := range ff {
 		_ff |= f
 	}
@@ -83,8 +83,8 @@ func (w *FmtWriter) LL(idx int, ff ...LineFlags) *locWriter {
 
 // At sets the collected style attributes and given flags for provided
 // range at given line.
-func (w *FmtWriter) At(line, cell int, ff ...LineFlags) *locWriter {
-	_ff := LineFlags(0)
+func (w *FmtWriter) At(line, cell int, ff ...LineFlagsZZZ) *locWriter {
+	_ff := LineFlagsZZZ(0)
 	for _, f := range ff {
 		_ff |= f
 	}
@@ -104,7 +104,7 @@ func (w *FmtWriter) Write(bb []byte) (int, error) {
 type locWriter struct {
 	sty        Style
 	line, cell int
-	ff         LineFlags
+	ff         LineFlagsZZZ
 	cmp        cmpWriter
 }
 

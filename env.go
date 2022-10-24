@@ -60,7 +60,7 @@ type Env struct {
 }
 
 type cmpWriter interface {
-	write(lines []byte, at, cell int, ff LineFlags, sty Style) (int, error)
+	write(lines []byte, at, cell int, ff LineFlagsZZZ, sty Style) (int, error)
 }
 
 func (e *Env) NewStyle() api.Style { return e.cmp.backend().NewStyle() }
@@ -91,7 +91,7 @@ func (e *Env) AddStyleRange(idx int, sr SR, rr ...SR) {
 	ll[idx].addStyleRange(sr, rr...)
 }
 
-func (e *Env) SetLineFlags(idx int, ff LineFlags) {
+func (e *Env) SetLineFlags(idx int, ff LineFlagsZZZ) {
 	ll := *e.cmp.embedded().ll
 	if idx < 0 || idx > len(ll) {
 		return
@@ -113,8 +113,8 @@ func (e *Env) BG(color Color) *FmtWriter {
 
 // LL returns a writer which writes to the line and its following lines
 // at given index.
-func (e *Env) LL(idx int, ff ...LineFlags) *locWriter {
-	_ff := LineFlags(0)
+func (e *Env) LL(idx int, ff ...LineFlagsZZZ) *locWriter {
+	_ff := LineFlagsZZZ(0)
 	for _, f := range ff {
 		_ff |= f
 	}
@@ -125,8 +125,8 @@ func (e *Env) LL(idx int, ff ...LineFlags) *locWriter {
 
 // At returns a writer which writes to given line at given position
 // adding given line flags to the line's flags.
-func (e *Env) At(line, cell int, ff ...LineFlags) *locWriter {
-	_ff := LineFlags(0)
+func (e *Env) At(line, cell int, ff ...LineFlagsZZZ) *locWriter {
+	_ff := LineFlagsZZZ(0)
 	for _, f := range ff {
 		_ff |= f
 	}

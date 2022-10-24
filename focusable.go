@@ -26,7 +26,7 @@ func (s *LineFocus) Next(highlighted bool) int {
 	}
 	old := s.current
 	for idx, l := range (*s.c.ll)[s.current+1:] {
-		if l.ff&NotFocusable == NotFocusable {
+		if l.ff&NotFocusableZZZ == NotFocusableZZZ {
 			continue
 		}
 		if s.current >= 0 && highlighted {
@@ -53,7 +53,7 @@ func (s *LineFocus) Previous(highlighted bool) int {
 	}
 	old := s.current
 	for i := initI; i >= 0; i-- {
-		if (*s.c.ll)[i].ff&NotFocusable == NotFocusable {
+		if (*s.c.ll)[i].ff&NotFocusableZZZ == NotFocusableZZZ {
 			continue
 		}
 		if s.current >= 0 && highlighted {

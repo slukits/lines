@@ -89,7 +89,7 @@ func (c *Component) initialize(
 	inner := &component{
 		dim:     lyt.DimFilling(1, 1),
 		ll:      &lines{},
-		globals: &globals{tabWidth: 4},
+		globals: &globals{style: DefaultStyle, tabWidth: 4},
 		fmt:     llFmt{sty: backend.NewStyle()},
 		userCmp: userComponent,
 		mod:     Overwriting,
@@ -179,6 +179,14 @@ type component struct {
 	slctd int
 }
 
+// globals represents settings which apply for all lines of a component.
+type globals struct {
+	tabWidth  int
+	style     Style
+	highlight Style
+	fmt       FmtMask
+}
+
 // component gets the component out of a layoutComponenter without using
 // a type-switch.
 func (c *component) wrapped() *component { return c }
@@ -203,11 +211,6 @@ func (c *component) ensureListeners() {
 		return
 	}
 	c.lst = &listeners{}
-}
-
-// globals represents settings which apply for all lines of a component.
-type globals struct {
-	tabWidth int
 }
 
 // layoutComponenter combines the user-provided component with its
