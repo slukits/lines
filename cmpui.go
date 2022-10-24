@@ -59,7 +59,8 @@ func (c *component) Len() int {
 // IsDirty is true if this component is flagged dirty or one of its
 // lines.
 func (c *component) IsDirty() bool {
-	return c.ll.IsDirty() || c.gg.isDirty() || c.dirty
+	ll, gg := c.ll.IsDirty(), c.gg.isDirty()
+	return ll || gg || c.dirty
 }
 
 // SetDirty flags a component as dirty having the effect that at the
@@ -137,6 +138,8 @@ func (c *component) sync(rw runeWriter) {
 	if c.gg != nil && c.gg.isDirty() {
 		sx, sy, sw, sh = c.gg.sync(sx, sy, sw, sh, rw, c.globals)
 	}
+	gg := c.gg.isDirty()
+	_ = gg
 	if sw <= 0 || sh <= 0 {
 		return
 	}

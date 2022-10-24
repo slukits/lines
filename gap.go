@@ -15,93 +15,69 @@ const (
 )
 
 type gap struct {
-	gm    gapMask
-	ll    []line
-	dirty bool
+	gm gapMask
+	ll []*line
 }
 
 func (g *gap) ensureLevel(l int) *line {
 	if len(g.ll) > l {
-		return &g.ll[l]
+		return g.ll[l]
 	}
 	for i := len(g.ll); i <= l; i++ {
-		g.ll = append(g.ll, line{})
+		g.ll = append(g.ll, &line{ff: dirty})
 	}
-	return &g.ll[l]
+	return g.ll[l]
 }
 
 func (g *gap) setDefaultStyle(level int, s Style) {
-	if !g.dirty {
-		g.dirty = true
-	}
 	g.ensureLevel(level).setDefaultStyle(s)
 }
 
 func (g *gap) withAA(level int, aa StyleAttributeMask) {
-	if !g.dirty {
-		g.dirty = true
-	}
 	g.ensureLevel(level).withAA(aa)
 }
 
 func (g *gap) withFG(level int, c Color) {
-	if !g.dirty {
-		g.dirty = true
-	}
 	g.ensureLevel(level).withFG(c)
 }
 
 func (g *gap) withBG(level int, c Color) {
-	if !g.dirty {
-		g.dirty = true
-	}
 	g.ensureLevel(level).withBG(c)
 }
 
-func (g *gap) isDirty() bool { return g.dirty }
+func (g *gap) isDirty() bool {
+	for _, l := range g.ll {
+		if !l.isDirty() {
+			continue
+		}
+		return true
+	}
+	return false
+}
 
 func (g *gap) set(level int, s string) {
-	if !g.dirty {
-		g.dirty = true
-	}
 	g.ensureLevel(level).set(s)
 }
 
 func (g *gap) setAt(level, at int, rr []rune) {
-	if !g.dirty {
-		g.dirty = true
-	}
 	g.ensureLevel(level).setAt(at, rr)
 }
 
 func (g *gap) setStyledAt(level, at int, rr []rune, sty *Style) {
-	if !g.dirty {
-		g.dirty = true
-	}
 	g.ensureLevel(level).setStyledAt(at, rr, *sty)
 }
 
 func (g *gap) setAtFilling(level, at int, r rune) {
-	if !g.dirty {
-		g.dirty = true
-	}
 	g.ensureLevel(level).setAtFilling(at, r)
 }
 
 func (g *gap) setStyledAtFilling(level, at int, r rune, sty *Style) {
-	if !g.dirty {
-		g.dirty = true
-	}
 	g.ensureLevel(level).setStyledAtFilling(at, r, *sty)
 }
 
 func (g *gap) sync(
 	x, y, width, height int, rw runeWriter, gg *globals,
 ) int {
-
-	if g.dirty {
-		g.dirty = false
-	}
 
 	switch g.gm & (top | right | bottom | left) {
 	case top:
@@ -125,13 +101,7 @@ func (g *gap) syncTop(
 		if width <= 0 || i == height {
 			return i
 		}
-		rr, ss := l.display(width, gg)
-		for j, r := range rr {
-			if j == width {
-				break
-			}
-			rw.Display(x+j, y+i, r, ss.of(j))
-		}
+		l.sync(x, y+i, width, rw, gg)
 		x++
 		width -= 2
 	}
@@ -146,13 +116,7 @@ func (g *gap) syncBottom(
 		if width <= 0 || i == height {
 			return i
 		}
-		rr, ss := l.display(width, gg)
-		for j, r := range rr {
-			if j == width {
-				break
-			}
-			rw.Display(x+j, y+height-(i+1), r, ss.of(j))
-		}
+		l.sync(x, y+height-(i+1), width, rw, gg)
 		x++
 		width -= 2
 	}
@@ -167,13 +131,7 @@ func (g *gap) syncLeft(
 		if height <= 0 || i == width {
 			return i
 		}
-		rr, ss := l.display(height, gg)
-		for j, r := range rr {
-			if j == height {
-				break
-			}
-			rw.Display(x+i, y+j, r, ss.of(j))
-		}
+		l.vsync(x+i, y, height, rw, gg)
 		y++
 		height -= 2
 	}
@@ -187,13 +145,7 @@ func (g *gap) syncRight(
 		if height <= 0 || i == width {
 			return i
 		}
-		rr, ss := l.display(height, gg)
-		for j, r := range rr {
-			if j == height {
-				break
-			}
-			rw.Display(x+width-(i+1), y+j, r, ss.of(j))
-		}
+		l.vsync(x+width-(i+1), y, height, rw, gg)
 		y++
 		height -= 2
 	}

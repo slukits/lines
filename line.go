@@ -70,6 +70,13 @@ func (l *line) setDirty() {
 	l.ff |= dirty
 }
 
+func (l *line) setClean() {
+	if !l.isDirty() {
+		return
+	}
+	l.ff &^= dirty
+}
+
 // isDirty returns true if the dirty flag is set.
 func (l *line) isDirty() bool {
 	return l.ff&dirty != 0
@@ -79,6 +86,7 @@ func (l *line) isDirty() bool {
 // ranges.
 func (l *line) setDefaultStyle(s Style) {
 	l.ss = newStyleRanges(s)
+	l.setDirty()
 }
 
 // ensureStyleRanges returns given line l's style ranges and initializes
@@ -95,6 +103,7 @@ func (l *line) ensureStyleRanges() styleRanges {
 // DefaultStyle is used and modified with given attributes.
 func (l *line) withAA(aa StyleAttributeMask) {
 	l.ensureStyleRanges().withAA(aa)
+	l.setDirty()
 }
 
 // withFG sets of given line l its default style's foreground color.
@@ -102,6 +111,7 @@ func (l *line) withAA(aa StyleAttributeMask) {
 // DefaultStyle is used and modified with given foreground color.
 func (l *line) withFG(c Color) {
 	l.ensureStyleRanges().withFG(c)
+	l.setDirty()
 }
 
 // withBG sets of given line l its default style's background color.
@@ -109,6 +119,7 @@ func (l *line) withFG(c Color) {
 // DefaultStyle is used and modified with given background color.
 func (l *line) withBG(c Color) {
 	l.ensureStyleRanges().withBG(c)
+	l.setDirty()
 }
 
 // set sets given line l's content converting given string s to a rune
@@ -118,6 +129,10 @@ func (l *line) set(s string) {
 	if len(l.fillAt) > 0 {
 		l.fillAt = []int{}
 	}
+	if len(l.ss) > 0 {
+		l.ss = nil
+	}
+	l.setDirty()
 }
 
 // setStyled sets given line l's content to the conversion of given
@@ -129,6 +144,7 @@ func (l *line) set(s string) {
 func (l *line) setStyled(s string, sty Style) {
 	l.set(s)
 	l.ss = styleRanges{Range{0, len(l.rr)}: sty}
+	l.setDirty()
 }
 
 // setAt sets given rune slice rr at given position p in given line l's
@@ -138,6 +154,7 @@ func (l *line) setAt(p int, rr []rune) {
 	l.padTo(p)
 	l.rr = append(l.rr[:p], rr...)
 	l.truncateAt(p)
+	l.setDirty()
 }
 
 // truncateAt truncates fillers and styles at and after given position
@@ -172,6 +189,7 @@ func (l *line) setStyledAt(at int, rr []rune, sty Style) {
 		l.ss = styleRanges{}
 	}
 	l.ss[Range{at, at + len(rr)}] = sty
+	l.setDirty()
 }
 
 // setAtFilling sets given rune r at given position p of given line l's
@@ -181,6 +199,7 @@ func (l *line) setAtFilling(p int, r rune) {
 	l.truncateAt(p)
 	l.rr = append(l.rr[:p], r)
 	l.fillAt = append(l.fillAt, p)
+	l.setDirty()
 }
 
 // setStyledAtFilling sets given rune r at given position p of given
@@ -192,6 +211,45 @@ func (l *line) setStyledAtFilling(at int, r rune, sty Style) {
 		l.ss = styleRanges{}
 	}
 	l.ss[Range{at, at + 1}] = sty
+	l.setDirty()
+}
+
+// addStyleRange adds given style ranges sr and rr to given line l's
+// style ranges iff they don't overlap with already existing style ranges.
+func (l *line) addStyleRange(sr SR, rr ...SR) {
+	if l.ss == nil {
+		l.ss = styleRanges{}
+	}
+	l.ss.add(sr.Range, sr.Style)
+	for _, r := range rr {
+		l.ss.add(r.Range, r.Style)
+	}
+	l.setDirty()
+}
+
+// sync writes given line l's expanded and styled runes at coordinates x
+// and y to the screen with given rune writer rw.  Is l wider than given
+// width w it is truncated at w.
+func (l *line) sync(x, y, width int, rw runeWriter, gg *globals) {
+	l.setClean()
+	rr, ss := l.display(width, gg)
+	for i, r := range rr {
+		if i == width {
+			break
+		}
+		rw.Display(x+i, y, r, ss.of(i))
+	}
+}
+
+func (l *line) vsync(x, y, height int, rw runeWriter, gg *globals) {
+	l.setClean()
+	rr, ss := l.display(height, gg)
+	for i, r := range rr {
+		if i == height {
+			break
+		}
+		rw.Display(x, y+i, r, ss.of(i))
+	}
 }
 
 // display returns a line's calculated content depending on given width

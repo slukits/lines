@@ -141,6 +141,26 @@ func (s styleRanges) copy() styleRanges {
 	return cp
 }
 
+// add adds to given style ranges sr given range r and style s iff r
+// doesn't overlap any ranges in sr.
+func (sr styleRanges) add(r Range, s Style) {
+	if sr.isOverlapping(r) {
+		return
+	}
+	sr[r] = s
+}
+
+// isOverlapping returns true if given range r's start- or end-point is
+// contained in a range of given style ranges sr; false otherwise.
+func (sr styleRanges) isOverlapping(r Range) bool {
+	for r := range sr {
+		if r.contains(r.Start()) || r.contains(r.End()) {
+			return true
+		}
+	}
+	return false
+}
+
 // copyWithDefault returns a shallow copy of given style ranges s
 // setting given style dflt as its default style iff s doesn't have a
 // default.

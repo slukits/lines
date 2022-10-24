@@ -28,7 +28,8 @@ func (gg *gaps) isDirty() bool {
 	if gg == nil {
 		return false
 	}
-	return gg.top.isDirty() || gg.right.isDirty() ||
+	top := gg.top.isDirty()
+	return top || gg.right.isDirty() ||
 		gg.bottom.isDirty() || gg.left.isDirty() ||
 		gg.topLeft.isDirty() || gg.topRight.isDirty() ||
 		gg.bottomRight.isDirty() || gg.bottomLeft.isDirty()
