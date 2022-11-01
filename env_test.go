@@ -89,71 +89,71 @@ func (s *env) Overwrites_given_line_and_following(t *T) {
 	t.Eq(strings.TrimSpace(sl[8]), "ninth line")
 }
 
-func (s *env) Changes_fore_and_background_for_line_s_content(t *T) {
-	tt := s.tt(t, &icmpFX{init: func(_ *icmpFX, e *Env) {
-		fmt.Fprint(e.BG(Red).FG(White),
-			"text with read back- and white foreground")
-	}})
-	l := tt.Cells()[0]
-	str := strings.TrimSpace(l.String())
-	for i := range str {
-		t.True(l.HasBG(i, Red))
-		t.True(l.HasFG(i, White))
-		t.Eq(l[i].Rune, int32(str[i]))
-	}
-}
-
-func (s *env) Changes_fore_and_background_for_whole_line(t *T) {
-	tt := s.tt(t, &icmpFX{init: func(_ *icmpFX, e *Env) {
-		fmt.Fprint(e.BG(Red).FG(White).LL(0), "line with space")
-	}})
-	l0 := tt.Cells()[0]
-	for i := range l0 {
-		t.True(l0.HasBG(i, Red))
-		t.True(l0.HasFG(i, White))
-	}
-}
-
-func (s *env) Changes_fore_and_background_for_partial_line(t *T) {
-	tt := s.tt(t, &icmpFX{init: func(_ *icmpFX, e *Env) {
-		fmt.Fprint(e.BG(Red).FG(White).At(0, 0), "un-filled with space")
-		fmt.Fprint(e.BG(Red).FG(White).LL(1), "filled with space")
-	}})
-
-	l0 := tt.Cells()[0]
-	for i := range l0 {
-		if l0[i].Rune != ' ' || len(l0) > i+1 && l0[i+1].Rune != ' ' {
-			t.True(l0.HasBG(i, Red))
-			t.True(l0.HasFG(i, White))
-			continue
-		}
-		t.Not.True(l0.HasBG(i, Red))
-		t.Not.True(l0.HasFG(i, White))
-	}
-
-	l1 := tt.Cells()[1]
-	for i := range l1 {
-		t.True(l1.HasBG(i, Red))
-		t.True(l1.HasFG(i, White))
-	}
-}
-
-func (s *env) Changes_line_style_for_a_range_of_runes(t *T) {
-	tt := s.tt(t, &icmpFX{init: func(_ *icmpFX, e *Env) {
-		fmt.Fprint(e, "\t")
-		fmt.Fprint(e.FG(White).BG(Red).At(0, 1), "red")
-		fmt.Fprint(e.At(0, 1+len("red")), LineFiller+"right")
-	}})
-	l0, exp := tt.Cells()[0], Range{4, 7}
-	str := l0.String()
-	for i := range str {
-		if exp.contains(i) {
-			t.True(l0.HasBG(i, Red))
-			continue
-		}
-		t.Not.True(l0.HasBG(i, Red))
-	}
-}
+// func (s *env) Changes_fore_and_background_for_line_s_content(t *T) {
+// 	tt := s.tt(t, &icmpFX{init: func(_ *icmpFX, e *Env) {
+// 		fmt.Fprint(e.BG(Red).FG(White),
+// 			"text with read back- and white foreground")
+// 	}})
+// 	l := tt.Cells()[0]
+// 	str := strings.TrimSpace(l.String())
+// 	for i := range str {
+// 		t.True(l.HasBG(i, Red))
+// 		t.True(l.HasFG(i, White))
+// 		t.Eq(l[i].Rune, int32(str[i]))
+// 	}
+// }
+//
+// func (s *env) Changes_fore_and_background_for_whole_line(t *T) {
+// 	tt := s.tt(t, &icmpFX{init: func(_ *icmpFX, e *Env) {
+// 		fmt.Fprint(e.BG(Red).FG(White).LL(0), "line with space")
+// 	}})
+// 	l0 := tt.Cells()[0]
+// 	for i := range l0 {
+// 		t.True(l0.HasBG(i, Red))
+// 		t.True(l0.HasFG(i, White))
+// 	}
+// }
+//
+// func (s *env) Changes_fore_and_background_for_partial_line(t *T) {
+// 	tt := s.tt(t, &icmpFX{init: func(_ *icmpFX, e *Env) {
+// 		fmt.Fprint(e.BG(Red).FG(White).At(0, 0), "un-filled with space")
+// 		fmt.Fprint(e.BG(Red).FG(White).LL(1), "filled with space")
+// 	}})
+//
+// 	l0 := tt.Cells()[0]
+// 	for i := range l0 {
+// 		if l0[i].Rune != ' ' || len(l0) > i+1 && l0[i+1].Rune != ' ' {
+// 			t.True(l0.HasBG(i, Red))
+// 			t.True(l0.HasFG(i, White))
+// 			continue
+// 		}
+// 		t.Not.True(l0.HasBG(i, Red))
+// 		t.Not.True(l0.HasFG(i, White))
+// 	}
+//
+// 	l1 := tt.Cells()[1]
+// 	for i := range l1 {
+// 		t.True(l1.HasBG(i, Red))
+// 		t.True(l1.HasFG(i, White))
+// 	}
+// }
+//
+// func (s *env) Changes_line_style_for_a_range_of_runes(t *T) {
+// 	tt := s.tt(t, &icmpFX{init: func(_ *icmpFX, e *Env) {
+// 		fmt.Fprint(e, "\t")
+// 		fmt.Fprint(e.FG(White).BG(Red).At(0, 1), "red")
+// 		fmt.Fprint(e.At(0, 1+len("red")), LineFiller+"right")
+// 	}})
+// 	l0, exp := tt.Cells()[0], Range{4, 7}
+// 	str := l0.String()
+// 	for i := range str {
+// 		if exp.contains(i) {
+// 			t.True(l0.HasBG(i, Red))
+// 			continue
+// 		}
+// 		t.Not.True(l0.HasBG(i, Red))
+// 	}
+// }
 
 func TestEnv(t *testing.T) {
 	t.Parallel()

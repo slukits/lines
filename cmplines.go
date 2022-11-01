@@ -29,49 +29,65 @@ type ComponentLines struct {
 	Focus *LineFocus
 }
 
-func (cll *ComponentLines) By(idx int) *cmpLine { return (*cll.c.ll)[idx] }
+func (cll *ComponentLines) By(idx int) *line { return (*cll.c.ll)[idx] }
 
 func newComponentLines(c *Component) *ComponentLines {
 	return &ComponentLines{c: c, Focus: &LineFocus{c: c, current: -1}}
 }
 
-type lines []*cmpLine
+type lines []*line
 
 // append given content lines to current content
 func (ll *lines) append(
-	lnFactory func() *cmpLine,
-	ff LineFlagsZZZ,
-	sty Style,
-	cc ...[]byte,
+	ff LineFlags, sty *Style, cc ...[]byte,
 ) {
 
 	for _, c := range cc {
-		l := lnFactory()
-		l.content = string(c)
-		l.ff = ff
-		l.sty = sty
-		*ll = append(*ll, l)
+		l := line{rr: []rune(string(c)), ff: ff | dirty}
+		if sty != nil {
+			l.setDefaultStyle(*sty)
+		}
+		*ll = append(*ll, &l)
 	}
 }
 
 // replaceAt replaces starting at given index the following lines with
 // given content lines.  replaceAt is a no-op if idx < 0 or len(cc) == 0
 func (ll *lines) replaceAt(
-	lnFactory func() *cmpLine,
 	idx, cell int,
-	ff LineFlagsZZZ,
-	sty Style,
+	ff LineFlags,
+	sty *Style,
 	cc ...[]byte,
 ) {
 	if idx < 0 || len(cc) == 0 {
 		return
 	}
 	for idx+len(cc) > len(*ll) {
-		*ll = append(*ll, lnFactory())
+		l := line{ff: ff | dirty}
+		*ll = append(*ll, &l)
 	}
-	for i, j := idx, 0; i < idx+len(cc); i++ {
-		(*ll)[i].replaceAt(cell, string(cc[j]), sty, ff)
-		j++
+	l := (*ll)[idx]
+	if sty == nil {
+		l.setAt(cell, []rune(string(cc[0])))
+	} else {
+		l.setStyledAt(cell, []rune(string(cc[0])), *sty)
+	}
+	if ff != ZeroLineFlag {
+		l.ff = ff
+	}
+	if len(cc) < 2 {
+		return
+	}
+	for i := 1; i < len(cc); i++ {
+		l := (*ll)[idx+i]
+		if sty == nil {
+			l.set(string(cc[i]))
+		} else {
+			l.setStyled(string(cc[i]), *sty)
+		}
+		if ff != ZeroLineFlag {
+			l.ff = ff
+		}
 	}
 }
 
@@ -81,7 +97,7 @@ func (ll lines) IsDirty() bool {
 		return false
 	}
 	for _, l := range ll {
-		if !l.dirty {
+		if !l.isDirty() {
 			continue
 		}
 		return true
@@ -90,9 +106,9 @@ func (ll lines) IsDirty() bool {
 }
 
 // ForDirty calls back for every dirty line.
-func (ll lines) ForDirty(offset int, cb func(int, *cmpLine) (stop bool)) {
+func (ll lines) ForDirty(offset int, cb func(int, *line) (stop bool)) {
 	for i, l := range ll[offset:] {
-		if !l.dirty {
+		if !l.isDirty() {
 			continue
 		}
 		if cb(i, l) {
@@ -103,7 +119,7 @@ func (ll lines) ForDirty(offset int, cb func(int, *cmpLine) (stop bool)) {
 
 // For calls back for every line of given lines ll starting at given
 // offset.
-func (ll lines) For(offset int, cb func(int, *cmpLine) (stop bool)) {
+func (ll lines) For(offset int, cb func(int, *line) (stop bool)) {
 	for i, l := range ll[offset:] {
 		if cb(i, l) {
 			return

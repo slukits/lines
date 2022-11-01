@@ -84,12 +84,12 @@ const All = -1
 // lines index is -1 (see All-constant) Rest scrolls to the top,
 // truncates its lines to the screen-area-height and resets the
 // remaining lines.
-func (c *component) Reset(idx int, ff ...LineFlagsZZZ) {
+func (c *component) Reset(idx int, ff ...LineFlags) {
 	if idx < -1 || idx >= c.Len() {
 		return
 	}
 
-	_ff := LineFlagsZZZ(0)
+	_ff := LineFlags(0)
 	for _, f := range ff {
 		_ff |= f
 	}
@@ -102,12 +102,12 @@ func (c *component) Reset(idx int, ff ...LineFlagsZZZ) {
 			c.ll = &ll
 		}
 		for _, l := range *c.ll {
-			l.reset(c.fmt.sty, _ff)
+			l.reset(_ff, nil)
 		}
 		return
 	}
 
-	(*c.ll)[idx].reset(c.fmt.sty, _ff)
+	(*c.ll)[idx].reset(_ff, nil)
 }
 
 // hardSync clears the screen area of receiving component before its
@@ -143,11 +143,11 @@ func (c *component) sync(rw runeWriter) {
 	if sw <= 0 || sh <= 0 {
 		return
 	}
-	c.ll.ForDirty(c.first, func(i int, l *cmpLine) (stop bool) {
+	c.ll.ForDirty(c.first, func(i int, l *line) (stop bool) {
 		if i >= sh {
 			return true
 		}
-		l.sync(sx, sy+i, sw, rw)
+		l.sync(sx, sy+i, sw, rw, c.globals)
 		return false
 	})
 }
@@ -168,11 +168,11 @@ func (c *component) syncCleared(rw runeWriter) {
 	if sw <= 0 || sh <= 0 {
 		return
 	}
-	c.ll.For(c.first, func(i int, l *cmpLine) (stop bool) {
+	c.ll.For(c.first, func(i int, l *line) (stop bool) {
 		if i >= sh {
 			return true
 		}
-		l.sync(sx, sy+i, sw, rw)
+		l.sync(sx, sy+i, sw, rw, c.globals)
 		return false
 	})
 }
@@ -192,28 +192,20 @@ func (c *component) setFirst(f int) {
 }
 
 func (c *component) write(
-	bb []byte, line, cell int, ff LineFlagsZZZ, sty Style,
+	bb []byte, line, cell int, ff LineFlags, sty *Style,
 ) (int, error) {
 	switch {
 	case c.mod&(Appending|Tailing) != 0:
 		c.ll.append(
-			c.lineFactory, ff, sty, bytes.Split(bb, []byte("\n"))...)
+			ff, sty, bytes.Split(bb, []byte("\n"))...)
 	default:
 		if line == -1 {
 			c.Reset(line)
 			line = 0
 		}
 		c.ll.replaceAt(
-			c.lineFactory, line, cell, ff, sty,
+			line, cell, ff, sty,
 			bytes.Split(bb, []byte("\n"))...)
 	}
 	return len(bb), nil
-}
-
-func (c *component) lineFactory() *cmpLine {
-	return &cmpLine{
-		sty:    c.fmt.sty,
-		dirty:  true,
-		global: c.globals,
-	}
 }

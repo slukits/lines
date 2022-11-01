@@ -53,7 +53,7 @@ func (w *FmtWriter) Attr(aa StyleAttributeMask) *FmtWriter {
 	return w
 }
 
-func (w *FmtWriter) get(line int) *cmpLine {
+func (w *FmtWriter) get(line int) *line {
 	return (*w.cmp.(Componenter).embedded().ll)[line]
 }
 
@@ -73,8 +73,8 @@ func (w *FmtWriter) has(line int) bool {
 
 // LL returns a writer which writes to the line and its following lines
 // at given index.
-func (w *FmtWriter) LL(idx int, ff ...LineFlagsZZZ) *locWriter {
-	_ff := LineFlagsZZZ(0)
+func (w *FmtWriter) LL(idx int, ff ...LineFlags) *locWriter {
+	_ff := LineFlags(0)
 	for _, f := range ff {
 		_ff |= f
 	}
@@ -83,8 +83,8 @@ func (w *FmtWriter) LL(idx int, ff ...LineFlagsZZZ) *locWriter {
 
 // At sets the collected style attributes and given flags for provided
 // range at given line.
-func (w *FmtWriter) At(line, cell int, ff ...LineFlagsZZZ) *locWriter {
-	_ff := LineFlagsZZZ(0)
+func (w *FmtWriter) At(line, cell int, ff ...LineFlags) *locWriter {
+	_ff := LineFlags(0)
 	for _, f := range ff {
 		_ff |= f
 	}
@@ -94,7 +94,7 @@ func (w *FmtWriter) At(line, cell int, ff ...LineFlagsZZZ) *locWriter {
 // Write to a components screen-portion made available by an Env
 // instance provided to a listener implementation.
 func (w *FmtWriter) Write(bb []byte) (int, error) {
-	return w.cmp.write(bb, 0, -1, 0, w.sty)
+	return w.cmp.write(bb, 0, -1, 0, &w.sty)
 }
 
 // locWriter represents a location writer implementing the writer
@@ -104,11 +104,11 @@ func (w *FmtWriter) Write(bb []byte) (int, error) {
 type locWriter struct {
 	sty        Style
 	line, cell int
-	ff         LineFlagsZZZ
+	ff         LineFlags
 	cmp        cmpWriter
 }
 
 // Write to a specific line an onward.
 func (w *locWriter) Write(bb []byte) (int, error) {
-	return w.cmp.write(bb, w.line, w.cell, w.ff, w.sty)
+	return w.cmp.write(bb, w.line, w.cell, w.ff, &w.sty)
 }

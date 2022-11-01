@@ -22,6 +22,9 @@ const (
 	// TrimmedHighlighted flagged line has additive the global highlight
 	// style applied except on leading and trailing spaces.
 	TrimmedHighlighted
+
+	// ZeroLineFlag is the LineFlags zero type
+	ZeroLineFlag LineFlags = 0
 )
 
 // A line structure stores the content, style-information and line
@@ -34,9 +37,27 @@ type line struct {
 	fillAt []int
 }
 
-// Switch turns given flag(s) of if they are (all) set otherwise these
+func (l *line) reset(ff LineFlags, s *Style) *line {
+	l.ff = ff
+	l.rr = nil
+	if s != nil {
+		l.ss = newStyleRanges(*s)
+	} else {
+		l.ss = nil
+	}
+	l.fillAt = nil
+	l.setDirty()
+	return l
+}
+
+func (l *line) setFlags(ff LineFlags) {
+	l.ff = ff | dirty
+}
+
+// Switch turns given flag(s) on if they are not all set otherwise these
 // flags are removed.
 func (l *line) Switch(ff LineFlags) {
+	l.setDirty()
 	if l.ff&ff == ff {
 		l.ff &^= ff
 		return
@@ -49,7 +70,12 @@ func (l *line) Switch(ff LineFlags) {
 		l.ff &^= TrimmedHighlighted
 	}
 	l.ff |= ff
-	l.setDirty()
+}
+
+// IsFlagged returns true if given line l has given flags ff set; false
+// otherwise.
+func (l *line) IsFlagged(ff LineFlags) bool {
+	return l.ff&ff == ff
 }
 
 // cleanFlagsSwitch removes inconsistent flags preferring usually the
@@ -151,10 +177,18 @@ func (l *line) setStyled(s string, sty Style) {
 // content overwriting what has been at and after this position.  If
 // needed rr is padded with spaces to p.
 func (l *line) setAt(p int, rr []rune) {
+	if p < -1 {
+		return
+	}
+	l.setDirty()
+	if p == -1 {
+		l.rr = rr
+		l.truncateAt(0)
+		return
+	}
 	l.padTo(p)
 	l.rr = append(l.rr[:p], rr...)
 	l.truncateAt(p)
-	l.setDirty()
 }
 
 // truncateAt truncates fillers and styles at and after given position
@@ -185,11 +219,14 @@ func (l *line) truncateAt(p int) {
 // padded with spaces until p.
 func (l *line) setStyledAt(at int, rr []rune, sty Style) {
 	l.setAt(at, rr)
+	if at == -1 {
+		l.setDefaultStyle(sty)
+		return
+	}
 	if l.ss == nil {
 		l.ss = styleRanges{}
 	}
 	l.ss[Range{at, at + len(rr)}] = sty
-	l.setDirty()
 }
 
 // setAtFilling sets given rune r at given position p of given line l's
@@ -227,6 +264,10 @@ func (l *line) addStyleRange(sr SR, rr ...SR) {
 	l.setDirty()
 }
 
+type runeWriter interface {
+	Display(x, y int, r rune, s Style)
+}
+
 // sync writes given line l's expanded and styled runes at coordinates x
 // and y to the screen with given rune writer rw.  Is l wider than given
 // width w it is truncated at w.
@@ -255,15 +296,15 @@ func (l *line) vsync(x, y, height int, rw runeWriter, gg *globals) {
 // display returns a line's calculated content depending on given width
 // and set filler as well as corresponding style ranges ready to print
 // to the screen.
-func (l *line) display(width int, g *globals) ([]rune, styleRanges) {
-	ss := l.ss.copyWithDefault(g.style)
+func (l *line) display(width int, gg *globals) ([]rune, styleRanges) {
+	ss := l.ss.copyWithDefault(gg.style)
 	if len(l.rr) == 0 {
-		return l.displayEmpty(width, g, ss)
+		return l.displayEmpty(width, gg, ss)
 	}
 	rr := append([]rune{}, l.rr...)
-	rr, ss = l.expandLeadingTabs(rr, ss, g.tabWidth)
+	rr, ss = l.expandLeadingTabs(rr, ss, gg.tabWidth)
 	if len(rr) >= width {
-		return l.displayOverflowing(width, g, rr, ss)
+		return l.displayOverflowing(width, gg, rr, ss)
 	}
 	if len(l.fillAt) > 0 {
 		rr, ss = l.expandFillerAt(rr, width, ss)
@@ -272,10 +313,13 @@ func (l *line) display(width int, g *globals) ([]rune, styleRanges) {
 		rr = l.pad(rr, width)
 	}
 	if l.ff&(Highlighted|TrimmedHighlighted) != 0 {
-		ss = l.highlighted(rr, ss, g)
+		ss = l.highlighted(rr, ss, gg)
 	}
 	return rr, ss
 }
+
+// displayEmpty returns width many space runes and adjust styles in case
+// given line l is highlighted.
 func (l *line) displayEmpty(width int, g *globals, ss styleRanges) (
 	[]rune, styleRanges,
 ) {
@@ -286,6 +330,8 @@ func (l *line) displayEmpty(width int, g *globals, ss styleRanges) (
 	return rr, ss
 }
 
+// displayOverflowing trims given runes to given width and adjusts given
+// style ranges ss in case given line l is highlighted.
 func (l *line) displayOverflowing(
 	width int, g *globals, rr []rune, ss styleRanges,
 ) ([]rune, styleRanges) {
@@ -426,6 +472,8 @@ func (l *line) highlightTrimmed(
 	return ss
 }
 
+// highlightStyle returns the highlighted version of given style s by
+// "adding" given style h to it.
 func highlightStyle(s, h Style) Style {
 	if h.AA() != 0 {
 		if s.AA()&h.AA() == 0 {

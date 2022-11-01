@@ -91,7 +91,7 @@ func (s *lineFocus) Focuses_first_focusable_line(t *T) {
 
 	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
 		fx.LL.Focus.Reset(false)
-		fmt.Fprint(e.LL(0, NotFocusableZZZ), "first")
+		fmt.Fprint(e.LL(0, NotFocusable), "first")
 		fmt.Fprint(e.LL(1), "second")
 	}))
 
@@ -103,7 +103,7 @@ func (s *lineFocus) Focuses_next_focusable_line(t *T) {
 	tt, fx := s.lfFX(t,
 		func(c *lfCmpFX, e *Env) {
 			fmt.Fprint(e.LL(0), "first")
-			fmt.Fprint(e.LL(1, NotFocusableZZZ), "second")
+			fmt.Fprint(e.LL(1, NotFocusable), "second")
 			fmt.Fprint(e.LL(2), "third")
 		},
 		func(c *lfCmpFX, e *Env, idx int) {
@@ -140,8 +140,8 @@ func (s *lineFocus) Resets_if_no_next_focusable(t *T) {
 
 	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
 		t.Eq(-1, fx.LL.Focus.Current())
-		fmt.Fprint(e.LL(1, NotFocusableZZZ), "second")
-		fmt.Fprint(e.LL(2, NotFocusableZZZ), "third")
+		fmt.Fprint(e.LL(1, NotFocusable), "second")
+		fmt.Fprint(e.LL(2, NotFocusable), "third")
 	}))
 
 	tt.FireKey(Down)
@@ -172,7 +172,7 @@ func (s *lineFocus) Focuses_previous_focusable_line(t *T) {
 	tt.FireRune('k') // case 2
 
 	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
-		fmt.Fprint(e.LL(0, NotFocusableZZZ), "first")
+		fmt.Fprint(e.LL(0, NotFocusable), "first")
 		fmt.Fprint(e.LL(1), "second")
 		fmt.Fprint(e.LL(2), "third")
 	}))
@@ -210,11 +210,11 @@ func (s *lineFocus) Scrolls_to_next_highlighted_line(t *T) {
 	tt, fx := s.lfFX(t,
 		func(c *lfCmpFX, e *Env) {
 			c.dim.SetHeight(2)
-			fmt.Fprint(e.LL(0, NotFocusableZZZ), "line 1")
-			fmt.Fprint(e.LL(1, NotFocusableZZZ), "line 2")
-			fmt.Fprint(e.LL(2, NotFocusableZZZ), "line 3")
-			fmt.Fprint(e.LL(3, NotFocusableZZZ), "line 4")
-			fmt.Fprint(e.LL(4, NotFocusableZZZ), "line 5")
+			fmt.Fprint(e.LL(0, NotFocusable), "line 1")
+			fmt.Fprint(e.LL(1, NotFocusable), "line 2")
+			fmt.Fprint(e.LL(2, NotFocusable), "line 3")
+			fmt.Fprint(e.LL(3, NotFocusable), "line 4")
+			fmt.Fprint(e.LL(4, NotFocusable), "line 5")
 			fmt.Fprint(e.LL(5), "line 6")
 			fmt.Fprint(e.LL(6), "line 7")
 		},
@@ -233,11 +233,11 @@ func (s *lineFocus) Scrolls_to_previous_highlighted_line(t *T) {
 	tt, fx := s.lfFX(t,
 		func(c *lfCmpFX, e *Env) {
 			c.dim.SetHeight(2)
-			fmt.Fprint(e.LL(0, NotFocusableZZZ), "line 1")
+			fmt.Fprint(e.LL(0, NotFocusable), "line 1")
 			fmt.Fprint(e.LL(1), "line 2")
-			fmt.Fprint(e.LL(2, NotFocusableZZZ), "line 3")
-			fmt.Fprint(e.LL(3, NotFocusableZZZ), "line 4")
-			fmt.Fprint(e.LL(4, NotFocusableZZZ), "line 5")
+			fmt.Fprint(e.LL(2, NotFocusable), "line 3")
+			fmt.Fprint(e.LL(3, NotFocusable), "line 4")
+			fmt.Fprint(e.LL(4, NotFocusable), "line 5")
 			fmt.Fprint(e.LL(5), "line 6")
 			fmt.Fprint(e.LL(6), "line 7")
 		},
@@ -266,7 +266,7 @@ func (s *lineFocus) Inverts_bg_fg_of_focused_if_highlighted(t *T) {
 		func(c *lfCmpFX, e *Env) {
 			c.FF.Add(HighlightedFocusable)
 			c.dim.SetHeight(2)
-			fmt.Fprint(e.LL(0, NotFocusableZZZ), "line 1")
+			fmt.Fprint(e.LL(0, NotFocusable), "line 1")
 			fmt.Fprint(e.LL(1), "line 2")
 		},
 		func(c *lfCmpFX, e *Env, i int) {

@@ -56,26 +56,25 @@ type Env struct {
 	// instance.  NOTE with Evt.Source() a backend event may be accessed.
 	Evt Eventer
 
+	sty   *Style
 	flags envMask
 }
 
 type cmpWriter interface {
-	write(lines []byte, at, cell int, ff LineFlagsZZZ, sty Style) (int, error)
+	write(lines []byte, at, cell int, ff LineFlags, sty *Style) (int, error)
 }
 
 func (e *Env) NewStyle() api.Style { return e.cmp.backend().NewStyle() }
 
-// Write writes to the screen area of the component having given
-// environment.
+// Write given bytes bb to the screen area of the component whose
+// event handler was called with given environment e.  For that purpose
+// given bytes a broken into lines at new-lines and set style-attributes
+// or fore- or background colors are passed as these lines default
+// style, fore- or background colors.  NOTE all previous content of the
+// component is removed.
 func (e *Env) Write(bb []byte) (int, error) {
-	return e.cmp.(cmpWriter).write(bb, -1, -1, 0,
-		e.cmp.embedded().fmt.sty)
+	return e.cmp.(cmpWriter).write(bb, -1, -1, 0, e.sty)
 }
-
-// Fmt sets the next write's formattings like centered.
-// func (e *Env) Fmt(f FmtMask) *FmtWriter {
-// 	return &FmtWriter{cmp: e.cmp.(cmpWriter), fmt: &llFmt{mask: f}}
-// }
 
 // Attr sets the next write's style attributes like bold.
 func (e *Env) Attr(aa StyleAttributeMask) *FmtWriter {
@@ -83,6 +82,8 @@ func (e *Env) Attr(aa StyleAttributeMask) *FmtWriter {
 		sty: e.cmp.embedded().fmt.sty.WithAdded(aa)}
 }
 
+// TODO: move this feature to a line-context; i.e.
+// Env.LL(n).AddStyleRange
 func (e *Env) AddStyleRange(idx int, sr SR, rr ...SR) {
 	ll := *e.cmp.embedded().ll
 	if idx < 0 || idx > len(ll) {
@@ -91,7 +92,7 @@ func (e *Env) AddStyleRange(idx int, sr SR, rr ...SR) {
 	ll[idx].addStyleRange(sr, rr...)
 }
 
-func (e *Env) SetLineFlags(idx int, ff LineFlagsZZZ) {
+func (e *Env) SetLineFlags(idx int, ff LineFlags) {
 	ll := *e.cmp.embedded().ll
 	if idx < 0 || idx > len(ll) {
 		return
@@ -113,8 +114,8 @@ func (e *Env) BG(color Color) *FmtWriter {
 
 // LL returns a writer which writes to the line and its following lines
 // at given index.
-func (e *Env) LL(idx int, ff ...LineFlagsZZZ) *locWriter {
-	_ff := LineFlagsZZZ(0)
+func (e *Env) LL(idx int, ff ...LineFlags) *locWriter {
+	_ff := LineFlags(0)
 	for _, f := range ff {
 		_ff |= f
 	}
@@ -125,8 +126,8 @@ func (e *Env) LL(idx int, ff ...LineFlagsZZZ) *locWriter {
 
 // At returns a writer which writes to given line at given position
 // adding given line flags to the line's flags.
-func (e *Env) At(line, cell int, ff ...LineFlagsZZZ) *locWriter {
-	_ff := LineFlagsZZZ(0)
+func (e *Env) At(line, cell int, ff ...LineFlags) *locWriter {
+	_ff := LineFlags(0)
 	for _, f := range ff {
 		_ff |= f
 	}

@@ -80,16 +80,20 @@ func (c *Component) initialize(
 	userComponent Componenter, backend api.UIer,
 ) layoutComponenter {
 
-	if c.layoutCmp != nil {
+	if c.layoutCmp != nil { // already initialized
 		return c.layoutCmp
 	}
 
 	c.bcknd = backend
 
 	inner := &component{
-		dim:     lyt.DimFilling(1, 1),
-		ll:      &lines{},
-		globals: &globals{style: DefaultStyle, tabWidth: 4},
+		dim: lyt.DimFilling(1, 1),
+		ll:  &lines{},
+		globals: &globals{
+			style:     DefaultStyle,
+			highlight: DefaultStyle.WithAA(Reverse),
+			tabWidth:  4,
+		},
 		fmt:     llFmt{sty: backend.NewStyle()},
 		userCmp: userComponent,
 		mod:     Overwriting,

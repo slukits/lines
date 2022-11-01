@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	. "github.com/slukits/gounit"
 )
@@ -24,12 +25,23 @@ func (s *_component) Access_panics_outside_event_processing(t *T) {
 	t.Panics(func() { cmp.Dim().SetHeight(20) })
 }
 
-func (s *_component) tt(t *T, c Componenter) *Fixture {
-	return TermFixture(t.GoT(), 0, c)
+func cmpfx(t *T, d ...time.Duration) (*Fixture, *cmpFX) {
+	cmp := &cmpFX{}
+	var tt *Fixture
+	if len(d) == 0 {
+		tt = TermFixture(t.GoT(), 0, cmp)
+	} else {
+		tt = TermFixture(t.GoT(), d[0], cmp)
+	}
+	return tt, cmp
+}
+
+func xcmpfx(t *T, cmp Componenter) *Fixture {
+	return TermFixture(t.GoT(), 0, cmp)
 }
 
 func (s *_component) Creates_needed_lines_on_write(t *T) {
-	tt := s.tt(t, &cmpFX{})
+	tt, _ := cmpfx(t)
 	t.FatalOn(tt.Lines.Update(tt.Root(), nil, func(e *Env) {
 		fx := tt.Root().(*cmpFX)
 		t.Eq(0, fx.Len())
@@ -39,8 +51,7 @@ func (s *_component) Creates_needed_lines_on_write(t *T) {
 }
 
 func (s *_component) Doesnt_change_line_count_on_line_overwrite(t *T) {
-	cmp := &cmpFX{}
-	tt := s.tt(t, cmp)
+	tt, cmp := cmpfx(t)
 	t.FatalOn(tt.Lines.Update(cmp, nil, func(e *Env) {
 		cmp.Mod(Overwriting)
 		fmt.Fprint(e, "two\nlines")
@@ -54,8 +65,7 @@ func (s *_component) Doesnt_change_line_count_on_line_overwrite(t *T) {
 }
 
 func (s *_component) Has_a_line_more_after_appending_an_line(t *T) {
-	cmp := &cmpFX{}
-	tt := s.tt(t, cmp)
+	tt, cmp := cmpfx(t)
 	t.FatalOn(tt.Lines.Update(cmp, nil, func(e *Env) {
 		cmp.Mod(Appending)
 		fmt.Fprint(e, "two\nlines")
@@ -65,8 +75,7 @@ func (s *_component) Has_a_line_more_after_appending_an_line(t *T) {
 }
 
 func (s *_component) Has_a_line_more_after_writing_to_tailing(t *T) {
-	cmp := &cmpFX{}
-	tt := s.tt(t, cmp)
+	tt, cmp := cmpfx(t)
 	t.FatalOn(tt.Lines.Update(cmp, nil, func(e *Env) {
 		cmp.Mod(Tailing)
 		fmt.Fprint(e, "two\nlines")
@@ -76,8 +85,7 @@ func (s *_component) Has_a_line_more_after_writing_to_tailing(t *T) {
 }
 
 func (s *_component) Shows_last_line_clipped_above_if_tailing(t *T) {
-	cmp := &cmpFX{}
-	tt := s.tt(t, cmp)
+	tt, cmp := cmpfx(t)
 	tt.FireResize(20, 2)
 	t.FatalOn(tt.Lines.Update(cmp, nil, func(e *Env) {
 		cmp.Mod(Tailing)
@@ -87,8 +95,7 @@ func (s *_component) Shows_last_line_clipped_above_if_tailing(t *T) {
 }
 
 func (s *_component) Blanks_a_reset_line(t *T) {
-	cmp := &cmpFX{}
-	tt := s.tt(t, cmp)
+	tt, cmp := cmpfx(t)
 	tt.FireResize(20, 2)
 	t.FatalOn(tt.Lines.Update(cmp, nil, func(e *Env) {
 		fmt.Fprint(e, "first\nsecond")
@@ -102,6 +109,26 @@ func (s *_component) Blanks_a_reset_line(t *T) {
 
 	t.Eq("second", tt.Screen().Trimmed().String())
 }
+
+type dbg struct{ Suite }
+
+func (s *dbg) Dbg(t *T) {
+	tt, cmp := cmpfx(t, 10*time.Minute)
+	tt.FireResize(20, 2)
+	t.FatalOn(tt.Lines.Update(cmp, nil, func(e *Env) {
+		fmt.Fprint(e, "first\nsecond")
+	}))
+	t.Eq("first \nsecond", tt.Screen().Trimmed().String())
+
+	t.FatalOn(tt.Lines.Update(cmp, nil, func(e *Env) {
+		cmp.Reset(-2) // no-op, coverage
+		cmp.Reset(0)
+	}))
+
+	t.Eq("second", tt.Screen().Trimmed().String())
+}
+
+func TestDBG(t *testing.T) { Run(&dbg{}, t) }
 
 func (s *_component) fxCmp(t *T) (*Fixture, *cmpFX) {
 	cmp := &cmpFX{}
@@ -313,7 +340,7 @@ func (s *_component) Updates_according_to_its_on_update_definition(t *T) {
 	cmp := &uiCmpFX{init: func(c *uiCmpFX, e *Env) {
 		fmt.Fprint(e, "initial value")
 	}}
-	tt := s.tt(t, cmp)
+	tt := xcmpfx(t, cmp)
 	tt.FireResize(13, 7)
 	str := strings.TrimSpace(tt.Screen().String())
 	t.Eq("initial value", str)
@@ -360,6 +387,8 @@ func (c *uiCmpFX) OnUpdate(e *Env) {
 	}
 }
 
+type fillerFX struct{ Component }
+
 type rplStackFX struct {
 	Component
 	Stacking
@@ -385,7 +414,7 @@ func (s *_component) Is_replaceable(t *T) {
 		long:  "a rather long long long line",
 		short: "a short line",
 	}
-	tt := s.tt(t, fx)
+	tt := xcmpfx(t, fx)
 	t.Eq(fx.long, tt.ScreenOf(fx).Trimmed().String())
 
 	t.FatalOn(tt.Lines.Update(fx, &icmpFX{
@@ -398,29 +427,27 @@ func (s *_component) Is_replaceable(t *T) {
 	t.Eq(fx.short, str)
 }
 
-type fillerFX struct{ Component }
-
-func (s *_component) Fills_line_at_line_fillers(t *T) {
-	fx := &icmpFX{init: func(c *icmpFX, e *Env) {
-		c.Dim().SetHeight(1).SetWidth(8)
-		fmt.Fprintf(e, "a%sb", LineFiller)
-	}}
-	tt := s.tt(t, fx)
-
-	t.Eq("a      b", tt.ScreenOf(fx).String())
-
-	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
-		fmt.Fprintf(e, "a%sb%[1]sc", LineFiller)
-	}))
-
-	t.Eq("a   b  c", tt.ScreenOf(fx).String())
-
-	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
-		fmt.Fprintf(e, "ab%scd%[1]sef%[1]sgh", LineFiller)
-	}))
-
-	t.Eq("ab cd ef", tt.ScreenOf(fx).String())
-}
+// func (s *_component) Fills_line_at_line_fillers(t *T) {
+// 	fx := &icmpFX{init: func(c *icmpFX, e *Env) {
+// 		c.Dim().SetHeight(1).SetWidth(8)
+// 		fmt.Fprintf(e, "a%sb", LineFiller)
+// 	}}
+// 	tt := s.tt(t, fx)
+//
+// 	t.Eq("a      b", tt.ScreenOf(fx).String())
+//
+// 	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
+// 		fmt.Fprintf(e, "a%sb%[1]sc", LineFiller)
+// 	}))
+//
+// 	t.Eq("a   b  c", tt.ScreenOf(fx).String())
+//
+// 	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
+// 		fmt.Fprintf(e, "ab%scd%[1]sef%[1]sgh", LineFiller)
+// 	}))
+//
+// 	t.Eq("ab cd ef", tt.ScreenOf(fx).String())
+// }
 
 func TestComponent(t *testing.T) {
 	t.Parallel()

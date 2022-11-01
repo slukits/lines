@@ -26,14 +26,14 @@ func (s *LineFocus) Next(highlighted bool) int {
 	}
 	old := s.current
 	for idx, l := range (*s.c.ll)[s.current+1:] {
-		if l.ff&NotFocusableZZZ == NotFocusableZZZ {
+		if l.ff&NotFocusable == NotFocusable {
 			continue
 		}
 		if s.current >= 0 && highlighted {
-			(*s.c.ll)[s.current].SwitchHighlighted()
+			(*s.c.ll)[s.current].Switch(Highlighted)
 		}
 		if highlighted {
-			l.SwitchHighlighted()
+			l.Switch(Highlighted)
 		}
 		s.current = s.current + 1 + idx
 		break
@@ -53,14 +53,14 @@ func (s *LineFocus) Previous(highlighted bool) int {
 	}
 	old := s.current
 	for i := initI; i >= 0; i-- {
-		if (*s.c.ll)[i].ff&NotFocusableZZZ == NotFocusableZZZ {
+		if (*s.c.ll)[i].ff&NotFocusable == NotFocusable {
 			continue
 		}
 		if s.current >= 0 && highlighted {
-			(*s.c.ll)[s.current].SwitchHighlighted()
+			(*s.c.ll)[s.current].Switch(Highlighted)
 		}
 		if highlighted {
-			(*s.c.ll)[i].SwitchHighlighted()
+			(*s.c.ll)[i].Switch(Highlighted)
 		}
 		s.current = i
 		break
@@ -79,8 +79,8 @@ func (s *LineFocus) Reset(_ bool) int {
 	if s.current == -1 {
 		return s.current
 	}
-	if (*s.c.ll)[s.current].IsHighlighted() {
-		(*s.c.ll)[s.current].SwitchHighlighted()
+	if (*s.c.ll)[s.current].IsFlagged(Highlighted) {
+		(*s.c.ll)[s.current].Switch(Highlighted)
 	}
 	s.current = -1
 	return s.current
