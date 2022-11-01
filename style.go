@@ -80,6 +80,12 @@ type SR struct {
 	Style
 }
 
+// Increment the start position of embedded range.
+func (sr *SR) IncrementStart() { sr.Range[0] = sr.Range[0] + 1 }
+
+// SetEnd sets the endpoint of embedded range.
+func (sr *SR) SetEnd(x int) { sr.Range[1] = x }
+
 // zeroRange is used in StyleRanges instance for its default style since
 // it contains no position.
 var zeroRange = Range{0, 0}
