@@ -32,6 +32,11 @@ type Lines struct {
 
 	// backend is needed to post events.
 	backend api.EventProcessor
+
+	// Globals are properties whose changing is propagated to all
+	// its clones who update iff the updated property is still in sync
+	// with the origin.
+	Globals *globals
 }
 
 // Term returns a Lines instance with a terminal backend displaying and
@@ -44,7 +49,9 @@ type Lines struct {
 func Term(cmp Componenter) *Lines {
 	ll := Lines{}
 	ll.backend = term.New(ll.listen)
-	ll.scr = newScreen(ll.backend.(api.UIer), cmp)
+	ll.Globals = newGlobals(nil)
+	ll.scr = newScreen(ll.backend.(api.UIer), cmp, ll.Globals)
+	ll.Globals.propagation = globalsPropagationClosure(ll.scr)
 	return &ll
 }
 
@@ -77,7 +84,7 @@ type Componenter interface {
 	// initialize sets up the embedded *component instance and wraps it
 	// together with the client-instance in a layoutComponenter which is
 	// returned.
-	initialize(Componenter, api.UIer) layoutComponenter
+	initialize(Componenter, api.UIer, *globals) layoutComponenter
 
 	// isInitialized returns true if embedded *component was wrapped
 	// into a layout component.
@@ -90,6 +97,9 @@ type Componenter interface {
 	// backend to post Update and Focus events on a user Componenter
 	// implementation.
 	backend() api.UIer
+
+	// globals returns a components global properties.
+	globals() *globals
 }
 
 // TermKiosk returns a Lines instance without registered Quitable feature,

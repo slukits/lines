@@ -297,7 +297,7 @@ func (l *line) vsync(x, y, height int, rw runeWriter, gg *globals) {
 // and set filler as well as corresponding style ranges ready to print
 // to the screen.
 func (l *line) display(width int, gg *globals) ([]rune, styleRanges) {
-	ss := l.ss.copyWithDefault(gg.style)
+	ss := l.ss.copyWithDefault(gg.Style(Default))
 	if len(l.rr) == 0 {
 		return l.displayEmpty(width, gg, ss)
 	}
@@ -419,7 +419,7 @@ func (l *line) highlighted(
 		return l.highlightTrimmed(rr, ss, gg)
 	}
 	for r, s := range ss {
-		ss[r] = highlightStyle(s, gg.highlight)
+		ss[r] = highlightStyle(s, gg.Style(Highlight))
 	}
 	return ss
 }
@@ -447,18 +447,19 @@ func (l *line) highlightTrimmed(
 		switch {
 		case r.Start() < tl && r.End() > tl && r.End() <= tr:
 			ss[Range{r.Start(), tl}] = ss[r]
-			ss[Range{tl, r.End()}] = highlightStyle(ss[r], gg.highlight)
+			ss[Range{tl, r.End()}] = highlightStyle(
+				ss[r], gg.Style(Highlight))
 			delete(ss, r)
 		case r.Start() >= tl && r.End() <= tr:
-			ss[r] = highlightStyle(ss[r], gg.highlight)
+			ss[r] = highlightStyle(ss[r], gg.Style(Highlight))
 		case r.Start() >= tl && r.Start() < tr && r.End() > tr:
 			ss[Range{tr, r.End()}] = ss[r]
-			ss[Range{r.Start(), tr}] = highlightStyle(ss[r], gg.highlight)
+			ss[Range{r.Start(), tr}] = highlightStyle(ss[r], gg.Style(Highlight))
 			delete(ss, r)
 		case r.Start() < tl && r.End() > tr:
 			ss[Range{r.Start(), tl}] = ss[r]
 			ss[Range{tr, r.End()}] = ss[r]
-			ss[Range{tl, tr}] = highlightStyle(ss[r], gg.highlight)
+			ss[Range{tl, tr}] = highlightStyle(ss[r], gg.Style(Highlight))
 			delete(ss, r)
 		}
 	}
@@ -467,7 +468,7 @@ func (l *line) highlightTrimmed(
 		return ss
 	}
 	for _, r := range urr {
-		ss[r] = highlightStyle(ss[zeroRange], gg.highlight)
+		ss[r] = highlightStyle(ss[zeroRange], gg.Style(Highlight))
 	}
 	return ss
 }

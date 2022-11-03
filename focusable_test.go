@@ -7,6 +7,7 @@ package lines
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	. "github.com/slukits/gounit"
 )
@@ -293,6 +294,56 @@ func (s *lineFocus) Inverts_bg_fg_of_focused_if_highlighted(t *T) {
 		t.Not.True(l2.HasAttr(x, Reverse))
 	}
 }
+
+type dbg struct{ Suite }
+
+func (s *dbg) lfFX(
+	t *T,
+	init func(*lfCmpFX, *Env),
+	onLf func(*lfCmpFX, *Env, int),
+) (*Fixture, *lfCmpFX) {
+	fx := &lfCmpFX{
+		onInit: init,
+		onLf:   onLf,
+	}
+	tt := TermFixture(t.GoT(), 10*time.Minute, fx)
+	return tt, fx
+}
+
+func (s *dbg) Dbg(t *T) {
+	tt, fx := s.lfFX(t,
+		func(c *lfCmpFX, e *Env) {
+			c.FF.Add(HighlightedFocusable)
+			c.dim.SetHeight(2)
+			fmt.Fprint(e.LL(0, NotFocusable), "line 1")
+			fmt.Fprint(e.LL(1), "line 2")
+		},
+		func(c *lfCmpFX, e *Env, i int) {
+			switch c.lfN {
+			case 1:
+				t.Eq(1, c.LL.Focus.Current())
+			}
+		})
+
+	l2 := tt.CellsOf(fx).Trimmed()[1]
+	for x := range l2 {
+		t.Not.True(l2.HasAttr(x, Reverse))
+	}
+
+	tt.FireKey(Down)
+	t.Eq(1, fx.lfN)
+
+	l2 = tt.CellsOf(fx).Trimmed()[1]
+	for x := range l2 {
+		if x < len("line 2") {
+			t.True(l2.HasAttr(x, Reverse))
+			continue
+		}
+		t.Not.True(l2.HasAttr(x, Reverse))
+	}
+}
+
+func TestDBG(t *testing.T) { Run(&dbg{}, t) }
 
 type lsCmpFX struct {
 	Component

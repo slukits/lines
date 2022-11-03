@@ -46,15 +46,16 @@ func (gg *gaps) forStyler(cb func(styler)) {
 // sync writes the gaps into given area and returns an area reduced by
 // gaps.
 func (gg *gaps) sync(
-	x, y, width, height int, w runeWriter, glbls *globals,
+	x, y, width, height int, w runeWriter, ggl *globals,
 ) (_, _, _, _ int) {
-	gg.topLeft.sync(x, y, width, height, w, glbls.style)
-	gg.topRight.sync(x, y, width, height, w, glbls.style)
-	gg.bottomRight.sync(x, y, width, height, w, glbls.style)
-	gg.bottomLeft.sync(x, y, width, height, w, glbls.style)
-	th := gg.top.sync(x+1, y, width-2, height, w, glbls)
-	bh := gg.bottom.sync(x+1, y+th, width-2, height-th, w, glbls)
-	lw := gg.left.sync(x, y+1, width, height-2, w, glbls)
-	rw := gg.right.sync(x+lw, y+1, width-lw, height-2, w, glbls)
+	gglSty := ggl.Style(Default)
+	gg.topLeft.sync(x, y, width, height, w, gglSty)
+	gg.topRight.sync(x, y, width, height, w, gglSty)
+	gg.bottomRight.sync(x, y, width, height, w, gglSty)
+	gg.bottomLeft.sync(x, y, width, height, w, gglSty)
+	th := gg.top.sync(x+1, y, width-2, height, w, ggl)
+	bh := gg.bottom.sync(x+1, y+th, width-2, height-th, w, ggl)
+	lw := gg.left.sync(x, y+1, width, height-2, w, ggl)
+	rw := gg.right.sync(x+lw, y+1, width-lw, height-2, w, ggl)
 	return x + lw, y + th, width - (lw + rw), height - (th + bh)
 }

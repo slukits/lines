@@ -42,12 +42,12 @@ type screen struct {
 	focus   layoutComponenter
 }
 
-func newScreen(backend api.UIer, cmp Componenter) *screen {
+func newScreen(backend api.UIer, cmp Componenter, gg *globals) *screen {
 	scr := &screen{backend: backend}
 	if cmp == nil {
 		cmp = &Component{}
 	}
-	lc := cmp.initialize(cmp, backend)
+	lc := cmp.initialize(cmp, backend, gg.clone())
 	lc.wrapped().ensureFeatures()
 	scr.lyt = &lyt.Manager{Root: lc}
 	scr.focus = lc
@@ -68,19 +68,19 @@ func (s *screen) setHeight(h int) *screen {
 	return s
 }
 
-func (s *screen) forComponent(cb func(Componenter)) {
+func (s *screen) forComponent(cb func(layoutComponenter)) {
 	s.lyt.ForDimer(nil, func(d lyt.Dimer) (stop bool) {
-		cb(d.(layoutComponenter).userComponent())
+		cb(d.(layoutComponenter))
 		return false
 	})
 }
 
 func (s *screen) forUninitialized(cb func(Componenter)) {
-	s.forComponent(func(cmp Componenter) {
-		if cmp.isInitialized() {
+	s.forComponent(func(cmp layoutComponenter) {
+		if cmp.userComponent().isInitialized() {
 			return
 		}
-		cb(cmp)
+		cb(cmp.userComponent())
 	})
 }
 

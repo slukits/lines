@@ -43,18 +43,18 @@ func (x *lineFX) redraw(tt *term.Fixture) api.CellsLine {
 }
 
 func (x *lineFX) highlighted(s Style) Style {
-	if x.gg.highlight.AA() != 0 {
-		if s.AA()&x.gg.highlight.AA() == 0 {
-			s = s.WithAdded(x.gg.highlight.AA())
+	if x.gg.Style(Highlight).AA() != 0 {
+		if s.AA()&x.gg.Style(Highlight).AA() == 0 {
+			s = s.WithAdded(x.gg.Style(Highlight).AA())
 		} else {
-			s = s.WithRemoved(x.gg.highlight.AA())
+			s = s.WithRemoved(x.gg.Style(Highlight).AA())
 		}
 	}
-	if x.gg.highlight.FG() != DefaultColor {
-		s = s.WithFG(x.gg.highlight.FG())
+	if x.gg.Style(Highlight).FG() != DefaultColor {
+		s = s.WithFG(x.gg.Style(Highlight).FG())
 	}
-	if x.gg.highlight.BG() != DefaultColor {
-		s = s.WithBG(x.gg.highlight.BG())
+	if x.gg.Style(Highlight).BG() != DefaultColor {
+		s = s.WithBG(x.gg.Style(Highlight).BG())
 	}
 	return s
 }
@@ -65,16 +65,12 @@ func (x *lineFX) highlighted(s Style) Style {
 func fx(t *T) (*term.Fixture, *lineFX) {
 	ui, tt := term.LstFixture(t.GoT(), nil, 0)
 	tt.PostResize(20, 1)
-	return tt, &lineFX{Displayer: ui, gg: &globals{
-		style:     DefaultStyle,
-		highlight: DefaultStyle.WithAA(Reverse),
-		tabWidth:  4,
-	}}
+	return tt, &lineFX{Displayer: ui, gg: newGlobals(nil)}
 }
 
 func fxDflt(t *T, s Style) (*term.Fixture, *lineFX) {
 	tt, fx := fx(t)
-	fx.gg.style = s
+	fx.gg.SetStyle(Default, s)
 	return tt, fx
 }
 
@@ -168,7 +164,7 @@ func (s *ALine) Displays_content_with_set_style(t *T) {
 	for _, c := range scrLine {
 		switch c.Rune {
 		case ' ':
-			t.True(c.Style.Equals(fx.gg.style))
+			t.True(c.Style.Equals(fx.gg.Style(Default)))
 		default:
 			t.True(c.Style.Equals(exp))
 		}
@@ -199,7 +195,7 @@ func (s *ALine) Styles_content_set_at_given_position(t *T) {
 	for _, c := range scrLine {
 		switch c.Rune {
 		case ' ':
-			t.True(c.Style.Equals(fx.gg.style))
+			t.True(c.Style.Equals(fx.gg.Style(Default)))
 		default:
 			t.True(c.Style.Equals(exp))
 		}
@@ -247,7 +243,7 @@ func (s *ALine) Expands_filler_style_preserving(t *T) {
 			s.Equals(s1)
 		case 20:
 			t.Eq(10, r.Start())
-			s.Equals(fx.gg.style)
+			s.Equals(fx.gg.Style(Default))
 		}
 	}
 	fx.set("01234")
@@ -258,7 +254,7 @@ func (s *ALine) Expands_filler_style_preserving(t *T) {
 		switch r.End() {
 		case 5:
 			t.Eq(0, r.Start())
-			s.Equals(fx.gg.style)
+			s.Equals(fx.gg.Style(Default))
 		case 15:
 			t.Eq(5, r.Start())
 			s.Equals(s1)
@@ -274,7 +270,7 @@ func (s *ALine) Expands_filler_style_preserving(t *T) {
 		switch r.End() {
 		case 10:
 			t.Eq(0, r.Start())
-			s.Equals(fx.gg.style)
+			s.Equals(fx.gg.Style(Default))
 		case 20:
 			t.Eq(10, r.Start())
 			s.Equals(s1)
@@ -305,10 +301,11 @@ func (s *ALine) Expands_leading_tabs_style_preserving(t *T) {
 func (s *ALine) Is_highlighted_if_highlight_flag_set(t *T) {
 	tt, fx := fx(t)
 	fx.Switch(Highlighted)
-	fx.gg.style = fx.gg.style.WithAA(Dim)
-	fx.gg.highlight = NewStyle(Dim, RebeccaPurple, DarkGoldenrod)
-	l, hStyle := fx.redraw(tt), fx.highlighted(fx.gg.style)
-	t.Not.True(fx.gg.style.Equals(hStyle))
+	fx.gg.SetStyle(Default, fx.gg.Style(Default).WithAA(Dim))
+	fx.gg.SetStyle(Highlight,
+		NewStyle(Dim, RebeccaPurple, DarkGoldenrod))
+	l, hStyle := fx.redraw(tt), fx.highlighted(fx.gg.Style(Default))
+	t.Not.True(fx.gg.Style(Default).Equals(hStyle))
 	for _, c := range l {
 		t.True(c.Style.Equals(hStyle))
 	}
@@ -323,12 +320,12 @@ func (s *ALine) Is_highlighted_trimmed_if_corresponding_flag_set(t *T) {
 	tt, fx := fx(t)
 	fx.Switch(TrimmedHighlighted)
 	fx.setAt(4, []rune("0123456789"))
-	l, hStyle := fx.redraw(tt), fx.highlighted(fx.gg.style)
-	t.Not.True(fx.gg.style.Equals(hStyle))
+	l, hStyle := fx.redraw(tt), fx.highlighted(fx.gg.Style(Default))
+	t.Not.True(fx.gg.Style(Default).Equals(hStyle))
 	for _, c := range l {
 		switch c.Rune {
 		case ' ':
-			c.Style.Equals(fx.gg.style)
+			c.Style.Equals(fx.gg.Style(Default))
 		default:
 			c.Style.Equals(hStyle)
 		}
@@ -342,13 +339,13 @@ func (s *ALine) Adapts_styles_overlapping_trimmed_highlighted_range(t *T) {
 	fx.setStyledAt(2, []rune("  012"), s1)
 	fx.setAt(7, []rune("3456"))
 	fx.setStyledAt(11, []rune("789  "), s2)
-	hs, hs1, hs2 := fx.highlighted(fx.gg.style), fx.highlighted(s1),
-		fx.highlighted(s2)
+	hs, hs1, hs2 := fx.highlighted(fx.gg.Style(Default)),
+		fx.highlighted(s1), fx.highlighted(s2)
 	l := fx.redraw(tt)
 	for i, c := range l {
 		switch i {
 		case 0, 1:
-			t.True(c.Style.Equals(fx.gg.style))
+			t.True(c.Style.Equals(fx.gg.Style(Default)))
 		case 2, 3:
 			t.True(c.Style.Equals(s1))
 		case 4, 5, 6:
@@ -360,7 +357,7 @@ func (s *ALine) Adapts_styles_overlapping_trimmed_highlighted_range(t *T) {
 		case 14, 15:
 			t.True(c.Style.Equals(s2))
 		default:
-			t.True(c.Style.Equals(fx.gg.style))
+			t.True(c.Style.Equals(fx.gg.Style(Default)))
 		}
 	}
 }
@@ -374,13 +371,13 @@ func (s *ALine) Adapts_enclosed_styles_in_trimmed_highlighted(t *T) {
 	fx.setAt(8, []rune("456"))
 	fx.setStyledAt(11, []rune("78"), s2)
 	fx.setAt(13, []rune("9"))
-	hs, hs1, hs2 := fx.highlighted(fx.gg.style), fx.highlighted(s1),
+	hs, hs1, hs2 := fx.highlighted(fx.gg.Style(Default)), fx.highlighted(s1),
 		fx.highlighted(s2)
 	l := fx.redraw(tt)
 	for i, c := range l {
 		switch i {
 		case 0, 1, 2, 3:
-			t.True(c.Style.Equals(fx.gg.style))
+			t.True(c.Style.Equals(fx.gg.Style(Default)))
 		case 4, 5:
 			t.True(c.Style.Equals(hs))
 		case 6, 7:
@@ -392,7 +389,7 @@ func (s *ALine) Adapts_enclosed_styles_in_trimmed_highlighted(t *T) {
 		case 13:
 			t.True(c.Style.Equals(hs))
 		default:
-			t.True(c.Style.Equals(fx.gg.style))
+			t.True(c.Style.Equals(fx.gg.Style(Default)))
 		}
 	}
 }
@@ -407,7 +404,7 @@ func (s *ALine) Adapts_enclosing_style_of_trimmed_highlighted(t *T) {
 	for i, c := range l {
 		switch i {
 		case 0, 1, 2:
-			t.True(c.Style.Equals(fx.gg.style))
+			t.True(c.Style.Equals(fx.gg.Style(Default)))
 		case 3:
 			t.True(c.Style.Equals(s1))
 		case 4, 5, 6, 7, 8, 9, 10, 11, 12, 13:
@@ -415,7 +412,7 @@ func (s *ALine) Adapts_enclosing_style_of_trimmed_highlighted(t *T) {
 		case 14:
 			t.True(c.Style.Equals(s1))
 		default:
-			t.True(c.Style.Equals(fx.gg.style))
+			t.True(c.Style.Equals(fx.gg.Style(Default)))
 		}
 	}
 }

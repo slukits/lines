@@ -77,7 +77,7 @@ const (
 )
 
 func (c *Component) initialize(
-	userComponent Componenter, backend api.UIer,
+	userComponent Componenter, backend api.UIer, gg *globals,
 ) layoutComponenter {
 
 	if c.layoutCmp != nil { // already initialized
@@ -87,14 +87,9 @@ func (c *Component) initialize(
 	c.bcknd = backend
 
 	inner := &component{
-		dim: lyt.DimFilling(1, 1),
-		ll:  &lines{},
-		globals: &globals{
-			style:     DefaultStyle,
-			highlight: DefaultStyle.WithAA(Reverse),
-			tabWidth:  4,
-		},
-		fmt:     llFmt{sty: backend.NewStyle()},
+		dim:     lyt.DimFilling(1, 1),
+		ll:      &lines{},
+		gg:      gg,
 		userCmp: userComponent,
 		mod:     Overwriting,
 		dirty:   true,
@@ -103,6 +98,7 @@ func (c *Component) initialize(
 	c.Scroll = &Scroller{c: c}
 	c.LL = newComponentLines(c)
 	c.Register = &Listeners{c: c}
+	inner.gg.SetUpdateListener(cmpGlobalsClosure(inner))
 	switch userComponent.(type) {
 	case Stacker:
 		c.layoutCmp = &stackingWrapper{component: inner}
@@ -114,9 +110,17 @@ func (c *Component) initialize(
 	return c.layoutCmp
 }
 
-func (c *Component) backend() api.UIer {
-	return c.bcknd
+func cmpGlobalsClosure(
+	c *component,
+) func(globalsUpdates, StyleType, globalStyleUpdates) {
+	return func(gu globalsUpdates, st StyleType, gsu globalStyleUpdates) {
+		if !c.dirty {
+			c.dirty = true
+		}
+	}
 }
+
+func (c *Component) backend() api.UIer { return c.bcknd }
 
 // enable component for client usage.
 func (c *Component) enable() {
@@ -154,26 +158,32 @@ func (c *Component) layoutComponent() layoutComponenter {
 func (c *Component) embedded() *Component { return c }
 
 func (c *Component) Gaps(level int) *gapsWriter {
-	if c.gg == nil {
-		c.gg = newGaps(c.fmt.sty)
+	if c.gaps == nil {
+		c.gaps = newGaps(c.gg.Style(Default))
 	}
-	return newGapsWriter(level, c.gg)
+	return newGapsWriter(level, c.gaps)
 }
+
+// Globals provides access to the API for manipulating component c
+// specific globally inherited properties like tab-width.  Note to
+// change such a property globally use the Lines-instance ll which
+// layouts c.  ll's Globals-property provides the same Api but
+// propagates manipulations to all components of the layout.
+func (c *Component) Globals() *globals { return c.gg }
 
 // func (c *Component) component() *Component
 
 // component is the actual implementation of a lines-Component.
 type component struct {
 	userCmp     Componenter
-	globals     *globals
+	gg          *globals
 	dim         *lyt.Dim
 	mod         ComponentMode
 	initialized bool
 	ll          *lines
-	fmt         llFmt
 	lst         *listeners
 	ff          *features
-	gg          *gaps
+	gaps        *gaps
 	dirty       bool
 
 	// first holds the index of the first displayed line
@@ -183,17 +193,11 @@ type component struct {
 	slctd int
 }
 
-// globals represents settings which apply for all lines of a component.
-type globals struct {
-	tabWidth  int
-	style     Style
-	highlight Style
-	fmt       FmtMask
-}
-
 // component gets the component out of a layoutComponenter without using
 // a type-switch.
 func (c *component) wrapped() *component { return c }
+
+func (c *component) globals() *globals { return c.gg }
 
 func (c *component) userComponent() Componenter {
 	return c.userCmp
@@ -237,7 +241,11 @@ type stackingWrapper struct {
 func (sw *stackingWrapper) ForStacked(cb func(lyt.Dimer) bool) {
 	sw.userCmp.(Stacker).ForStacked(func(cmp Componenter) bool {
 		if !cmp.hasLayoutWrapper() {
-			cmp.initialize(cmp, sw.userCmp.backend())
+			cmp.initialize(
+				cmp,
+				sw.userCmp.backend(),
+				sw.globals().clone(),
+			)
 		}
 		return cb(cmp.layoutComponent())
 	})
@@ -252,7 +260,11 @@ type chainingWrapper struct {
 func (cw *chainingWrapper) ForChained(cb func(lyt.Dimer) bool) {
 	cw.userCmp.(Chainer).ForChained(func(cmp Componenter) bool {
 		if !cmp.hasLayoutWrapper() {
-			cmp.initialize(cmp, cw.userCmp.backend())
+			cmp.initialize(
+				cmp,
+				cw.userCmp.backend(),
+				cw.globals().clone(),
+			)
 		}
 		return cb(cmp.layoutComponent())
 	})

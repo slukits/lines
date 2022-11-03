@@ -76,7 +76,9 @@ func TermFixture(
 	t.Helper()
 	ll := &Lines{}
 	ui, backend := term.NewFixture(t, timeout)
-	ll.scr = newScreen(ui, c)
+	ll.Globals = newGlobals(nil)
+	ll.scr = newScreen(ui, c, ll.Globals)
+	ll.Globals.propagation = globalsPropagationClosure(ll.scr)
 	ll.backend = ui
 	tt := &Fixture{
 		backend: backend,

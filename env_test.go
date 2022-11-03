@@ -14,7 +14,7 @@ import (
 
 type env struct{ Suite }
 
-// func (s *env) SetUp(t *T) { t.Parallel() }
+func (s *env) SetUp(t *T) { t.Parallel() }
 
 func (s *env) tt(t *T, cmp Componenter) *Fixture {
 	return TermFixture(t.GoT(), 0, cmp)
@@ -22,16 +22,16 @@ func (s *env) tt(t *T, cmp Componenter) *Fixture {
 
 type envCmpFX struct {
 	Component
-	env  *Env
-	test func(e *Env)
+	env *Env
+	fx  func(e *Env)
 }
 
 func (c *envCmpFX) OnInit(e *Env) {
 	c.env = e
-	if c.test == nil {
+	if c.fx == nil {
 		return
 	}
-	c.test(e)
+	c.fx(e)
 }
 
 func (c *envCmpFX) OnUpdate(e *Env) {
@@ -58,8 +58,43 @@ func (s *env) Provides_the_display_size(t *T) {
 	})
 }
 
+func (s *env) Writes_to_component_starting_at_top_left_corner(t *T) {
+	tt := s.tt(t, &stackedCmpFX{
+		cc: []Componenter{
+			&envCmpFX{fx: func(e *Env) { fmt.Fprint(e, "1st") }},
+			&envCmpFX{fx: func(e *Env) { fmt.Fprint(e, "3rd") }},
+		},
+	})
+	tt.FireResize(4, 4)
+	t.Eq("1st \n    \n3rd \n    ", tt.Screen())
+}
+
+func (s *env) Print_breaks_string_at_line_breaks_to_screen_lines(t *T) {
+	tt := s.tt(t, &envCmpFX{fx: func(e *Env) {
+		fmt.Fprint(e, "1st\n2nd\n3rd\n4th\n5th")
+	}})
+	tt.FireResize(3, 4)
+	t.Eq("1st\n2nd\n3rd\n4th", tt.Screen())
+}
+
+func (s *env) Printed_lines_colors_default_to_component_globals(t *T) {
+
+}
+
+func (s *env) Printed_lines_styles_default_to_component_globals(t *T) {
+
+}
+
+func (s *env) Overwrites_colors_for_printed_screen_lines(t *T) {
+
+}
+
+func (s *env) Overwrites_styles_for_printed_screen_lines(t *T) {
+
+}
+
 func (s *env) Provides_writer_for_the_nth_line(t *T) {
-	tt := s.tt(t, &envCmpFX{test: func(e *Env) {
+	tt := s.tt(t, &envCmpFX{fx: func(e *Env) {
 		fmt.Fprint(e.LL(0), "first line")
 		fmt.Fprint(e.LL(7), "eighth line")
 	}})
@@ -71,7 +106,7 @@ func (s *env) Provides_writer_for_the_nth_line(t *T) {
 }
 
 func (s *env) Overwrites_given_line_and_following(t *T) {
-	fxCmp := &envCmpFX{test: func(e *Env) {
+	fxCmp := &envCmpFX{fx: func(e *Env) {
 		fmt.Fprint(e.LL(0), "first line")
 		fmt.Fprint(e.LL(7), "eighth line")
 	}}

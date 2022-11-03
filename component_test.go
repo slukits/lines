@@ -110,26 +110,6 @@ func (s *_component) Blanks_a_reset_line(t *T) {
 	t.Eq("second", tt.Screen().Trimmed().String())
 }
 
-type dbg struct{ Suite }
-
-func (s *dbg) Dbg(t *T) {
-	tt, cmp := cmpfx(t, 10*time.Minute)
-	tt.FireResize(20, 2)
-	t.FatalOn(tt.Lines.Update(cmp, nil, func(e *Env) {
-		fmt.Fprint(e, "first\nsecond")
-	}))
-	t.Eq("first \nsecond", tt.Screen().Trimmed().String())
-
-	t.FatalOn(tt.Lines.Update(cmp, nil, func(e *Env) {
-		cmp.Reset(-2) // no-op, coverage
-		cmp.Reset(0)
-	}))
-
-	t.Eq("second", tt.Screen().Trimmed().String())
-}
-
-func TestDBG(t *testing.T) { Run(&dbg{}, t) }
-
 func (s *_component) fxCmp(t *T) (*Fixture, *cmpFX) {
 	cmp := &cmpFX{}
 	tt := TermFixture(t.GoT(), 0, cmp)
@@ -336,32 +316,6 @@ func (s *_component) Scrolls_to_top_on_reset_all(t *T) {
 	}))
 }
 
-func (s *_component) Updates_according_to_its_on_update_definition(t *T) {
-	cmp := &uiCmpFX{init: func(c *uiCmpFX, e *Env) {
-		fmt.Fprint(e, "initial value")
-	}}
-	tt := xcmpfx(t, cmp)
-	tt.FireResize(13, 7)
-	str := strings.TrimSpace(tt.Screen().String())
-	t.Eq("initial value", str)
-	linesUpdate := map[int]string{
-		0: "line 00",
-		1: "line 01",
-		2: "line 02",
-		3: "line 03",
-		4: "line 04",
-	}
-	if err := tt.Lines.Update(cmp, linesUpdate, nil); err != nil {
-		t.Fatalf("gounit: view: update: lines: %v", err)
-	}
-	str = strings.TrimSpace(tt.Screen().String())
-	exp := make([]string, 5)
-	for i, v := range linesUpdate {
-		exp[i] = fmt.Sprintf("%s      ", v)
-	}
-	t.Eq(strings.TrimSpace(strings.Join(exp, "\n")), str)
-}
-
 type uiCmpFX struct {
 	Component
 	init func(c *uiCmpFX, e *Env)
@@ -427,27 +381,32 @@ func (s *_component) Is_replaceable(t *T) {
 	t.Eq(fx.short, str)
 }
 
-// func (s *_component) Fills_line_at_line_fillers(t *T) {
-// 	fx := &icmpFX{init: func(c *icmpFX, e *Env) {
-// 		c.Dim().SetHeight(1).SetWidth(8)
-// 		fmt.Fprintf(e, "a%sb", LineFiller)
-// 	}}
-// 	tt := s.tt(t, fx)
-//
-// 	t.Eq("a      b", tt.ScreenOf(fx).String())
-//
-// 	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
-// 		fmt.Fprintf(e, "a%sb%[1]sc", LineFiller)
-// 	}))
-//
-// 	t.Eq("a   b  c", tt.ScreenOf(fx).String())
-//
-// 	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
-// 		fmt.Fprintf(e, "ab%scd%[1]sef%[1]sgh", LineFiller)
-// 	}))
-//
-// 	t.Eq("ab cd ef", tt.ScreenOf(fx).String())
-// }
+func (s *_component) Updates_tab_expansions_on_tab_width_change(t *T) {
+	tt, cmp := cmpfx(t)
+	tt.FireResize(11, 2)
+
+	tb, exp, expTB := "", 8, strings.Repeat(" ", 8)
+	tt.Lines.Update(cmp, nil, func(e *Env) {
+		tb = strings.Repeat(" ", cmp.Globals().TabWidth())
+		fmt.Fprint(e, "\t1st\n\t2nd")
+	})
+	t.Not.Eq(tb, expTB)
+	t.True(strings.HasPrefix(tt.Screen()[0], tb+"1st"))
+	t.True(strings.HasPrefix(tt.Screen()[1], tb+"2nd"))
+
+	tt.Lines.Update(cmp, nil, func(e *Env) {
+		cmp.Globals().SetTabWidth(exp)
+	})
+
+	t.True(strings.HasPrefix(tt.Screen()[0], expTB+"1st"))
+	t.True(strings.HasPrefix(tt.Screen()[1], expTB+"2nd"))
+}
+
+func (s *_component) Updates_lines_style_on_global_style_change(t *T) {
+	tt, _ := cmpfx(t)
+	tt.FireResize(10, 1)
+
+}
 
 func TestComponent(t *testing.T) {
 	t.Parallel()

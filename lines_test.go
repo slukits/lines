@@ -96,7 +96,7 @@ type stackedCmpFX struct {
 
 func (c *stackedCmpFX) ForStacked(cb func(Componenter) (stop bool)) {
 	for _, cmp := range c.cc {
-		if !cb(cmp) {
+		if cb(cmp) {
 			return
 		}
 	}

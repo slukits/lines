@@ -78,8 +78,10 @@ func (e *Env) Write(bb []byte) (int, error) {
 
 // Attr sets the next write's style attributes like bold.
 func (e *Env) Attr(aa StyleAttributeMask) *FmtWriter {
-	return &FmtWriter{cmp: e.cmp.(cmpWriter),
-		sty: e.cmp.embedded().fmt.sty.WithAdded(aa)}
+	return &FmtWriter{
+		cmp: e.cmp.(cmpWriter),
+		sty: e.cmp.embedded().gg.Style(Default).WithAdded(aa),
+	}
 }
 
 // TODO: move this feature to a line-context; i.e.
@@ -102,14 +104,18 @@ func (e *Env) SetLineFlags(idx int, ff LineFlags) {
 
 // FG sets the next write's foreground color.
 func (e *Env) FG(color Color) *FmtWriter {
-	return &FmtWriter{cmp: e.cmp.(cmpWriter),
-		sty: e.cmp.embedded().fmt.sty.WithFG(color)}
+	return &FmtWriter{
+		cmp: e.cmp.(cmpWriter),
+		sty: e.cmp.embedded().gg.Style(Default).WithFG(color),
+	}
 }
 
 // BG sets the next write's foreground color.
 func (e *Env) BG(color Color) *FmtWriter {
-	return &FmtWriter{cmp: e.cmp.(cmpWriter),
-		sty: e.cmp.embedded().fmt.sty.WithBG(color)}
+	return &FmtWriter{
+		cmp: e.cmp.(cmpWriter),
+		sty: e.cmp.embedded().gg.Style(Default).WithBG(color),
+	}
 }
 
 // LL returns a writer which writes to the line and its following lines
@@ -120,7 +126,7 @@ func (e *Env) LL(idx int, ff ...LineFlags) *locWriter {
 		_ff |= f
 	}
 	return &locWriter{
-		sty:  e.cmp.embedded().fmt.sty,
+		sty:  e.cmp.embedded().gg.Style(Default),
 		line: idx, cell: -1, ff: _ff, cmp: e.cmp.(cmpWriter)}
 }
 
@@ -132,7 +138,7 @@ func (e *Env) At(line, cell int, ff ...LineFlags) *locWriter {
 		_ff |= f
 	}
 	return &locWriter{
-		sty:  e.cmp.embedded().fmt.sty,
+		sty:  e.cmp.embedded().gg.Style(Default),
 		line: line, cell: cell, ff: _ff, cmp: e.cmp.(cmpWriter)}
 }
 

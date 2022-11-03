@@ -26,26 +26,23 @@ func (c *component) Mod(cm ComponentMode) {
 }
 
 // AA replaces a component's style attributes like bold or dimmed.
-func (c *component) AA(attr StyleAttributeMask) *component {
+func (c *component) AA(aa StyleAttributeMask) *component {
 	c.dirty = true
-	c.fmt.sty = c.fmt.sty.WithAA(attr)
-	c.globals.style = c.globals.style.WithAA(attr)
+	c.gg.SetAA(Default, aa)
 	return c
 }
 
 // FG replaces a component's foreground color.
 func (c *component) FG(color Color) *component {
 	c.dirty = true
-	c.fmt.sty = c.fmt.sty.WithFG(color)
-	c.globals.style = c.globals.style.WithFG(color)
+	c.gg.SetFG(Default, color)
 	return c
 }
 
 // BG replaces a component's background color.
 func (c *component) BG(color Color) *component {
 	c.dirty = true
-	c.fmt.sty = c.fmt.sty.WithBG(color)
-	c.globals.style = c.globals.style.WithBG(color)
+	c.gg.SetBG(Default, color)
 	return c
 }
 
@@ -59,7 +56,7 @@ func (c *component) Len() int {
 // IsDirty is true if this component is flagged dirty or one of its
 // lines.
 func (c *component) IsDirty() bool {
-	ll, gg := c.ll.IsDirty(), c.gg.isDirty()
+	ll, gg := c.ll.IsDirty(), c.gaps.isDirty()
 	return ll || gg || c.dirty
 }
 
@@ -135,10 +132,10 @@ func (c *component) sync(rw runeWriter) {
 		c.syncCleared(rw)
 		return
 	}
-	if c.gg != nil && c.gg.isDirty() {
-		sx, sy, sw, sh = c.gg.sync(sx, sy, sw, sh, rw, c.globals)
+	if c.gaps != nil && c.gaps.isDirty() {
+		sx, sy, sw, sh = c.gaps.sync(sx, sy, sw, sh, rw, c.gg)
 	}
-	gg := c.gg.isDirty()
+	gg := c.gaps.isDirty()
 	_ = gg
 	if sw <= 0 || sh <= 0 {
 		return
@@ -147,7 +144,7 @@ func (c *component) sync(rw runeWriter) {
 		if i >= sh {
 			return true
 		}
-		l.sync(sx, sy+i, sw, rw, c.globals)
+		l.sync(sx, sy+i, sw, rw, c.gg)
 		return false
 	})
 }
@@ -157,13 +154,13 @@ func (c *component) syncCleared(rw runeWriter) {
 	sx, sy, sw, sh := c.dim.Rect()
 	for y := sy; y < sy+sh; y++ {
 		for x := sx; x < sx+sw; x++ {
-			rw.Display(x, y, ' ', c.fmt.sty)
+			rw.Display(x, y, ' ', c.gg.Style(Default))
 		}
 	}
 	c.dirty = false
 	sx, sy, sw, sh = c.dim.Area()
-	if c.gg != nil {
-		sx, sy, sw, sh = c.gg.sync(sx, sy, sw, sh, rw, c.globals)
+	if c.gaps != nil {
+		sx, sy, sw, sh = c.gaps.sync(sx, sy, sw, sh, rw, c.gg)
 	}
 	if sw <= 0 || sh <= 0 {
 		return
@@ -172,7 +169,7 @@ func (c *component) syncCleared(rw runeWriter) {
 		if i >= sh {
 			return true
 		}
-		l.sync(sx, sy+i, sw, rw, c.globals)
+		l.sync(sx, sy+i, sw, rw, c.gg)
 		return false
 	})
 }
