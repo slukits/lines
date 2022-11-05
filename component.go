@@ -18,7 +18,7 @@ import (
 type Component struct {
 
 	// FF provides access and fine grained control over a components
-	// end-user features (see FeatureMask).
+	// default behavior.
 	FF *Features
 
 	// Register provides the api to register keys and runes listeners
@@ -166,7 +166,7 @@ func (c *Component) Gaps(level int) *gapsWriter {
 
 // Globals provides access to the API for manipulating component c
 // specific globally inherited properties like tab-width.  Note to
-// change such a property globally use the Lines-instance ll which
+// change such a property globally use the [Lines]-instance ll which
 // layouts c.  ll's Globals-property provides the same Api but
 // propagates manipulations to all components of the layout.
 func (c *Component) Globals() *globals { return c.gg }

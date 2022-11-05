@@ -7,7 +7,6 @@ package lines
 import (
 	"fmt"
 	"testing"
-	"time"
 
 	. "github.com/slukits/gounit"
 )
@@ -92,7 +91,8 @@ func (s *lineFocus) Focuses_first_focusable_line(t *T) {
 
 	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
 		fx.LL.Focus.Reset(false)
-		fmt.Fprint(e.LL(0, NotFocusable), "first")
+		fmt.Fprint(e.LL(0), "first")
+		fx.LL.By(0).Flag(NotFocusable)
 		fmt.Fprint(e.LL(1), "second")
 	}))
 
@@ -104,7 +104,8 @@ func (s *lineFocus) Focuses_next_focusable_line(t *T) {
 	tt, fx := s.lfFX(t,
 		func(c *lfCmpFX, e *Env) {
 			fmt.Fprint(e.LL(0), "first")
-			fmt.Fprint(e.LL(1, NotFocusable), "second")
+			fmt.Fprint(e.LL(1), "second")
+			c.LL.By(1).Flag(NotFocusable)
 			fmt.Fprint(e.LL(2), "third")
 		},
 		func(c *lfCmpFX, e *Env, idx int) {
@@ -141,8 +142,10 @@ func (s *lineFocus) Resets_if_no_next_focusable(t *T) {
 
 	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
 		t.Eq(-1, fx.LL.Focus.Current())
-		fmt.Fprint(e.LL(1, NotFocusable), "second")
-		fmt.Fprint(e.LL(2, NotFocusable), "third")
+		fmt.Fprint(e.LL(1), "second")
+		fx.LL.By(1).Flag(NotFocusable)
+		fmt.Fprint(e.LL(2), "third")
+		fx.LL.By(2).Flag(NotFocusable)
 	}))
 
 	tt.FireKey(Down)
@@ -173,7 +176,8 @@ func (s *lineFocus) Focuses_previous_focusable_line(t *T) {
 	tt.FireRune('k') // case 2
 
 	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
-		fmt.Fprint(e.LL(0, NotFocusable), "first")
+		fmt.Fprint(e.LL(0), "first")
+		fx.LL.By(0).Flag(NotFocusable)
 		fmt.Fprint(e.LL(1), "second")
 		fmt.Fprint(e.LL(2), "third")
 	}))
@@ -211,13 +215,12 @@ func (s *lineFocus) Scrolls_to_next_highlighted_line(t *T) {
 	tt, fx := s.lfFX(t,
 		func(c *lfCmpFX, e *Env) {
 			c.dim.SetHeight(2)
-			fmt.Fprint(e.LL(0, NotFocusable), "line 1")
-			fmt.Fprint(e.LL(1, NotFocusable), "line 2")
-			fmt.Fprint(e.LL(2, NotFocusable), "line 3")
-			fmt.Fprint(e.LL(3, NotFocusable), "line 4")
-			fmt.Fprint(e.LL(4, NotFocusable), "line 5")
-			fmt.Fprint(e.LL(5), "line 6")
-			fmt.Fprint(e.LL(6), "line 7")
+			for i := 0; i < 7; i++ {
+				fmt.Fprintf(e.LL(i), "line %d", i+1)
+			}
+			for i := 0; i < 5; i++ {
+				c.LL.By(i).Flag(NotFocusable)
+			}
 		},
 		func(c *lfCmpFX, e *Env, i int) {
 			t.Eq(5, c.LL.Focus.Current())
@@ -234,13 +237,12 @@ func (s *lineFocus) Scrolls_to_previous_highlighted_line(t *T) {
 	tt, fx := s.lfFX(t,
 		func(c *lfCmpFX, e *Env) {
 			c.dim.SetHeight(2)
-			fmt.Fprint(e.LL(0, NotFocusable), "line 1")
-			fmt.Fprint(e.LL(1), "line 2")
-			fmt.Fprint(e.LL(2, NotFocusable), "line 3")
-			fmt.Fprint(e.LL(3, NotFocusable), "line 4")
-			fmt.Fprint(e.LL(4, NotFocusable), "line 5")
-			fmt.Fprint(e.LL(5), "line 6")
-			fmt.Fprint(e.LL(6), "line 7")
+			for i := 0; i < 7; i++ {
+				fmt.Fprintf(e.LL(i), "line %d", i+1)
+			}
+			for _, idx := range []int{0, 2, 3, 4} {
+				c.LL.By(idx).Flag(NotFocusable)
+			}
 		},
 		func(c *lfCmpFX, e *Env, i int) {
 			switch c.lfN {
@@ -267,7 +269,8 @@ func (s *lineFocus) Inverts_bg_fg_of_focused_if_highlighted(t *T) {
 		func(c *lfCmpFX, e *Env) {
 			c.FF.Add(HighlightedFocusable)
 			c.dim.SetHeight(2)
-			fmt.Fprint(e.LL(0, NotFocusable), "line 1")
+			fmt.Fprint(e.LL(0), "line 1")
+			c.LL.By(0).Flag(NotFocusable)
 			fmt.Fprint(e.LL(1), "line 2")
 		},
 		func(c *lfCmpFX, e *Env, i int) {
@@ -294,56 +297,6 @@ func (s *lineFocus) Inverts_bg_fg_of_focused_if_highlighted(t *T) {
 		t.Not.True(l2.HasAttr(x, Reverse))
 	}
 }
-
-type dbg struct{ Suite }
-
-func (s *dbg) lfFX(
-	t *T,
-	init func(*lfCmpFX, *Env),
-	onLf func(*lfCmpFX, *Env, int),
-) (*Fixture, *lfCmpFX) {
-	fx := &lfCmpFX{
-		onInit: init,
-		onLf:   onLf,
-	}
-	tt := TermFixture(t.GoT(), 10*time.Minute, fx)
-	return tt, fx
-}
-
-func (s *dbg) Dbg(t *T) {
-	tt, fx := s.lfFX(t,
-		func(c *lfCmpFX, e *Env) {
-			c.FF.Add(HighlightedFocusable)
-			c.dim.SetHeight(2)
-			fmt.Fprint(e.LL(0, NotFocusable), "line 1")
-			fmt.Fprint(e.LL(1), "line 2")
-		},
-		func(c *lfCmpFX, e *Env, i int) {
-			switch c.lfN {
-			case 1:
-				t.Eq(1, c.LL.Focus.Current())
-			}
-		})
-
-	l2 := tt.CellsOf(fx).Trimmed()[1]
-	for x := range l2 {
-		t.Not.True(l2.HasAttr(x, Reverse))
-	}
-
-	tt.FireKey(Down)
-	t.Eq(1, fx.lfN)
-
-	l2 = tt.CellsOf(fx).Trimmed()[1]
-	for x := range l2 {
-		if x < len("line 2") {
-			t.True(l2.HasAttr(x, Reverse))
-			continue
-		}
-		t.Not.True(l2.HasAttr(x, Reverse))
-	}
-}
-
-func TestDBG(t *testing.T) { Run(&dbg{}, t) }
 
 type lsCmpFX struct {
 	Component

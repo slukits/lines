@@ -42,7 +42,6 @@ type globaler interface{ globals() *globals }
 // globals represents setup/behavior for a component's lines.
 type globals struct {
 	tabWidth    int
-	fmt         FmtMask
 	ss          map[StyleType]Style
 	updated     globalsUpdates
 	ssUpdated   map[StyleType]globalStyleUpdates
@@ -66,7 +65,6 @@ func newGlobals(propagation func(func(globaler))) *globals {
 func (gg *globals) clone() *globals {
 	cpy := globals{
 		tabWidth: gg.tabWidth,
-		fmt:      gg.fmt,
 		ss:       map[StyleType]Style{},
 	}
 	for k, v := range gg.ss {

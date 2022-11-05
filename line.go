@@ -62,7 +62,7 @@ func (l *line) Switch(ff LineFlags) {
 		l.ff &^= ff
 		return
 	}
-	ff = cleanFlagsSwitch(ff)
+	ff = cleanForFlagging(ff)
 	switch {
 	case l.ff&Highlighted != 0 && ff&TrimmedHighlighted != 0:
 		l.ff &^= Highlighted
@@ -72,17 +72,29 @@ func (l *line) Switch(ff LineFlags) {
 	l.ff |= ff
 }
 
+func (l *line) Flag(ff LineFlags) {
+	if l.ff&ff == ff {
+		return
+	}
+	ff = cleanForFlagging(ff)
+	l.ff |= ff
+}
+
 // IsFlagged returns true if given line l has given flags ff set; false
 // otherwise.
 func (l *line) IsFlagged(ff LineFlags) bool {
 	return l.ff&ff == ff
 }
 
-// cleanFlagsSwitch removes inconsistent flags preferring usually the
-// more specific one.
-func cleanFlagsSwitch(ff LineFlags) LineFlags {
-	switch ff {
-	case Highlighted | TrimmedHighlighted:
+// Unflag removes given flags ff from given line l.
+func (l *line) Unflag(ff LineFlags) { l.ff &^= ff }
+
+// cleanForFlagging removes inconsistent flags preferring usually
+// the more specific one.
+func cleanForFlagging(ff LineFlags) LineFlags {
+	highlight := Highlighted | TrimmedHighlighted
+	switch {
+	case ff&highlight == highlight:
 		ff &^= Highlighted
 	}
 	return ff
@@ -159,6 +171,13 @@ func (l *line) set(s string) {
 		l.ss = nil
 	}
 	l.setDirty()
+	for i, r := range l.rr {
+		if r != filler {
+			continue
+		}
+		l.fillAt = append(l.fillAt, i)
+		l.rr[i] = ' '
+	}
 }
 
 // setStyled sets given line l's content to the conversion of given
@@ -182,13 +201,21 @@ func (l *line) setAt(p int, rr []rune) {
 	}
 	l.setDirty()
 	if p == -1 {
-		l.rr = rr
 		l.truncateAt(0)
-		return
+		p = 0
+	} else {
+		l.truncateAt(p)
+		l.padTo(p)
+		l.rr = l.rr[:p]
 	}
-	l.padTo(p)
-	l.rr = append(l.rr[:p], rr...)
-	l.truncateAt(p)
+	l.rr = l.rr[:p]
+	for i, r := range rr {
+		if r == filler {
+			r = ' '
+			l.fillAt = append(l.fillAt, p+i)
+		}
+		l.rr = append(l.rr, r)
+	}
 }
 
 // truncateAt truncates fillers and styles at and after given position
@@ -251,9 +278,9 @@ func (l *line) setStyledAtFilling(at int, r rune, sty Style) {
 	l.setDirty()
 }
 
-// addStyleRange adds given style ranges sr and rr to given line l's
+// AddStyleRange adds given style ranges sr and rr to given line l's
 // style ranges iff they don't overlap with already existing style ranges.
-func (l *line) addStyleRange(sr SR, rr ...SR) {
+func (l *line) AddStyleRange(sr SR, rr ...SR) {
 	if l.ss == nil {
 		l.ss = styleRanges{}
 	}
@@ -302,12 +329,12 @@ func (l *line) display(width int, gg *globals) ([]rune, styleRanges) {
 		return l.displayEmpty(width, gg, ss)
 	}
 	rr := append([]rune{}, l.rr...)
-	rr, ss = l.expandLeadingTabs(rr, ss, gg.tabWidth)
+	rr, ss, tc := l.expandLeadingTabs(rr, ss, gg.tabWidth)
 	if len(rr) >= width {
 		return l.displayOverflowing(width, gg, rr, ss)
 	}
 	if len(l.fillAt) > 0 {
-		rr, ss = l.expandFillerAt(rr, width, ss)
+		rr, ss = l.expandFillerAt(rr, width, ss, tc, gg)
 	}
 	if len(rr) < width {
 		rr = l.pad(rr, width)
@@ -343,23 +370,32 @@ func (l *line) displayOverflowing(
 
 // expandFillerAt expands runes marked as fillers by an equal amount in
 // given runes rr to fit given width exactly adjusting given style
-// ranges accordingly.
+// ranges accordingly.  Note a previous tab-expansion shifting the
+// filler positions is taken into account by evaluating given tag count
+// tc and given globals providing the tab-width.
 func (l *line) expandFillerAt(
-	rr []rune, width int, ss styleRanges,
+	rr []rune, width int, ss styleRanges, tc int, gg *globals,
 ) ([]rune, styleRanges) {
-	f := (width - (len(rr) - len(l.fillAt))) / len(l.fillAt)
-	mf := (width - (len(rr) - len(l.fillAt))) % len(l.fillAt)
-	ff := map[int][]rune{}
-	for i := 0; i < len(l.fillAt)-mf; i++ {
-		ff[l.fillAt[i]] = []rune(
-			strings.Repeat(string(rr[l.fillAt[i]]), f))
+	fillAt := append([]int{}, l.fillAt...)
+	if tc > 0 { // adjust to tab expansion
+		tc *= (gg.TabWidth() - 1)
+		for i, f := range fillAt {
+			fillAt[i] = f + tc
+		}
 	}
-	for i := len(l.fillAt) - mf; i < len(l.fillAt); i++ {
-		ff[l.fillAt[i]] = []rune(
-			strings.Repeat(string(rr[l.fillAt[i]]), f+1))
+	f := (width - (len(rr) - len(fillAt))) / len(fillAt)
+	mf := (width - (len(rr) - len(fillAt))) % len(fillAt)
+	ff := map[int][]rune{}
+	for i := 0; i < len(fillAt)-mf; i++ {
+		ff[fillAt[i]] = []rune(
+			strings.Repeat(string(rr[fillAt[i]]), f))
+	}
+	for i := len(fillAt) - mf; i < len(fillAt); i++ {
+		ff[fillAt[i]] = []rune(
+			strings.Repeat(string(rr[fillAt[i]]), f+1))
 	}
 	_rr, last := []rune{}, 0
-	for _, at := range l.fillAt {
+	for _, at := range fillAt {
 		_rr = append(_rr, rr[last:at]...)
 		_rr = append(_rr, ff[at]...)
 		last = at + 1
@@ -378,18 +414,20 @@ func (l *line) adjustFillerExpansionStyles(
 		ff = append(ff, k)
 	}
 	sort.Ints(ff)
-	for _, f := range ff {
-		ss.expand(f, len(filler[f])-1)
+	fills := 0 // move filler positions in ff along with expansions
+	for i, f := range ff {
+		ss.expand(f+fills, len(filler[f])-1)
+		fills += len(filler[ff[i]]) - 1
 	}
 	return ss
 }
 
 func (l *line) expandLeadingTabs(
 	rr []rune, ss styleRanges, tabWidth int,
-) ([]rune, styleRanges) {
+) ([]rune, styleRanges, int) {
 
 	if len(rr) == 0 || rr[0] != '\t' {
-		return rr, ss
+		return rr, ss, 0
 	}
 	tc := 0
 	for _, r := range rr {
@@ -405,7 +443,7 @@ func (l *line) expandLeadingTabs(
 			rr[i*tabWidth+1:]...,
 		)...)
 	}
-	return rr, ss
+	return rr, ss, tc
 }
 
 // highlighted highlights the whole line; i.e. the global highlight

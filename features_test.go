@@ -96,24 +96,24 @@ func (s *_Features) Delete_default_quitable_rune(t *T) {
 func (s *_Features) Have_set_features(t *T) {
 	s.tt(t, func(ff *Features) {
 		ff.Add(Focusable)
-		ff.Add(Selectable)
+		ff.Add(selectable)
 		t.True(ff.Has(Focusable))
-		t.True(ff.Has(Selectable))
-		t.True(ff.Has(PreviousSelectable))
-		t.True(ff.Has(NextSelectable))
+		t.True(ff.Has(selectable))
+		t.True(ff.Has(previousSelectable))
+		t.True(ff.Has(nextSelectable))
 	})
 }
 
 func (s *_Features) Sets_defaults_bindings_of_feature(t *T) {
 	s.tt(t, func(ff *Features) {
 		ff.Add(Focusable)
-		ff.Add(Selectable)
+		ff.Add(selectable)
 		t.True(defaultBindings[Focusable].bb.Equals(
 			ff.ButtonsOf(Focusable)))
-		t.True(defaultBindings[NextSelectable].kk.Equals(
-			ff.KeysOf(NextSelectable)))
-		t.True(defaultBindings[PreviousSelectable].kk.Equals(
-			ff.KeysOf(PreviousSelectable)))
+		t.True(defaultBindings[nextSelectable].kk.Equals(
+			ff.KeysOf(nextSelectable)))
+		t.True(defaultBindings[previousSelectable].kk.Equals(
+			ff.KeysOf(previousSelectable)))
 	})
 }
 
@@ -215,24 +215,24 @@ func (s *_Features) Reports_button_bindings_of_recursive_feature(t *T) {
 
 func (s *_Features) Ignores_setting_runes_for_comprised_features(t *T) {
 	s.tt(t, func(ff *Features) {
-		ff.SetRunesOf(Selectable, false, FeatureRunes{{Rune: 's'}}...)
-		t.Not.True(ff.Has(Selectable))
+		ff.SetRunesOf(selectable, false, FeatureRunes{{Rune: 's'}}...)
+		t.Not.True(ff.Has(selectable))
 	})
 }
 
 func (s *_Features) Ignores_setting_keys_for_comprised_features(t *T) {
 	keyFX := FeatureKeys{{Key: Backtab, Mod: Alt}}
 	s.tt(t, func(ff *Features) {
-		ff.SetKeysOf(Selectable, false, keyFX...)
-		t.Not.True(ff.Has(Selectable))
+		ff.SetKeysOf(selectable, false, keyFX...)
+		t.Not.True(ff.Has(selectable))
 	})
 }
 
 func (s *_Features) Ignores_setting_buttons_for_comprised_features(t *T) {
 	bttFX := FeatureButtons{{Button: Secondary, Mod: Alt}}
 	s.tt(t, func(ff *Features) {
-		ff.SetButtonsOf(Selectable, false, bttFX...)
-		t.Not.True(ff.Has(Selectable))
+		ff.SetButtonsOf(selectable, false, bttFX...)
+		t.Not.True(ff.Has(selectable))
 	})
 }
 

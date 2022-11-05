@@ -53,7 +53,7 @@ func (c *component) Len() int {
 	return len(*c.ll)
 }
 
-// IsDirty is true if this component is flagged dirty or one of its
+// IsDirty is true if given component c is flagged dirty or one of its
 // lines.
 func (c *component) IsDirty() bool {
 	ll, gg := c.ll.IsDirty(), c.gaps.isDirty()
@@ -72,12 +72,12 @@ func (c *component) SetDirty() {
 func (c *component) Dim() *lyt.Dim { return c.dim }
 
 // All indicates for an operation with a line-index that the operation
-// should be executed for all lines, e.g. Reset on a component.
+// should be executed for all lines, e.g. [Component.Reset] on a component.
 const All = -1
 
 // Reset blanks out the content of the line or all lines with given
 // index the next time it is printed to the screen.  Provide line flags
-// if for example a reset line should not be focusable.  If provided
+// if for example a Reset line should not be focusable.  If provided
 // lines index is -1 (see All-constant) Rest scrolls to the top,
 // truncates its lines to the screen-area-height and resets the
 // remaining lines.
@@ -189,20 +189,47 @@ func (c *component) setFirst(f int) {
 }
 
 func (c *component) write(
-	bb []byte, line, cell int, ff LineFlags, sty *Style,
+	bb []byte, line, cell int, sty *Style,
 ) (int, error) {
 	switch {
 	case c.mod&(Appending|Tailing) != 0:
-		c.ll.append(
-			ff, sty, bytes.Split(bb, []byte("\n"))...)
+		c.ll.append(sty, bytes.Split(bb, []byte("\n"))...)
 	default:
 		if line == -1 {
 			c.Reset(line)
 			line = 0
 		}
 		c.ll.replaceAt(
-			line, cell, ff, sty,
+			line, cell, sty,
 			bytes.Split(bb, []byte("\n"))...)
 	}
 	return len(bb), nil
+}
+
+func (c *component) writeAt(
+	rr []rune, line, cell int, sty *Style,
+) {
+	if line < 0 || cell < 0 || len(rr) == 0 {
+		return
+	}
+	l := c.ll.padded(line)
+	if sty == nil {
+		l.setAt(cell, rr)
+	} else {
+		l.setStyledAt(cell, rr, *sty)
+	}
+}
+
+func (c *component) writeAtFilling(
+	r rune, line, cell int, sty *Style,
+) {
+	if line < 0 || cell < 0 {
+		return
+	}
+	l := c.ll.padded(line)
+	if sty == nil {
+		l.setAtFilling(cell, r)
+	} else {
+		l.setStyledAtFilling(cell, r, *sty)
+	}
 }

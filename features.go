@@ -111,7 +111,7 @@ func (ff *Features) OfRune(r rune, mm Modifier) FeatureMask {
 }
 
 func (ff *Features) OfButton(
-	b Button, mm Modifier,
+	b ButtonMask, mm Modifier,
 ) FeatureMask {
 	ff.ensureInitialized()
 	return ff.c.ff.buttonFeature(b, mm)
@@ -221,20 +221,20 @@ const (
 	// Focusable enables a component to be focused by a user's mouse
 	// input (default first(left)-button, second(right)-button and
 	// third(middle)-button, ModMask == ModeNone).
-	Focusable // TODO: implement
+	Focusable
 
 	// focusBubblable lets a user remove the focus from a component (or
 	// a component's line) up through nesting components by pressing the
 	// bubble focus key (default esc).
 	focusBubblable // TODO: implement
 
-	// PreviousSelectable components can be selected (i.e. receive the
+	// previousSelectable components can be selected (i.e. receive the
 	// focus through key-board input) by the user. (default shift-tab)
-	PreviousSelectable // TODO: implement
+	previousSelectable // TODO: implement
 
-	// NextSelectable components can be selected (i.e. receive the
+	// nextSelectable components can be selected (i.e. receive the
 	// focus through key-board input) by the user. (default tab-key)
-	NextSelectable // TODO: implement
+	nextSelectable // TODO: implement
 
 	// UpScrollable makes a component's content up-scrollable by the
 	// user (default page-up-key).
@@ -262,22 +262,22 @@ const (
 
 	// nextLineFocusable a component's previous focusable line can
 	// receive the focus. (default down-key and 'j')
-	PreviousLineFocusable // TODO: implement
+	PreviousLineFocusable
 
 	// NextLineFocusable a component's next focusable line can receive
 	// the focus. (default down-key and 'j')
-	NextLineFocusable // TODO: implement
+	NextLineFocusable
 
 	// LineUnfocusable a component's set line-focus can be removed
 	// (default esc)
-	LineUnfocusable // TODO: implement
+	LineUnfocusable
 
 	// highlightedFocusable highlights a component's focused line.
 	highlightedFocusable
 
 	// LineSelectable a component's focused line can be reported as
 	// selected (default enter)
-	LineSelectable // TODO: implement
+	LineSelectable
 
 	// maximizable lets the user maximize a component, i.e. all siblings
 	// which are collapsed to either one line if parent is stacking or
@@ -300,9 +300,9 @@ const (
 	// feature.
 	NoFeature FeatureMask = 0
 
-	// Selectable makes a component focusable through keyboard input by
+	// selectable makes a component focusable through keyboard input by
 	// combining next- and previous-selectable.
-	Selectable = PreviousSelectable | NextSelectable // TODO: implement
+	selectable = previousSelectable | nextSelectable // TODO: implement
 
 	// Scrollable makes a component's content vertically Scrollable by
 	// combining up- and down-Scrollable.
@@ -340,7 +340,7 @@ const (
 type features struct {
 	keys    map[Modifier]map[Key]FeatureMask
 	runes   map[Modifier]map[rune]FeatureMask
-	buttons map[Modifier]map[Button]FeatureMask
+	buttons map[Modifier]map[ButtonMask]FeatureMask
 	have    FeatureMask
 }
 
@@ -369,7 +369,7 @@ func (ff *features) copy() *features {
 	cpy := features{
 		keys:    map[Modifier]map[Key]FeatureMask{},
 		runes:   map[Modifier]map[rune]FeatureMask{},
-		buttons: map[Modifier]map[Button]FeatureMask{},
+		buttons: map[Modifier]map[ButtonMask]FeatureMask{},
 		have:    ff.have,
 	}
 
@@ -388,7 +388,7 @@ func (ff *features) copy() *features {
 	}
 
 	for m, bb := range ff.buttons {
-		cpy.buttons[m] = map[Button]FeatureMask{}
+		cpy.buttons[m] = map[ButtonMask]FeatureMask{}
 		for b, f := range bb {
 			cpy.buttons[m][b] = f
 		}
@@ -505,7 +505,7 @@ func (ff *features) add(f FeatureMask, recursive bool) {
 
 		for _, b := range df.bb {
 			if ff.buttons[b.Mod] == nil {
-				ff.buttons[b.Mod] = map[Button]FeatureMask{}
+				ff.buttons[b.Mod] = map[ButtonMask]FeatureMask{}
 			}
 			ff.buttons[b.Mod][b.Button] = f
 		}
@@ -607,7 +607,7 @@ func (ff *features) setKeysOf(
 // provided to SetButtonsOf.
 type FeatureButton struct {
 	Mod    Modifier
-	Button Button
+	Button ButtonMask
 }
 
 // FeatureButtons are provided by ButtonsOf of an Features instance
@@ -671,7 +671,7 @@ func (ff *features) setButtonsOf(
 	}
 	for _, b := range bb {
 		if ff.buttons[b.Mod] == nil {
-			ff.buttons[b.Mod] = map[Button]FeatureMask{}
+			ff.buttons[b.Mod] = map[ButtonMask]FeatureMask{}
 		}
 		ff.buttons[b.Mod][b.Button] = f
 	}
@@ -826,7 +826,7 @@ func (ff *features) deleteRunesOf(f FeatureMask) {
 	}
 }
 
-var allButtons = []Button{
+var allButtons = []ButtonMask{
 	Button1, Button2, Button3, Button4, Button5, Button6, Button7,
 	Button8, WheelUp, WheelDown, WheelLeft, WheelRight,
 }
@@ -844,7 +844,7 @@ func (ff *features) keyFeature(k Key, m Modifier) FeatureMask {
 // keyFeature maps a key to its associated feature or to NoEvent if not
 // registered.
 func (ff *features) buttonFeature(
-	b Button, m Modifier,
+	b ButtonMask, m Modifier,
 ) FeatureMask {
 
 	if ff == nil || ff.buttons[m] == nil {
@@ -869,7 +869,7 @@ var allFeatures = []FeatureMask{
 	UpScrollable, DownScrollable,
 	leftScrollable, rightScrollable,
 	lineLeftScrollable, lineRightScrollable,
-	PreviousSelectable, NextSelectable,
+	previousSelectable, nextSelectable,
 	PreviousLineFocusable, NextLineFocusable,
 	LineSelectable, LineUnfocusable, highlightedFocusable,
 	maximizable, editable,
@@ -891,7 +891,7 @@ var defaultFeatures = &features{
 			'q': Quitable,
 		},
 	},
-	buttons: map[Modifier]map[Button]FeatureMask{},
+	buttons: map[Modifier]map[ButtonMask]FeatureMask{},
 	have:    Quitable,
 }
 
@@ -914,13 +914,13 @@ var defaultBindings = map[FeatureMask]*bindings{
 			Mod:    ZeroModifier,
 		}},
 	},
-	NextSelectable: {
+	nextSelectable: {
 		kk: FeatureKeys{{
 			Key: TAB,
 			Mod: ZeroModifier,
 		}},
 	},
-	PreviousSelectable: {
+	previousSelectable: {
 		kk: FeatureKeys{{
 			Key: TAB,
 			Mod: Shift,

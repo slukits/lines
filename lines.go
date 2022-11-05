@@ -33,9 +33,9 @@ type Lines struct {
 	// backend is needed to post events.
 	backend api.EventProcessor
 
-	// Globals are properties whose changing is propagated to all
-	// its clones who update iff the updated property is still in sync
-	// with the origin.
+	// Globals are properties whose changing is propagated to all its
+	// clones in components who update iff the updated property is still
+	// in sync with the origin.
 	Globals *globals
 }
 
@@ -59,8 +59,8 @@ func Term(cmp Componenter) *Lines {
 // as an lines ui component.  Embedding [lines.Component] in a type
 // automatically fulfills this condition:
 //
-//	type MyTUIComponent struct { lines.Component }
-//	lines.New(&MyTUIComponent{}).Listen()
+//	type MyCmp struct { lines.Component }
+//	lines.Term(&MyCmp{}).WaitForQuit()
 type Componenter interface {
 
 	// enable makes the embedded component usable for the client, i.e.
@@ -110,7 +110,7 @@ func TermKiosk(cmp Componenter) *Lines {
 		runes: map[Modifier]map[rune]FeatureMask{ZeroModifier: {
 			0: NoFeature, // indicates the immutable default features
 		}},
-		buttons: map[Modifier]map[Button]FeatureMask{},
+		buttons: map[Modifier]map[ButtonMask]FeatureMask{},
 	}
 	return Term(cmp)
 }
@@ -215,7 +215,7 @@ type AtWriter interface {
 }
 
 // Print to an AtWriter.  The most common AtWriter of lines are provided
-// by Env and Gaps instances.
+// by [Env] instances and Gaps.
 func Print(w AtWriter, rr interface{}) {
 	if rr == nil {
 		return

@@ -9,11 +9,24 @@ package lines
 type LineFocus struct {
 	c       *Component
 	current int
+	hlType  LineFlags
 }
 
 // Current returns the line-index of the currently focused line.
 func (s *LineFocus) Current() int {
 	return s.current
+}
+
+// Trimmed switches the highlight-style to "trimmed-highlighted", i.e.
+// only a line's space-trimmed content is highlighted and not the whole
+// line.  Note the next call of Trimmed switches back to full line
+// highlighting.
+func (s *LineFocus) Trimmed() {
+	if s.hlType != Highlighted {
+		s.hlType = Highlighted
+		return
+	}
+	s.hlType = TrimmedHighlighted
 }
 
 // Next returns the index of the next (relative to Current) selectable
@@ -30,10 +43,10 @@ func (s *LineFocus) Next(highlighted bool) int {
 			continue
 		}
 		if s.current >= 0 && highlighted {
-			(*s.c.ll)[s.current].Switch(Highlighted)
+			(*s.c.ll)[s.current].Switch(s.hlType)
 		}
 		if highlighted {
-			l.Switch(Highlighted)
+			l.Switch(s.hlType)
 		}
 		s.current = s.current + 1 + idx
 		break
@@ -57,10 +70,10 @@ func (s *LineFocus) Previous(highlighted bool) int {
 			continue
 		}
 		if s.current >= 0 && highlighted {
-			(*s.c.ll)[s.current].Switch(Highlighted)
+			(*s.c.ll)[s.current].Switch(s.hlType)
 		}
 		if highlighted {
-			(*s.c.ll)[i].Switch(Highlighted)
+			(*s.c.ll)[i].Switch(s.hlType)
 		}
 		s.current = i
 		break
@@ -79,8 +92,8 @@ func (s *LineFocus) Reset(_ bool) int {
 	if s.current == -1 {
 		return s.current
 	}
-	if (*s.c.ll)[s.current].IsFlagged(Highlighted) {
-		(*s.c.ll)[s.current].Switch(Highlighted)
+	if (*s.c.ll)[s.current].IsFlagged(s.hlType) {
+		(*s.c.ll)[s.current].Switch(s.hlType)
 	}
 	s.current = -1
 	return s.current

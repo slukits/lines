@@ -22,8 +22,8 @@ type Clicker interface {
 
 // Contexter is implemented by components which want to be informed
 // about a mouse "right click"-event in their printable area.  If the
-// clicked, i.e. the component with the smallest layout area containing
-// the event coordinates,component does not have the focus an OnFocus
+// clicked component, i.e. the component with the smallest layout area
+// containing the event coordinates, does not have the focus an OnFocus
 // event is reported first if and only if the clicked component has the
 // Focusable feature.
 //
@@ -34,8 +34,7 @@ type Contexter interface {
 	// OnContext gets "right click"-events reported.  x and y provide
 	// the click coordinates translated into the layouted area of the
 	// receiving component.  E.g. y == 3 means that the component's
-	// third line was clicked.  Env.Evt provides the reported
-	// tcell.EventMouse event.
+	// third line was clicked.
 	OnContext(_ *Env, x, y int)
 }
 
@@ -50,8 +49,7 @@ type Mouser interface {
 	// OnMouse gets any mouse event reported as it is reported by tcell.
 	// x and y provide the event coordinates translated into the
 	// layouted area of the receiving component.  E.g. y == 3 means that
-	// the component's third line was clicked.  Env.Evt provides the
-	// reported tcell.EventMouse event.
+	// the component's third line was clicked.
 	OnMouse(_ *Env, x, y int)
 }
 

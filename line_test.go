@@ -181,16 +181,17 @@ func (s *ALine) Has_content_set_at_zero_position(t *T) {
 
 func (s *ALine) Has_content_set_at_given_position_space_padded(t *T) {
 	_, fx := fx(t)
-	fx.setAt(10, []rune("0123456789"))
+	fx.setAt(8, []rune("0123456789"))
 	got, _ := fx.display(fx.width(), fx.gg)
-	t.Eq("          ", string(got[:10]))
-	t.Eq("0123456789", string(got[10:]))
+	t.Eq("        ", string(got[:8]))
+	t.Eq("0123456789", string(got[8:18]))
+	t.Eq("  ", string(got[18:]))
 }
 
 func (s *ALine) Styles_content_set_at_given_position(t *T) {
 	exp := NewStyle(Blink, Yellow, Blue)
 	tt, fx := fx(t)
-	fx.setStyledAt(10, []rune("0123456789"), exp)
+	fx.setStyledAt(5, []rune("0123456789"), exp)
 	scrLine := fx.redraw(tt)
 	for _, c := range scrLine {
 		switch c.Rune {
@@ -228,6 +229,13 @@ func (s *ALine) Fills_remaining_space_with_a_filling_rune(t *T) {
 	fx.setAtFilling(10, 'a')
 	got, _ = fx.display(fx.width(), fx.gg)
 	t.Eq("0123456789aaaaaaaaaa", string(got))
+	fx.setAt(0, []rune("012"))
+	fx.setAtFilling(3, 'a')
+	fx.setAt(4, []rune("3456"))
+	fx.setAtFilling(8, 'b')
+	fx.setAt(9, []rune("789"))
+	got, _ = fx.display(fx.width(), fx.gg)
+	t.Eq("012aaaaa3456bbbbb789", string(got))
 }
 
 func (s *ALine) Expands_filler_style_preserving(t *T) {

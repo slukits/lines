@@ -40,7 +40,7 @@ type Tester interface {
 	PostRune(rune, Modifier) error
 
 	// PostKey emulates a user-mouse-input with underlying backend.
-	PostMouse(x, y int, _ Button, _ Modifier) error
+	PostMouse(x, y int, _ ButtonMask, _ Modifier) error
 
 	// PostKey emulates a resize event of the available display area
 	// with underlying backend.

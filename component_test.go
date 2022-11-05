@@ -15,11 +15,11 @@ import (
 
 type cmpFX struct{ Component }
 
-type _component struct{ Suite }
+type AComponent struct{ Suite }
 
-func (s *_component) SetUp(t *T) { t.Parallel() }
+func (s *AComponent) SetUp(t *T) { t.Parallel() }
 
-func (s *_component) Access_panics_outside_event_processing(t *T) {
+func (s *AComponent) Access_panics_outside_event_processing(t *T) {
 	cmp := &cmpFX{}
 	TermFixture(t.GoT(), 0, cmp)
 	t.Panics(func() { cmp.Dim().SetHeight(20) })
@@ -40,7 +40,7 @@ func xcmpfx(t *T, cmp Componenter) *Fixture {
 	return TermFixture(t.GoT(), 0, cmp)
 }
 
-func (s *_component) Creates_needed_lines_on_write(t *T) {
+func (s *AComponent) Creates_needed_lines_on_write(t *T) {
 	tt, _ := cmpfx(t)
 	t.FatalOn(tt.Lines.Update(tt.Root(), nil, func(e *Env) {
 		fx := tt.Root().(*cmpFX)
@@ -50,7 +50,7 @@ func (s *_component) Creates_needed_lines_on_write(t *T) {
 	}))
 }
 
-func (s *_component) Doesnt_change_line_count_on_line_overwrite(t *T) {
+func (s *AComponent) Doesnt_change_line_count_on_line_overwrite(t *T) {
 	tt, cmp := cmpfx(t)
 	t.FatalOn(tt.Lines.Update(cmp, nil, func(e *Env) {
 		cmp.Mod(Overwriting)
@@ -64,7 +64,7 @@ func (s *_component) Doesnt_change_line_count_on_line_overwrite(t *T) {
 	t.Eq("one line", tt.Screen().Trimmed().String())
 }
 
-func (s *_component) Has_a_line_more_after_appending_an_line(t *T) {
+func (s *AComponent) Has_a_line_more_after_appending_an_line(t *T) {
 	tt, cmp := cmpfx(t)
 	t.FatalOn(tt.Lines.Update(cmp, nil, func(e *Env) {
 		cmp.Mod(Appending)
@@ -74,7 +74,7 @@ func (s *_component) Has_a_line_more_after_appending_an_line(t *T) {
 	}))
 }
 
-func (s *_component) Has_a_line_more_after_writing_to_tailing(t *T) {
+func (s *AComponent) Has_a_line_more_after_writing_to_tailing(t *T) {
 	tt, cmp := cmpfx(t)
 	t.FatalOn(tt.Lines.Update(cmp, nil, func(e *Env) {
 		cmp.Mod(Tailing)
@@ -84,7 +84,7 @@ func (s *_component) Has_a_line_more_after_writing_to_tailing(t *T) {
 	}))
 }
 
-func (s *_component) Shows_last_line_clipped_above_if_tailing(t *T) {
+func (s *AComponent) Shows_last_line_clipped_above_if_tailing(t *T) {
 	tt, cmp := cmpfx(t)
 	tt.FireResize(20, 2)
 	t.FatalOn(tt.Lines.Update(cmp, nil, func(e *Env) {
@@ -94,7 +94,7 @@ func (s *_component) Shows_last_line_clipped_above_if_tailing(t *T) {
 	t.Eq("lines  \nat last", tt.Screen().Trimmed().String())
 }
 
-func (s *_component) Blanks_a_reset_line(t *T) {
+func (s *AComponent) Blanks_a_reset_line(t *T) {
 	tt, cmp := cmpfx(t)
 	tt.FireResize(20, 2)
 	t.FatalOn(tt.Lines.Update(cmp, nil, func(e *Env) {
@@ -110,13 +110,13 @@ func (s *_component) Blanks_a_reset_line(t *T) {
 	t.Eq("second", tt.Screen().Trimmed().String())
 }
 
-func (s *_component) fxCmp(t *T) (*Fixture, *cmpFX) {
+func (s *AComponent) fxCmp(t *T) (*Fixture, *cmpFX) {
 	cmp := &cmpFX{}
 	tt := TermFixture(t.GoT(), 0, cmp)
 	return tt, cmp
 }
 
-func (s *_component) Truncates_lines_to_screen_area_on_reset_all(t *T) {
+func (s *AComponent) Truncates_lines_to_screen_area_on_reset_all(t *T) {
 	tt, fx := s.fxCmp(t)
 	tt.FireResize(20, 2)
 	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
@@ -129,7 +129,7 @@ func (s *_component) Truncates_lines_to_screen_area_on_reset_all(t *T) {
 	}))
 }
 
-func (s *_component) Scrolls_by_one_line_if_height_is_one(t *T) {
+func (s *AComponent) Scrolls_by_one_line_if_height_is_one(t *T) {
 	tt, fx := s.fxCmp(t)
 	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
 		fx.Dim().SetHeight(1)
@@ -156,7 +156,7 @@ func (s *_component) Scrolls_by_one_line_if_height_is_one(t *T) {
 	t.Eq("first", tt.Screen().Trimmed().String())
 }
 
-func (s *_component) Scrolls_to_last_line_if_last_displayed(t *T) {
+func (s *AComponent) Scrolls_to_last_line_if_last_displayed(t *T) {
 	tt, fx := s.fxCmp(t)
 	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
 		fx.Dim().SetHeight(3)
@@ -170,7 +170,7 @@ func (s *_component) Scrolls_to_last_line_if_last_displayed(t *T) {
 	t.Eq("second\nthird \nforth ", tt.Screen().Trimmed().String())
 }
 
-func (s *_component) Scrolls_to_first_line_if_first_displayed(t *T) {
+func (s *AComponent) Scrolls_to_first_line_if_first_displayed(t *T) {
 	tt, fx := s.fxCmp(t)
 	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
 		fx.Dim().SetHeight(3)
@@ -188,7 +188,7 @@ func (s *_component) Scrolls_to_first_line_if_first_displayed(t *T) {
 	t.Eq("first \nsecond\nthird ", tt.Screen().Trimmed().String())
 }
 
-func (s *_component) Scrolls_down_by_90_percent_height(t *T) {
+func (s *AComponent) Scrolls_down_by_90_percent_height(t *T) {
 	tt, fx := s.fxCmp(t)
 	tt.FireResize(20, 30)
 	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
@@ -238,7 +238,7 @@ func (s *_component) Scrolls_down_by_90_percent_height(t *T) {
 	t.Eq(strings.Join(exp, "\n"), tt.Screen().Trimmed().String())
 }
 
-func (s *_component) Scrolls_up_by_90_percent_height(t *T) {
+func (s *AComponent) Scrolls_up_by_90_percent_height(t *T) {
 	tt, fx := s.fxCmp(t)
 	tt.FireResize(20, 30)
 	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
@@ -302,7 +302,7 @@ func (s *_component) Scrolls_up_by_90_percent_height(t *T) {
 	t.Eq(strings.Join(exp, "\n"), tt.Screen().Trimmed().String())
 }
 
-func (s *_component) Scrolls_to_top_on_reset_all(t *T) {
+func (s *AComponent) Scrolls_to_top_on_reset_all(t *T) {
 	tt, fx := s.fxCmp(t)
 	tt.FireResize(20, 2)
 	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
@@ -363,7 +363,7 @@ func (c *rplStackFX) OnUpdate(e *Env) {
 	c.CC[1] = cmp
 }
 
-func (s *_component) Is_replaceable(t *T) {
+func (s *AComponent) Is_replaceable(t *T) {
 	fx := &rplStackFX{
 		long:  "a rather long long long line",
 		short: "a short line",
@@ -381,7 +381,7 @@ func (s *_component) Is_replaceable(t *T) {
 	t.Eq(fx.short, str)
 }
 
-func (s *_component) Updates_tab_expansions_on_tab_width_change(t *T) {
+func (s *AComponent) Updates_tab_expansions_on_tab_width_change(t *T) {
 	tt, cmp := cmpfx(t)
 	tt.FireResize(11, 2)
 
@@ -402,7 +402,7 @@ func (s *_component) Updates_tab_expansions_on_tab_width_change(t *T) {
 	t.True(strings.HasPrefix(tt.Screen()[1], expTB+"2nd"))
 }
 
-func (s *_component) Updates_lines_style_on_global_style_change(t *T) {
+func (s *AComponent) Updates_lines_style_on_global_style_change(t *T) {
 	tt, _ := cmpfx(t)
 	tt.FireResize(10, 1)
 
@@ -410,5 +410,5 @@ func (s *_component) Updates_lines_style_on_global_style_change(t *T) {
 
 func TestComponent(t *testing.T) {
 	t.Parallel()
-	Run(&_component{}, t)
+	Run(&AComponent{}, t)
 }

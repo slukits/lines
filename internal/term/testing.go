@@ -76,6 +76,7 @@ func NewFixture(t *testing.T, timeout time.Duration) (*UI, *Fixture) {
 // Listen sets the listener and posts initial resize event.  Listen is an
 // no-op if already a listener is set.
 func (tt *Fixture) Listen(l func(api.Eventer)) {
+	tt.t.Helper()
 	if tt.ui.listener != nil {
 		return
 	}
@@ -84,6 +85,7 @@ func (tt *Fixture) Listen(l func(api.Eventer)) {
 }
 
 func (tt *Fixture) Display(s string, sty api.Style) {
+	tt.t.Helper()
 	if len(s) == 0 {
 		return
 	}
@@ -109,7 +111,7 @@ func (tt *Fixture) PostRune(r rune, m api.Modifier) {
 }
 
 func (tt *Fixture) PostMouse(
-	x, y int, b api.Button, m api.Modifier,
+	x, y int, b api.ButtonMask, m api.Modifier,
 ) {
 	tt.t.Helper()
 	if err := tt.ui.Post(newMouseEvent(x, y, b, m)); err != nil {

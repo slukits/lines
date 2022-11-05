@@ -172,7 +172,7 @@ type MouseEventer interface {
 	Eventer
 
 	// Button returns the buttons mask of the mouse event.
-	Button() Button
+	Button() ButtonMask
 
 	// Mod reports the pressed modifier key like shift, alt, ...
 	Mod() Modifier

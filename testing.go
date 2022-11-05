@@ -18,10 +18,11 @@ import (
 type StringScreen = api.StringScreen
 
 // CellsScreen is a screen representation at a specific point in time of
-// lines of cells which also provide information about their styling.
+// [CellsLine] instances which also provide information about their
+// styling for test-evaluations.
 type CellsScreen = api.CellsScreen
 
-// CellsLine represents a line of a [lines.CellsScreen].
+// CellsLine represents a line of a [CellsScreen] for test-evaluations.
 type CellsLine = api.CellsLine
 
 // backend prevents the backend testing instance from being a public
@@ -167,7 +168,7 @@ func (tt *Fixture) FireContext(x, y int) {
 // not listening it is started before the event is fired.  Are given
 // coordinates outside the available screen area the call is ignored.
 func (tt *Fixture) FireMouse(
-	x, y int, bm api.Button, mm api.Modifier,
+	x, y int, bm api.ButtonMask, mm api.Modifier,
 ) {
 	tt.t.Helper()
 	width, height := tt.Lines.scr.backend.Size()

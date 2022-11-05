@@ -1,4 +1,5 @@
 // Copyright (c) 2022 Stephan Lukits. All rights reserved.
+
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
@@ -56,12 +57,14 @@ type Env struct {
 	// instance.  NOTE with Evt.Source() a backend event may be accessed.
 	Evt Eventer
 
-	sty   *Style
 	flags envMask
 }
 
 type cmpWriter interface {
-	write(lines []byte, at, cell int, ff LineFlags, sty *Style) (int, error)
+	globals() *globals
+	write(lines []byte, at, cell int, sty *Style) (int, error)
+	writeAt(rr []rune, at, cell int, sty *Style)
+	writeAtFilling(r rune, at, cell int, sty *Style)
 }
 
 func (e *Env) NewStyle() api.Style { return e.cmp.backend().NewStyle() }
@@ -73,25 +76,7 @@ func (e *Env) NewStyle() api.Style { return e.cmp.backend().NewStyle() }
 // style, fore- or background colors.  NOTE all previous content of the
 // component is removed.
 func (e *Env) Write(bb []byte) (int, error) {
-	return e.cmp.(cmpWriter).write(bb, -1, -1, 0, e.sty)
-}
-
-// Attr sets the next write's style attributes like bold.
-func (e *Env) Attr(aa StyleAttributeMask) *FmtWriter {
-	return &FmtWriter{
-		cmp: e.cmp.(cmpWriter),
-		sty: e.cmp.embedded().gg.Style(Default).WithAdded(aa),
-	}
-}
-
-// TODO: move this feature to a line-context; i.e.
-// Env.LL(n).AddStyleRange
-func (e *Env) AddStyleRange(idx int, sr SR, rr ...SR) {
-	ll := *e.cmp.embedded().ll
-	if idx < 0 || idx > len(ll) {
-		return
-	}
-	ll[idx].addStyleRange(sr, rr...)
+	return e.cmp.(cmpWriter).write(bb, -1, -1, nil)
 }
 
 func (e *Env) SetLineFlags(idx int, ff LineFlags) {
@@ -102,44 +87,50 @@ func (e *Env) SetLineFlags(idx int, ff LineFlags) {
 	ll[idx].setFlags(ff)
 }
 
-// FG sets the next write's foreground color.
-func (e *Env) FG(color Color) *FmtWriter {
-	return &FmtWriter{
+// AA sets the next write's style attributes like bold.
+func (e *Env) AA(aa StyleAttributeMask) *EnvWriter {
+	sty := e.cmp.embedded().gg.Style(Default).WithAdded(aa)
+	return &EnvWriter{
 		cmp: e.cmp.(cmpWriter),
-		sty: e.cmp.embedded().gg.Style(Default).WithFG(color),
+		sty: &sty,
+	}
+}
+
+// FG sets the next write's foreground color.
+func (e *Env) FG(color Color) *EnvWriter {
+	sty := e.cmp.embedded().gg.Style(Default).WithFG(color)
+	return &EnvWriter{
+		cmp: e.cmp.(cmpWriter),
+		sty: &sty,
 	}
 }
 
 // BG sets the next write's foreground color.
-func (e *Env) BG(color Color) *FmtWriter {
-	return &FmtWriter{
+func (e *Env) BG(color Color) *EnvWriter {
+	sty := e.cmp.embedded().gg.Style(Default).WithBG(color)
+	return &EnvWriter{
 		cmp: e.cmp.(cmpWriter),
-		sty: e.cmp.embedded().gg.Style(Default).WithBG(color),
+		sty: &sty,
 	}
 }
 
 // LL returns a writer which writes to the line and its following lines
 // at given index.
-func (e *Env) LL(idx int, ff ...LineFlags) *locWriter {
-	_ff := LineFlags(0)
-	for _, f := range ff {
-		_ff |= f
+func (e *Env) LL(idx int) *EnvLineWriter {
+	return &EnvLineWriter{
+		line: idx,
+		cmp:  e.cmp.(cmpWriter),
 	}
-	return &locWriter{
-		sty:  e.cmp.embedded().gg.Style(Default),
-		line: idx, cell: -1, ff: _ff, cmp: e.cmp.(cmpWriter)}
 }
 
 // At returns a writer which writes to given line at given position
 // adding given line flags to the line's flags.
-func (e *Env) At(line, cell int, ff ...LineFlags) *locWriter {
-	_ff := LineFlags(0)
-	for _, f := range ff {
-		_ff |= f
+func (e *Env) At(line, cell int) *EnvAtWriter {
+	return &EnvAtWriter{
+		line: line,
+		cell: cell,
+		cmp:  e.cmp.(cmpWriter),
 	}
-	return &locWriter{
-		sty:  e.cmp.embedded().gg.Style(Default),
-		line: line, cell: cell, ff: _ff, cmp: e.cmp.(cmpWriter)}
 }
 
 // Focused returns the currently focused component.  Please remember to

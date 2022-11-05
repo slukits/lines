@@ -10,6 +10,8 @@ lifting for you when it comes to
 * feature handling
 * testing
 
+Following example times out in the go playground since it is blocking:
+
 ```go
     package main
 
@@ -62,7 +64,7 @@ what does work
 ```
 
 Also using functionality or properties provided by embedded Component
-instance in a function that doesn't return in the listener
+instance in a function that doesn't return in the executing listener
 implementation doesn't work.
 
 ```go
@@ -86,7 +88,7 @@ interface implemented in a component, corresponding events are reported
 to that component.  E.g. OnKey, OnFocus, OnLayout are methods of such
 interfaces.  Keyboard and mouse events are bubbling up from the
 focused/clicked component through all enclosing ancestors.  The
-environment instance of such a reported bubbling event may be used to
+environment instance e of such a reported bubbling event may be used to
 suppress bubbling: e.StopBubbling().
 
 # Layout handling
@@ -105,32 +107,36 @@ hence it silently ignores the chained components.
 # Content and format handling
 
 The Env(ironment) instance passed to a event listener is associated with
-the screen portion of the component the event is reported to.  Writing
+the screen portion of the component the event is reported to.  Printing
 to the environment prints provided content to its screen portion.  Env's
-methods Fmt, Sty, BG, FG, LL, Pos give fine grained control of what is
-printed where and how.  Fmt stands for formatting like centered.  Sty
-may be used to set a combination of lines.StyleAttribute.  Methods  FG,
-BG lets you set fore- and background color.  LL lets you address a
-specific line, Pos a line and a column.  Each of these methods return a
-writer implementation, i.e. we can do this
+methods LL, At, AA, FG and BG give fine grained control of what is
+printed where and how.  While printing directly to an environment will
+always clear the component before it prints to its first screen line the
+LL method lets you select which line to print to.  A subsequent call of
+At defines the position in selected line.  AA sets style attributes
+while FG and BG set the fore- and background color of the next print.
+Each of these methods return a writer implementation, i.e. we can do
+this
 
 ```go
-	fmt.Fprint(
-	    e.Fmt(lines.Centered).Sty(lines.Bold).LL(5),
-	    "a centered bold line",
+	fmt.Fprint(e.LL(5).AA(lines.Bold),
+	    lines.Filler + "a centered bold line" + lines.Filler)
 	)
 ```
 
 The above prints "a centered bold line" centered in bold letters into
-the component's fifth line.  While the e-methods bind formatting and
-styles to the next printed text there is a similar API on component
-level provided by the embedded Component instance: Component.Fmt, .BG,
-.FG sets default formatting directives for each printed content of a
-component.  There is also the property Component.Gaps which makes optional
-gaps around a component accessible.  And the method Component.Mod
-controls if a component's content is overwritten or appended, or if it
-is shown tailed.
+the component's fifth line.  Note here again the line will stay centered
+if the terminal window size changes.  A similar API is provided by
+embedded Component's Gaps(index)-method
 
+```go
+	c.Gaps(0).Sty(lines.Reverse)
+	c.Gaps(0).Corners.Sty(lines.Revers)
+	)
+```
+
+above is as of now the simplest way to frame a component.  Gaps allows to
+do all sorts of framing, padding and guttering of a component.
 
 # Feature handling
 
@@ -159,7 +165,7 @@ If we now click into p2 we probably expect p2 to receive the focus.  But
 if we click into the statusbar will we also want sb to receive the
 focus? Maybe, maybe not.  To avoid opinionated default behavior lines
 implements the "Feature" concept whose API may be accessed by the
-FF-property of a embedded Component instance.
+FF-property of the embedded Component instance.
 
 ```go
     type MyComponent { lines.Component }

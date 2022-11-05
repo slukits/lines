@@ -11,7 +11,7 @@ import (
 	"github.com/slukits/lines/internal/api"
 )
 
-var apiToTcellButtons = map[api.Button]tcell.ButtonMask{
+var apiToTcellButtons = map[api.ButtonMask]tcell.ButtonMask{
 	api.Button1:    tcell.Button1,
 	api.Button2:    tcell.Button2,
 	api.Button3:    tcell.Button3,
@@ -27,7 +27,7 @@ var apiToTcellButtons = map[api.Button]tcell.ButtonMask{
 	api.ZeroButton: tcell.ButtonNone,
 }
 
-var tcellToApiButtons = map[tcell.ButtonMask]api.Button{
+var tcellToApiButtons = map[tcell.ButtonMask]api.ButtonMask{
 	tcell.Button1:    api.Button1,
 	tcell.Button2:    api.Button2,
 	tcell.Button3:    api.Button3,
@@ -45,7 +45,7 @@ var tcellToApiButtons = map[tcell.ButtonMask]api.Button{
 
 type mouseEvent struct{ evt *tcell.EventMouse }
 
-func newMouseEvent(x, y int, b api.Button, m api.Modifier) api.MouseEventer {
+func newMouseEvent(x, y int, b api.ButtonMask, m api.Modifier) api.MouseEventer {
 	return &mouseEvent{evt: tcell.NewEventMouse(
 		x, y,
 		apiToTcellButtons[b],
@@ -55,7 +55,7 @@ func newMouseEvent(x, y int, b api.Button, m api.Modifier) api.MouseEventer {
 
 func (e *mouseEvent) Pos() (int, int) { return e.evt.Position() }
 
-func (e *mouseEvent) Button() api.Button {
+func (e *mouseEvent) Button() api.ButtonMask {
 	return tcellToApiButtons[e.evt.Buttons()]
 }
 
