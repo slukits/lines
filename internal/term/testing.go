@@ -36,7 +36,7 @@ func LstFixture(
 	t.Helper()
 
 	if timeout == 0 {
-		timeout = 100 * time.Millisecond
+		timeout = 10 * time.Second
 	}
 	ui := initUI(tcell.NewSimulationScreen("UTF-8"), listener)
 	t.Cleanup(func() { ui.Quit() })
@@ -60,7 +60,7 @@ func NewFixture(t *testing.T, timeout time.Duration) (*UI, *Fixture) {
 	t.Helper()
 
 	if timeout == 0 {
-		timeout = 100 * time.Millisecond
+		timeout = 10 * time.Second
 	}
 	ui := initUI(tcell.NewSimulationScreen("UTF-8"), nil)
 	t.Cleanup(func() { ui.Quit() })
