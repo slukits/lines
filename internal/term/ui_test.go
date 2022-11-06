@@ -139,7 +139,7 @@ func (s *AnUI) Reports_a_resize_eventer(t *T) {
 }
 
 func (s *AnUI) Displays_given_rune_at_given_position(t *T) {
-	ui, tt := LstFixture(t.GoT(), nil, 10*time.Minute)
+	ui, tt := LstFixture(t.GoT(), nil, 0)
 	tt.PostResize(3, 3)
 
 	ui.Display(1, 1, 'x', ui.NewStyle())

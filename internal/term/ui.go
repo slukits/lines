@@ -108,6 +108,10 @@ func (u *UI) Quit() {
 	if !u.hasQuit.CompareAndSwap(false, true) {
 		return
 	}
+	u.Post(&quitEvent{when: time.Now()})
+}
+
+func (u *UI) quit() {
 	u.Lock()
 	defer u.Unlock()
 	for _, l := range u.quitter {
@@ -122,39 +126,50 @@ func (u *UI) Quit() {
 	}
 }
 
+// screenEvent is used to read the content of a simulation screen while
+// making sure no other event is writing to it.
+type quitEvent struct {
+	when time.Time
+}
+
+func (e *quitEvent) When() time.Time     { return e.when }
+func (e *quitEvent) Source() interface{} { return e }
+
 func (u *UI) poll() {
 	for {
 		evt := u.lib.PollEvent()
 		if evt == nil {
 			return
 		}
-		if evt, ok := evt.(*screenEvent); ok {
-			u.handleScreenEvent(evt)
-			continue
-		}
-		if u.listener == nil {
-			u.handleTransactional()
-			continue
+		lst := u.listener
+		if lst == nil {
+			lst = func(e api.Eventer) {}
 		}
 		switch evt := evt.(type) {
 		case *tcell.EventResize:
-			u.listener(&resize{evt: evt})
+			lst(&resize{evt: evt})
 		case *tcell.EventKey:
 			if evt.Key() == tcell.KeyRune {
-				u.listener(&runeEvent{evt: evt})
+				lst(&runeEvent{evt: evt})
 				break
 			}
-			u.listener(&keyEvent{evt: evt})
+			lst(&keyEvent{evt: evt})
 		case *tcell.EventMouse:
-			u.listener(&mouseEvent{evt: evt})
+			lst(&mouseEvent{evt: evt})
 		case *tcell.EventPaste:
-			u.listener(&bracketPaste{evt: evt})
+			lst(&bracketPaste{evt: evt})
+		case *screenEvent:
+			u.handleScreenEvent(evt)
+		case *quitEvent:
+			u.quit()
+			u.handleTransactional()
+			return
 		default:
 			e, ok := evt.(api.Eventer)
 			if !ok {
 				panic(fmt.Sprintf("unknown event type: %T", evt))
 			}
-			u.listener(e)
+			lst(e)
 		}
 		u.handleTransactional()
 	}
@@ -166,10 +181,7 @@ func (u *UI) handleTransactional() {
 	}
 }
 
-func (u *UI) handleScreenEvent(evt *screenEvent) {
-	evt.grab()
-	u.handleTransactional()
-}
+func (u *UI) handleScreenEvent(evt *screenEvent) { evt.grab() }
 
 type resize struct{ evt *tcell.EventResize }
 
