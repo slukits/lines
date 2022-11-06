@@ -206,7 +206,14 @@ func (r *bracketPaste) When() time.Time     { return r.evt.When() }
 func (r *bracketPaste) Start() bool         { return r.evt.Start() }
 func (r *bracketPaste) End() bool           { return r.evt.End() }
 
+// Post given event evt into the event queue.  Post is a no-op if Quit
+// has been already called.
 func (u *UI) Post(evt api.Eventer) error {
+	if u.hasQuit.Load() {
+		if _, ok := evt.(*quitEvent); !ok {
+			return nil
+		}
+	}
 	if u.transactional.Load() == nil {
 		return u.lib.PostEvent(evt)
 	}
