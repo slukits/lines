@@ -15,17 +15,22 @@ Following example times out in the go playground since it is blocking:
 ```go
     package main
 
-    import (
-        fmt
+	import (
+	    fmt
 
-        "github.com/slukits/lines"
-    )
+	    "github.com/slukits/lines"
+	)
 
-    type Cmp struct { lines.Component }
+	type Cmp struct { lines.Component }
 
-    func (c *Cmp) OnInit(e *lines.Env) { fmt.Fprint(e, "hello world") }
+	func (c *Cmp) OnInit(e *lines.Env) {
+	    c.Dim().SetWidth(len("hello world")).SetHeight(1)
+	    fmt.Fprint(e, "hello world")
+	}
 
-    func main() { lines.Term(&Cmp{}).WaitForQuit() }
+	func main() {
+	    lines.Term(&Cmp{}).WaitForQuit()
+	}
 ```
 
 Term provides an Lines-instance with a terminal backend.  It reports
@@ -33,9 +38,20 @@ user input and programmatically posted events to listener
 implementations of client provided components.  While client listener
 implementations print to an provided environment which is associated
 with the component's portion of the screen.  lines is designed to easily
-add further backends like "Shiny" of "Fine" for graphical displays.  As
+add further backends like "shiny" of "fyne" for graphical displays.  As
 of now lines has only a terminal backend which wraps the package
 [tcell](https://github.com/gdamore/tcell).
+
+Above "hello world"-program takes over a terminal screen printing
+horizontally and vertically centered "hello world" to it.  "hello world"
+stays centered in case the screen is a terminal window which changes its
+size.  Ctrl-c, Ctrl-d or q will quit the application.  Note SetWidth in
+above example works as expected because "hello world" consists of ASCII
+characters only.  Is that not guaranteed you will want to count runes
+instead of bytes.  Setting width and height is not necessary.  Left out
+in above example "hello world" is printed to the screen starting in the
+upper left corner.
+
 
 # Concurrency safety
 
@@ -65,7 +81,7 @@ what does work
 
 Also using functionality or properties provided by embedded Component
 instance in a function that doesn't return in the executing listener
-implementation doesn't work.
+won't work.
 
 ```go
     func (c *Cmp) OnInit(e *lines.Env) {
@@ -93,16 +109,13 @@ suppress bubbling: e.StopBubbling().
 
 # Layout handling
 
-lines comes with a layout manager which does most of the work for
-you.  If fine grained control is needed the embedded Component's Dim
-method informs about positioning and size and also provides features
-to change the later.  One can also control there if a component is
-filling, i.e. uses up unused space, or if its size is fixed.
-Components can be arbitrarily nested by embedding either the Stacking
-or Chaining type in a component or by implementing the Stacker or
-Chainer interface.  The layout manager is not smart enough to handle
-a component which is both stacking and chaining other components
-hence it silently ignores the chained components.
+lines comes with a layout manager which does most of the work for you.
+If fine grained control is needed the embedded Component's Dim method
+informs about positioning and size and also provides features to change
+the later.  One can also control there if a component is filling, i.e.
+uses up unused space, or if its size is fixed.  Components can be
+arbitrarily nested by embedding *either* the Stacking or Chaining type in
+a component or by implementing the Stacker or Chainer interface.
 
 # Content and format handling
 
@@ -135,21 +148,16 @@ embedded Component's Gaps(index)-method
 	)
 ```
 
-above is as of now the simplest way to frame a component.  Gaps allows to
+above is as of now the simplest way to frame a component.  Gaps allow to
 do all sorts of framing, padding and guttering of a component.
 
 # Feature handling
 
 The feature concept answers the question after the default behavior of
-an ui-component.  While we probably expect that we can scroll a
-component whose content doesn't fit in its screen area, do we also want
-a component whose content is shown tailed to be able to scroll up and
-down? Maybe, maybe not.
-
-Lets assume we have implemented the components App, MessageBar,
-Statusbar, Workspace and Panel.  Lets further assume component App
-stacks the components MessageBar, Workspace and Statusbar while a
-Workspace  chains two panel instances p1 and p2.
+an ui-component.  Lets assume we have implemented the components App,
+MessageBar, Statusbar, Workspace and Panel.  Lets further assume
+component App stacks the components MessageBar, Workspace and Statusbar
+while a Workspace  chains two panel instances p1 and p2.
 
     APP--------------------------+
       |           mb             |
