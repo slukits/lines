@@ -13,24 +13,24 @@ lifting for you when it comes to
 Following example times out in the go playground since it is blocking:
 
 ```go
-    package main
+package main
 
-	import (
-	    fmt
+import (
+    fmt
 
-	    "github.com/slukits/lines"
-	)
+    "github.com/slukits/lines"
+)
 
-	type Cmp struct { lines.Component }
+type Cmp struct { lines.Component }
 
-	func (c *Cmp) OnInit(e *lines.Env) {
-	    c.Dim().SetWidth(len("hello world")).SetHeight(1)
-	    fmt.Fprint(e, "hello world")
-	}
+func (c *Cmp) OnInit(e *lines.Env) {
+    c.Dim().SetWidth(len("hello world")).SetHeight(1)
+    fmt.Fprint(e, "hello world")
+}
 
-	func main() {
-	    lines.Term(&Cmp{}).WaitForQuit()
-	}
+func main() {
+    lines.Term(&Cmp{}).WaitForQuit()
+}
 ```
 
 Term provides an Lines-instance with a terminal backend.  It reports
@@ -58,25 +58,25 @@ upper left corner.
 What doesn't work
 
 ```go
-    func (c *Cmp) OnInit(e *lines.Env) {
-        go func() {
-            time.Sleep(1*time.Second)
-            fmt.Fprint(e, "awoken") // will panic
-        }()
-    }
+func (c *Cmp) OnInit(e *lines.Env) {
+    go func() {
+        time.Sleep(1*time.Second)
+        fmt.Fprint(e, "awoken") // will panic
+    }()
+}
 ```
 
 what does work
 
 ```go
-    func (c *Cmp) OnInit(e *lines.Env) {
-        go func(ll *lines.Lines) {
-            time.Sleep(1*time.Second)
-            ee.Update(c, nil, func(e *lines.Env) {
-                 fmt.Fprint(e, "awoken") // will not panic
-            })
-        }(e.Lines)
-    }
+func (c *Cmp) OnInit(e *lines.Env) {
+    go func(ll *lines.Lines) {
+        time.Sleep(1*time.Second)
+        ee.Update(c, nil, func(e *lines.Env) {
+             fmt.Fprint(e, "awoken") // will not panic
+        })
+    }(e.Lines)
+}
 ```
 
 Also using functionality or properties provided by embedded Component
@@ -84,13 +84,13 @@ instance in a function that doesn't return in the executing listener
 won't work.
 
 ```go
-    func (c *Cmp) OnInit(e *lines.Env) {
-        go func() {
-            time.Sleep(1*time.Second)
-            c.FF.Add(Scrollable) // panic or race condition
-            c.Dim().SetWidth(42) // panic or race condition
-        }()
-    }
+func (c *Cmp) OnInit(e *lines.Env) {
+    go func() {
+        time.Sleep(1*time.Second)
+        c.FF.Add(Scrollable) // panic or race condition
+        c.Dim().SetWidth(42) // panic or race condition
+    }()
+}
 ```
 
 It is only save to pass (the initially created) Lines instance 
@@ -132,9 +132,9 @@ Each of these methods return a writer implementation, i.e. we can do
 this
 
 ```go
-	fmt.Fprint(e.LL(5).AA(lines.Bold),
-	    lines.Filler + "a centered bold line" + lines.Filler)
-	)
+fmt.Fprint(e.LL(5).AA(lines.Bold),
+    lines.Filler + "a centered bold line" + lines.Filler),
+)
 ```
 
 The above prints "a centered bold line" centered in bold letters into
@@ -143,9 +143,8 @@ if the component's size changes.  A similar API is provided by embedded
 Component's Gaps(index)-method
 
 ```go
-	c.Gaps(0).Sty(lines.Reverse)
-	c.Gaps(0).Corners.Sty(lines.Revers)
-	)
+c.Gaps(0).Sty(lines.Reverse)
+c.Gaps(0).Corners.Sty(lines.Revers)
 ```
 
 above is as of now the simplest way to frame a component.  Gaps allow to
@@ -176,11 +175,11 @@ implements the "Feature" concept whose API may be accessed by the
 FF-property of the embedded Component instance.
 
 ```go
-    type MyComponent { lines.Component }
+type MyComponent { lines.Component }
 
-    func (c *MyComponent) OnInit(_ *lines.Env) {
-        c.FF.Add(lines.Scrollable)
-    }
+func (c *MyComponent) OnInit(_ *lines.Env) {
+    c.FF.Add(lines.Scrollable)
+}
 ```
 
 Now our component will react on page up/down key-presses if its content
@@ -188,9 +187,9 @@ doesn't fit (vertically) into c's screen area.  But we don't need to set
 each feature for each component separately:
 
 ```go
-    func (ws *Workspace) OnInit(e *lines.Env) {
-        ws.FF.AddRecursively(lines.Focusable)
-    }
+func (ws *Workspace) OnInit(e *lines.Env) {
+    ws.FF.AddRecursively(lines.Focusable)
+}
 ```
 
 The above line makes all descendants of the workspace focusable, i.e.
@@ -202,25 +201,25 @@ they receive the focus if clicked with the mouse on them.
 lines comes with testing facilities:
 
 ```go
-    import (
-        "testing"
+import (
+    "testing"
 
-        "github.com/slukits/lines"
-    )
+    "github.com/slukits/lines"
+)
 
-    type CmpFixture struct { lines.Component }
+type CmpFixture struct { lines.Component }
 
-    func TestUpdateListenerIsCalled(t *T) {
-        tt := lines.TermFixture(t, 0, &CmpFixture{})
-        exp :=  "update listener called"
-        tt.Lines.Update(tt.Root(), nil, func(e *lines.Env) {
-            fmt.Fprint(e, exp)
-        })
-        if exp != tt.Screen().Trimmed().String() {
-            t.Errorf("expected: '%s'; got '%s'", exp,
-                tt.Screen().Trimmed().String())
-        }
+func TestUpdateListenerIsCalled(t *T) {
+    tt := lines.TermFixture(t, 0, &CmpFixture{})
+    exp :=  "update listener called"
+    tt.Lines.Update(tt.Root(), nil, func(e *lines.Env) {
+        fmt.Fprint(e, exp)
+    })
+    if exp != tt.Screen().Trimmed().String() {
+        t.Errorf("expected: '%s'; got '%s'", exp,
+            tt.Screen().Trimmed().String())
     }
+}
 ```
 
 lines can be asked for a test fixture.  The main features of an
