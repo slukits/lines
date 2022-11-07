@@ -18,11 +18,13 @@ import (
 type StringScreen = api.StringScreen
 
 // CellsScreen is a screen representation at a specific point in time of
-// [CellsLine] instances which also provide information about their
-// styling for test-evaluations.
+// [CellsLine] instances.  NOTE use CellsScreen's Trimmed-method to
+// minimize the reported screen area.
 type CellsScreen = api.CellsScreen
 
-// CellsLine represents a line of a [CellsScreen] for test-evaluations.
+// CellsLine represents a line of a [CellsScreen] providing of each cell
+// in the line its displayed rune and style information for
+// test-evaluations.
 type CellsLine = api.CellsLine
 
 // backend prevents the backend testing instance from being a public

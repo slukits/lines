@@ -282,7 +282,7 @@ func (s *lineFocus) Inverts_bg_fg_of_focused_if_highlighted(t *T) {
 
 	l2 := tt.CellsOf(fx).Trimmed()[1]
 	for x := range l2 {
-		t.Not.True(l2.HasAttr(x, Reverse))
+		t.Not.True(l2.HasAA(x, Reverse))
 	}
 
 	tt.FireKey(Down)
@@ -291,10 +291,10 @@ func (s *lineFocus) Inverts_bg_fg_of_focused_if_highlighted(t *T) {
 	l2 = tt.CellsOf(fx).Trimmed()[1]
 	for x := range l2 {
 		if x < len("line 2") {
-			t.True(l2.HasAttr(x, Reverse))
+			t.True(l2.HasAA(x, Reverse))
 			continue
 		}
-		t.Not.True(l2.HasAttr(x, Reverse))
+		t.Not.True(l2.HasAA(x, Reverse))
 	}
 }
 

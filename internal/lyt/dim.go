@@ -281,7 +281,7 @@ func (d *Dim) clearUpdate() {
 	}
 }
 
-// Area provides a Dimer's writable area in a layout, i.e. without
+// Area provides a Dimer's printable area in a layout, i.e. without
 // clippings and margins.
 func (d *Dim) Area() (x, y, width, height int) {
 	if d.IsOffScreen() {
@@ -333,8 +333,7 @@ func (d *Dim) Rect() (x, y, width, height int) {
 	return d.x, d.y, width, height
 }
 
-// Clip how much of the Area is overflowing.  I.e. the area-width
-// reduced by clip-width is the available width in a calculated layout.
+// Clip how much of the components (minimal) width and hight is clipped.
 func (d *Dim) Clip() (width, height int) {
 	return d.clipWidth, d.clipHeight
 }

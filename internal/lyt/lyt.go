@@ -51,10 +51,10 @@ var ErrLyt = errors.New("lty: ")
 // Dimers implements either of those interfaces its provided Dimers'
 // layout is calculated also and so on.  Provided Dimers must not
 // implement both interfaces.  In the later case the Stacker supersedes
-// the Chainer; no error is reported.  Dimers not fitting in the
+// the Chainer; no error is reported.  Dimers overflowing their
 // available area are clipped, i.e. have either a partial area of their
 // wanted area available or are flagged as off-screen (see
-// Dim.IsOffScreen).  Dimers which do not fir their assigned are receive
+// Dim.IsOffScreen).  Dimers which underflow their assigned area receive
 // a margin.
 type Manager struct {
 	Width, Height int

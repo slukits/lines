@@ -5,8 +5,6 @@
 
 package lines
 
-import "github.com/slukits/lines/internal/api"
-
 type envMask uint64
 
 const (
@@ -26,21 +24,24 @@ const (
 //	}
 //
 //	func (c *MyUIComponent) myListener(e *lines.Env) {
-//	    go func(ee *lines.Events) {
+//	    go func(ll *lines.Lines) {
 //	        time.Sleep(1*time.Second)
-//	        ee.UpdateComponent(c, nil, func(e *lines.Env) {
+//	        ll.UpdateComponent(c, nil, func(e *lines.Env) {
 //	             fmt.Fprint(e, "awoken") // will not panic
 //	        })
-//	    }(e.EE)
+//	    }(e.Lines)
 //	}
 //
-// An Env instance also informs about the triggering event see
-// Evt-property.  NOTE the Evt-property can be nil, e.g. if a OnFocus
-// event is reported.  Last but not least an Env instance provides
-// features to communicate back to the reporting Events instance, e.g.
+// An Env e instance also informs about the triggering backend event see
+// Evt-property which may be nil.  Last but not least an Env instance
+// provides features to communicate back to the reporting [Lines]
+// instance, e.g. [Env.StopBubbling]:
 //
 //	func (c *MyUIComponent) Runes(e *lines.Env, r rune) {
-//	    fmt.Fprintf(e, "received rune: '%c'", r)
+//	    fmt.Fprintf(
+//	        e, "received rune: '%c' of event %T",
+//	        r, e.Env.Source(),
+//	    )
 //	    // the event stops bubbling through enclosing components
 //	    e.StopBubbling()
 //	}
@@ -67,27 +68,17 @@ type cmpWriter interface {
 	writeAtFilling(r rune, at, cell int, sty *Style)
 }
 
-func (e *Env) NewStyle() api.Style { return e.cmp.backend().NewStyle() }
-
-// Write given bytes bb to the screen area of the component whose
-// event handler was called with given environment e.  For that purpose
-// given bytes a broken into lines at new-lines and set style-attributes
-// or fore- or background colors are passed as these lines default
-// style, fore- or background colors.  NOTE all previous content of the
+// Write given bytes bb to the screen area of the component whose event
+// handler was called with given environment e.  For that purpose given
+// bytes a broken into screen lines at new-lines and optionally set
+// style-attributes as well as fore- and background colors are passed as
+// default style to these lines.  NOTE all previous content of the
 // component is removed.
 func (e *Env) Write(bb []byte) (int, error) {
 	return e.cmp.(cmpWriter).write(bb, -1, -1, nil)
 }
 
-func (e *Env) SetLineFlags(idx int, ff LineFlags) {
-	ll := *e.cmp.embedded().ll
-	if idx < 0 || idx > len(ll) {
-		return
-	}
-	ll[idx].setFlags(ff)
-}
-
-// AA sets the next write's style attributes like bold.
+// AA sets the next write's style attributes like [Bold].
 func (e *Env) AA(aa StyleAttributeMask) *EnvWriter {
 	sty := e.cmp.embedded().gg.Style(Default).WithAdded(aa)
 	return &EnvWriter{
@@ -105,7 +96,7 @@ func (e *Env) FG(color Color) *EnvWriter {
 	}
 }
 
-// BG sets the next write's foreground color.
+// BG sets the next write's background color.
 func (e *Env) BG(color Color) *EnvWriter {
 	sty := e.cmp.embedded().gg.Style(Default).WithBG(color)
 	return &EnvWriter{
@@ -123,18 +114,8 @@ func (e *Env) LL(idx int) *EnvLineWriter {
 	}
 }
 
-// At returns a writer which writes to given line at given position
-// adding given line flags to the line's flags.
-func (e *Env) At(line, cell int) *EnvAtWriter {
-	return &EnvAtWriter{
-		line: line,
-		cell: cell,
-		cmp:  e.cmp.(cmpWriter),
-	}
-}
-
 // Focused returns the currently focused component.  Please remember to
-// ask your Events-instance (e.EE) for an update event of the focused
+// ask your [Lines]-instance (e.Lines) for an update event of the focused
 // component if you want it to be changed.
 func (e *Env) Focused() Componenter {
 	return e.Lines.scr.focus.userComponent()
@@ -144,12 +125,10 @@ func (e *Env) Focused() Componenter {
 // after the listener calling StopBubbling returns.
 func (e *Env) StopBubbling() { e.flags |= envStopBubbling }
 
-// DisplaySize provides the currently total available size on the
-// display.  This might be useful during the OnInit event to do some
-// layout calculations/settings before the layout manager layouts the
-// components.  Or to investigate how a component's layout relates to
-// the total available size on the display.
-func (e *Env) DisplaySize() (width, height int) { return e.size() }
+// ScreenSize provides the currently total screen size.  Use
+// [Component.Dim] to get layout information about the environment
+// receiving component.
+func (e *Env) ScreenSize() (width, height int) { return e.size() }
 
 func (e *Env) reset() {
 	e.Lines = nil

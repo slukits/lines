@@ -13,7 +13,9 @@ import (
 	"github.com/slukits/lines/internal/term"
 )
 
-// Eventer is the interface which all reported events implement.
+// Eventer is the interface which all reported events implement.  Note
+// each Env instance has an Env.Evt property of type Eventer whereas
+// Env.Evt.Source() provides the backend event if there is any.
 type Eventer = api.Eventer
 
 // QuitEventer is reported when a Lines-instance is quit.
@@ -23,7 +25,7 @@ type QuitEventer = api.QuitEventer
 type ResizeEventer = api.ResizeEventer
 
 // Dimer provides dimensions of a component in the layout.  Note each
-// type embedding [lines.Component] type implements the Dimer interface.
+// type embedding [lines.Component] implements the Dimer interface.
 type Dimer = lyt.Dimer
 
 type Lines struct {
@@ -40,12 +42,22 @@ type Lines struct {
 }
 
 // Term returns a Lines instance with a terminal backend displaying and
-// reporting events to given componenter and its nested components.
-// Given componenter has the Quitable feature set to 'q', ctrl-c and
-// ctrl-d.  The binding to 'q' may be removed.  The bindings to ctrl-c
-// and ctrl-d may not be removed.  Use the TermKiosk constructor for an
-// setup without any quit bindings.  Term panics if the terminal screen
-// can't be obtained.
+// reporting events to given component cmp and its nested components.
+// cmp has the Quitable feature set to 'q', ctrl-c and ctrl-d.  The
+// binding to 'q' may be removed.  The bindings to ctrl-c and ctrl-d may
+// not be removed.  Use the TermKiosk constructor for an setup without
+// any quit bindings.  Term panics if the terminal screen can't be
+// obtained.  NOTE to create a Componenter-instance define a type which
+// embeds the [Component] type:
+//
+//	type myComponent struct { lines.Component }
+//	lines.Term(&myComponent{}).WaitForQuit()
+//
+// Leverage [Lines.OnQuit] registration if you want to be informed about
+// the quit event which is triggered by user-input that is associated
+// with the quitable feature or by calling [Lines.Quit].  After your
+// application is initialized you typically will want to wait until the
+// quit event occurs using [Lines.WaitForQuit].
 func Term(cmp Componenter) *Lines {
 	ll := Lines{}
 	ll.backend = term.New(ll.listen)
@@ -61,6 +73,17 @@ func Term(cmp Componenter) *Lines {
 //
 //	type MyCmp struct { lines.Component }
 //	lines.Term(&MyCmp{}).WaitForQuit()
+//
+// a Componenter implementation is informed about application events if
+// it also implements event listener interfaces like
+//   - [Initer] is informed once before a component becomes part of the layout
+//   - [Layouter] is informed that a component's layout was calculated
+//   - [Focuser]/[FocusLooser] is informed about focus gain/loss
+//   - [Keyer] is informed about any user special key-press like 'enter' or 'tab'
+//   - [Runer] is informed about user rune-key input
+//   - [Mouser] is informed about any mouse event see also [Clicker]/[Contexter]
+//   - [LineSelecter] is informed if a component's line was selected
+//   - [LineFocuser] is informed if a component's line received the focus
 type Componenter interface {
 
 	// enable makes the embedded component usable for the client, i.e.
@@ -102,8 +125,9 @@ type Componenter interface {
 	globals() *globals
 }
 
-// TermKiosk returns a Lines instance without registered Quitable feature,
-// i.e. the application can't be quit by the user by default.
+// TermKiosk returns a Lines instance like [Term] but without registered
+// Quitable feature, i.e. the application can't be quit by the user by
+// default.
 func TermKiosk(cmp Componenter) *Lines {
 	defaultFeatures = &features{
 		keys: map[Modifier]map[Key]FeatureMask{},
@@ -209,13 +233,22 @@ func (e *moveFocusEvent) When() time.Time { return e.when }
 func (e *moveFocusEvent) Source() interface{} { return e }
 
 // AtWriter is for printing runes at specific screen cells commonly used
-// to define differentiated stylings.
+// to define differentiated stylings printing to a component's
+// environment e:
+//
+//	fmt.Fprint(e.LL(0), "An ")
+//	lines.Print(e.LL(0).At(3).AA(Italic), "italic")
+//	lines.Print(e.LL(0).At(9), " word")
 type AtWriter interface {
 	WriteAt(rr []rune)
 }
 
-// Print to an AtWriter.  The most common AtWriter of lines are provided
-// by [Env] instances and Gaps.
+// Print to an AtWriter a rune or slice of runes.  The common AtWriter
+// of lines are provided by a component listener environment and a
+// components gaps:
+//
+//	lines.Print(e.LL(0).At(0), []rune("print to first line's first cell"))
+//	lines.Print(cmp.Gaps(0).Left.At(5), []rune("print to left gutter"))
 func Print(w AtWriter, rr interface{}) {
 	if rr == nil {
 		return

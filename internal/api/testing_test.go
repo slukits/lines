@@ -94,8 +94,8 @@ func (s *_testing) Reports_style_information_falsy_if_out_of_bound(t *T) {
 			scr.HasFG(len(scr[0]), 0, lines.Green) ||
 			scr.HasBG(0, -1, lines.BlanchedAlmond) ||
 			scr.HasBG(-1, 0, lines.BlanchedAlmond) ||
-			scr.HasAttr(0, -1, api.Italic) ||
-			scr.HasAttr(-1, 0, api.Italic),
+			scr.HasAA(0, -1, api.Italic) ||
+			scr.HasAA(-1, 0, api.Italic),
 	)
 }
 
@@ -109,7 +109,7 @@ func (s *_testing) Reports_style_information_of_screen_cells(t *T) {
 	t.True(
 		scr.HasFG(0, 0, lines.Green) &&
 			scr.HasBG(0, 0, lines.BlanchedAlmond) &&
-			scr.HasAttr(0, 0, api.Italic),
+			scr.HasAA(0, 0, api.Italic),
 	)
 }
 

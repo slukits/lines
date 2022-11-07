@@ -83,7 +83,7 @@ func (s *_testing) Reports_style_of_cell(t *T) {
 		for i := range l {
 			t.True(l.HasFG(i, api.Yellow))
 			t.True(l.HasBG(i, api.Blue))
-			t.True(l.HasAttr(i, api.Italic))
+			t.True(l.HasAA(i, api.Italic))
 		}
 	}
 }

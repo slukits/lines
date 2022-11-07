@@ -91,7 +91,7 @@ func (c *mouseFX) OnContext(e *Env, x, y int) {
 	}
 }
 
-func (c *mouseFX) OnMouse(e *Env, x, y int) {
+func (c *mouseFX) OnMouse(e *Env, bm ButtonMask, x, y int) {
 	c.reported.append(e.Evt.(MouseEventer), onMouse, x, y)
 	if c.stopBubblingMouse {
 		e.StopBubbling()

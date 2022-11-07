@@ -10,51 +10,49 @@ import (
 	"github.com/slukits/lines/internal/lyt"
 )
 
-// Mod sets how given components content is maintained.
-func (c *component) Mod(cm ComponentMode) {
-	switch cm {
-	case Appending:
-		c.mod &^= Overwriting | Tailing
-		c.mod |= Appending
-	case Overwriting:
-		c.mod &^= Appending | Tailing
-		c.mod |= Overwriting
-	case Tailing:
-		c.mod &^= Appending | Overwriting
-		c.mod |= Tailing
-	}
-}
-
-// AA replaces a component's style attributes like bold or dimmed.
+// AA replaces a component's style attributes like bold or dimmed.  Note
+// changing the style attributes of the default style of the Lines'
+// globals will have no effect on components whose style attributes has
+// been set.
 func (c *component) AA(aa StyleAttributeMask) *component {
-	c.dirty = true
-	c.gg.SetAA(Default, aa)
+	c.gg.SetAA(Default, aa) // globals update listener sets c dirty
 	return c
 }
 
-// FG replaces a component's foreground color.
+// FG replaces a component's foreground color.  Note changing the
+// foreground color of the default style of the Lines' globals will have
+// no effect on components whose foreground color has been set.
 func (c *component) FG(color Color) *component {
-	c.dirty = true
-	c.gg.SetFG(Default, color)
+	c.gg.SetFG(Default, color) // globals update listener sets c dirty
 	return c
 }
 
-// BG replaces a component's background color.
+// BG replaces a component's background color.  Note changing the
+// background color of the default style of the Lines' globals will have
+// no effect on components whose background color has been set.
 func (c *component) BG(color Color) *component {
-	c.dirty = true
-	c.gg.SetBG(Default, color)
+	c.gg.SetBG(Default, color) // globals update listener sets c dirty
+	return c
+}
+
+// Sty replaces a component's style, i.e. its style attributes and its
+// fore- and background color.  Note changing the default style of the
+// Lines' globals will have no effect on components whose style has been
+// set.
+func (c *component) Sty(s Style) *component {
+	c.gg.SetStyle(Default, s) // globals update listener sets c dirty
 	return c
 }
 
 // Len returns the number of lines currently stored in a component.
-// Note the line number is independent of a component's associated
-// screen area.
+// Note the number of component lines is independent of a component's
+// available screen lines.
 func (c *component) Len() int {
 	return len(*c.ll)
 }
 
 // IsDirty is true if given component c is flagged dirty or one of its
-// lines.
+// lines or gaps.
 func (c *component) IsDirty() bool {
 	ll, gg := c.ll.IsDirty(), c.gaps.isDirty()
 	return ll || gg || c.dirty
@@ -62,7 +60,9 @@ func (c *component) IsDirty() bool {
 
 // SetDirty flags a component as dirty having the effect that at the
 // next syncing the component's screen area is cleared before it is
-// written to.
+// written to.  Note usually you don't need this method since a
+// component is automatically flagged dirty if its layout changed, if
+// one of its global properties changed etc.
 func (c *component) SetDirty() {
 	c.dirty = true
 }
@@ -75,12 +75,15 @@ func (c *component) Dim() *lyt.Dim { return c.dim }
 // should be executed for all lines, e.g. [Component.Reset] on a component.
 const All = -1
 
-// Reset blanks out the content of the line or all lines with given
+// Reset blanks out the content of the line (or all lines) with given
 // index the next time it is printed to the screen.  Provide line flags
-// if for example a Reset line should not be focusable.  If provided
-// lines index is -1 (see All-constant) Rest scrolls to the top,
-// truncates its lines to the screen-area-height and resets the
-// remaining lines.
+// if for example a Reset line should not be focusable:
+//
+//	c.Reset(lines.All, lines.NotFocusable)
+//
+// If provided lines index is -1, see [All]-constant, Reset scrolls to
+// the top, truncates its lines to the available screen-lines and resets
+// the remaining lines.
 func (c *component) Reset(idx int, ff ...LineFlags) {
 	if idx < -1 || idx >= c.Len() {
 		return

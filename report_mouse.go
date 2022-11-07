@@ -9,15 +9,17 @@ package lines
 // component, i.e. the component with the smallest layout area
 // containing the event coordinates, does not have the focus an OnFocus
 // event is reported first if and only if the clicked component has the
-// Focusable feature.
+// Focusable feature.  See [Mouser] event interface for a more general
+// mouse event handling.
 type Clicker interface {
 
 	// OnClick gets "left click"-events reported.  x and y provide the
 	// click coordinates translated into the layouted area of the
 	// receiving component.  E.g. y == 3 means that the component's
-	// third line was clicked.  Env.Evt provides the reported
-	// tcell.EventMouse event.
-	OnClick(_ *Env, x, y int)
+	// third line was clicked.  This event bubbles use e.StopBubbling()
+	// to suppress further bubbling.  Note e.Evt.Source() provides the
+	// event object reported by the backend.
+	OnClick(e *Env, x, y int)
 }
 
 // Contexter is implemented by components which want to be informed
@@ -25,7 +27,8 @@ type Clicker interface {
 // clicked component, i.e. the component with the smallest layout area
 // containing the event coordinates, does not have the focus an OnFocus
 // event is reported first if and only if the clicked component has the
-// Focusable feature.
+// Focusable feature.  See [Mouser] event interface for a more general
+// mouse event handling.
 //
 // TODO: implement: see if event can also be reported for a potential
 // context-menu key press (having x/y set to -1 then?).
@@ -34,7 +37,9 @@ type Contexter interface {
 	// OnContext gets "right click"-events reported.  x and y provide
 	// the click coordinates translated into the layouted area of the
 	// receiving component.  E.g. y == 3 means that the component's
-	// third line was clicked.
+	// third line was clicked.  This event bubbles use e.StopBubbling()
+	// to suppress further bubbling.  Note e.Evt.Source() provides the
+	// event object reported by the backend.
 	OnContext(_ *Env, x, y int)
 }
 
@@ -50,11 +55,17 @@ type Mouser interface {
 	// x and y provide the event coordinates translated into the
 	// layouted area of the receiving component.  E.g. y == 3 means that
 	// the component's third line was clicked.
-	OnMouse(_ *Env, x, y int)
+	OnMouse(_ *Env, _ ButtonMask, x, y int)
 }
 
-func mouseCurry(l func(*Env, int, int), x, y int) func(*Env) {
+func clickCurry(l func(*Env, int, int), x, y int) func(*Env) {
 	return func(e *Env) { l(e, x, y) }
+}
+
+func mouseCurry(
+	l func(*Env, ButtonMask, int, int), bm ButtonMask, x, y int,
+) func(*Env) {
+	return func(e *Env) { l(e, bm, x, y) }
 }
 
 // reportMouse makes sure that the smallest component containing
@@ -109,7 +120,7 @@ func reportClick(
 		return
 	}
 
-	env := callback(nil, cntx, mouseCurry(clk.OnClick, x, y))
+	env := callback(nil, cntx, clickCurry(clk.OnClick, x, y))
 	return env&envStopBubbling == envStopBubbling
 }
 
@@ -130,7 +141,7 @@ func reportContext(
 		return
 	}
 
-	env := callback(nil, cntx, mouseCurry(clk.OnContext, x, y))
+	env := callback(nil, cntx, clickCurry(clk.OnContext, x, y))
 	return env&envStopBubbling == envStopBubbling
 }
 
@@ -142,6 +153,7 @@ func reportOnMouse(
 	if !ok {
 		return false
 	}
-	env := callback(nil, cntx, mouseCurry(msr.OnMouse, x, y))
+	env := callback(nil, cntx, mouseCurry(
+		msr.OnMouse, cntx.evt.(MouseEventer).Button(), x, y))
 	return env&envStopBubbling == envStopBubbling
 }

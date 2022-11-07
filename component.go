@@ -11,10 +11,28 @@ import (
 
 // Component enables a user implemented UI-component to be processed by
 // lines, i.e. all user UI-components which are provided to lines must
-// embed this type.  NOTE accessing features provided by an embedded
-// Component instance is only supported during an event reporting
-// callback to its embedding component; otherwise the embedded Component
-// instance will panic.
+// embed this type.  NOTE accessing features of an embedded Component is
+// only supported during an event reporting callback to embedding
+// component c:
+//
+//	func (c *cmp) OnInit(_ *lines.Env) {
+//		go func() {
+//			time.Sleep(1*time.Second)
+//			c.Dim().SetHeight(5) // will panic
+//		}
+//		c.Dim().SetHeight(5) // will not panic
+//	}
+//
+// Next to embedding the Component type a client component will usually
+// also implement event listener interface to receive events like:
+//   - [Initer] is informed once before a component becomes part of the layout
+//   - [Layouter] is informed that a component's layout was calculated
+//   - [Focuser]/[FocusLooser] is informed about focus gain/loss
+//   - [Keyer] is informed about any user special key-press like 'enter' or 'tab'
+//   - [Runer] is informed about user rune-key input
+//   - [Mouser] is informed about any mouse event see also [Clicker]/[Contexter]
+//   - [LineSelecter] is informed if a component's line was selected
+//   - [LineFocuser] is informed if a component's line received the focus
 type Component struct {
 
 	// FF provides access and fine grained control over a components
@@ -22,15 +40,17 @@ type Component struct {
 	FF *Features
 
 	// Register provides the api to register keys and runes listeners
-	// for a component.
+	// for a component.  See Keyer and Runer for a more general way of
+	// keyboard listening.
 	Register *Listeners
 
 	// Scroll provides a component's API for scrolling.
 	Scroll *Scroller
 
-	// LL provides an API for ui-aspects of a component's lines.  Use an
-	// reported event's Env-instance writers to manipulate their
-	// content.
+	// LL provides an API for ui-aspects of a component's lines like is
+	// a line focusable, are they tailing maintained etc.  To manipulate
+	// the content of component lines use an Env(ironment) instance of a
+	// reported event.
 	LL *ComponentLines
 
 	// bcknd to post Update and Focus events
@@ -157,7 +177,14 @@ func (c *Component) layoutComponent() layoutComponenter {
 
 func (c *Component) embedded() *Component { return c }
 
-func (c *Component) Gaps(level int) *gapsWriter {
+// Gaps returns a gap writer at given leven allowing to do framing,
+// padding or guttering around a component's content:
+//
+//	fmt.Fprint(c.Gaps(0).AA(Reverse).Filling(), "•")
+//	fmt.Fprint(c.Gaps(0).Corners.AA(Reverse), "•")
+//	c.Gaps(1).AA(Reverse).Filling()
+//	c.Gaps(1).Corners.AA(Reverse)
+func (c *Component) Gaps(level int) *GapsWriter {
 	if c.gaps == nil {
 		c.gaps = newGaps(c.gg.Style(Default))
 	}

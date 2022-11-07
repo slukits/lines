@@ -52,7 +52,7 @@ func (s *env) Provides_the_display_size(t *T) {
 	tt := s.tt(t, &envCmpFX{})
 	width, height := tt.Size()
 	tt.Lines.Update(tt.Root(), nil, func(e *Env) {
-		envWidth, envHeight := e.DisplaySize()
+		envWidth, envHeight := e.ScreenSize()
 		t.Eq(width, envWidth)
 		t.Eq(height, envHeight)
 	})

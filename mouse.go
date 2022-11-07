@@ -9,7 +9,8 @@ import "github.com/slukits/lines/internal/api"
 // A MouseEventer is implemented by a reported mouse event.
 type MouseEventer = api.MouseEventer
 
-// A ButtonMask mask is reported by a mouse event.
+// A ButtonMask mask is reported by a mouse event to a [Mouser]
+// implementing component.
 type ButtonMask = api.ButtonMask
 
 const (

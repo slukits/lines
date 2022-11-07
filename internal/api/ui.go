@@ -22,7 +22,11 @@ const (
 	ZeroStyle StyleAttributeMask = 0
 )
 
-// Style represents what a print to the screen should look like.
+// Style represents what a print to the screen should look like.  A new
+// Style instance has fore- and background color set to black.  Use its
+// With* methods to create a style with desired properties:
+//
+// myStyle := (lines.Style{}).WithFG(lines.White)
 type Style struct {
 	// AA is the style attribute mask providing set style attributes
 	aa StyleAttributeMask
@@ -39,8 +43,8 @@ type Style struct {
 // methods to create new styles from the default style.
 var DefaultStyle = Style{fg: DefaultColor, bg: DefaultColor}
 
-// NewStyle creates a new style with given style attribute, foreground
-// color and background color.
+// NewStyle creates a new style with given style attributes and given fore-
+// and background color.
 func NewStyle(aa StyleAttributeMask, fg, bg Color) Style {
 	return Style{aa: aa, fg: fg, bg: bg}
 }

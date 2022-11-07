@@ -37,7 +37,7 @@ Term provides an Lines-instance with a terminal backend.  It reports
 user input and programmatically posted events to listener
 implementations of client provided components.  While client listener
 implementations print to an provided environment which is associated
-with the component's portion of the screen.  lines is designed to easily
+with the component's portion of the screen.  lines is designed to 
 add further backends like "shiny" of "fyne" for graphical displays.  As
 of now lines has only a terminal backend which wraps the package
 [tcell](https://github.com/gdamore/tcell).
@@ -139,8 +139,8 @@ this
 
 The above prints "a centered bold line" centered in bold letters into
 the component's fifth line.  Note here again the line will stay centered
-if the terminal window size changes.  A similar API is provided by
-embedded Component's Gaps(index)-method
+if the component's size changes.  A similar API is provided by embedded
+Component's Gaps(index)-method
 
 ```go
 	c.Gaps(0).Sty(lines.Reverse)
@@ -211,7 +211,7 @@ lines comes with testing facilities:
     type CmpFixture struct { lines.Component }
 
     func TestUpdateListenerIsCalled(t *T) {
-        tt := lines.TermFixture(t, 0, &CmpFixture)
+        tt := lines.TermFixture(t, 0, &CmpFixture{})
         exp :=  "update listener called"
         tt.Lines.Update(tt.Root(), nil, func(e *lines.Env) {
             fmt.Fprint(e, exp)

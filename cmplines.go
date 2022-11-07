@@ -16,27 +16,51 @@ package lines
 
 const filler = rune(29)
 
-// Filler can be used in component content-lines indicating that a line
-// l should fill up its whole width whereas its remaining empty space is
-// spread equally over filler found in l being filled with blanks.  See
-// [EnvAtWriter.Filling] for a more sophisticated filling mechanism.
+// A Filler in a string printed to a component's environment e indicates
+// that a line l should fill up its whole width whereas its remaining
+// empty space is distributed equally over filler found in l.
+//
+//	fmt.Fprint(e.LL(0), lines.Filler+"centered first line"+lines.Filler)
+//
+// See [EnvAtWriter.Filling] for a more sophisticated filling mechanism.
 const Filler = string(filler)
 
 // ComponentLines provides the API to manipulate ui-aspects of a
 // component's lines like which line has the focus.  A component's lines
-// are accessed through its LL-property.  To manipulate content use the
-// writers provided by a component's Env(ironment) instance in a
-// listener callback.
+// are accessed through its LL-property.  To manipulate their content
+// print to an Env(ironment) instance provided to an event listener
+// implementation.
 type ComponentLines struct {
 	c     *Component
 	Focus *LineFocus
 }
 
-// By returns the component line with given non negative index idx.  Is
-// idx negative nil is returned.  If no line with index idx exists it
-// (and all the lines before it) is created.  I.e. for a non-negative
-// index is always a line returned.
+// Mod sets how given component lines cll are maintained.
+func (cll *ComponentLines) Mod(cm ComponentMode) {
+	switch cm {
+	case Appending:
+		cll.c.mod &^= Overwriting | Tailing
+		cll.c.mod |= Appending
+	case Overwriting:
+		cll.c.mod &^= Appending | Tailing
+		cll.c.mod |= Overwriting
+	case Tailing:
+		cll.c.mod &^= Appending | Overwriting
+		cll.c.mod |= Tailing
+	}
+}
+
+// Len returns the number of component lines, which is independent from
+// the number of screen lines.
+func (cll *ComponentLines) Len() int { return cll.c.Len() }
+
+// By returns the component line with given non negative index idx.  By
+// panics if idx is negative.  Is idx < [ComponentLines.Len] lines are
+// padded accordingly.
 func (cll *ComponentLines) By(idx int) *line {
+	if idx < 0 {
+		panic("lines: component lines: negative line index given")
+	}
 	return cll.c.ll.padded(idx)
 }
 

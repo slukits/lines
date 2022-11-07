@@ -19,7 +19,7 @@ type Layouter interface {
 }
 
 // Stacker is implemented by components which want to provide nested
-// components in a vertical manner.
+// components vertically stacked.
 type Stacker interface {
 
 	// ForStacked calls back for each component of this Stacker
@@ -28,7 +28,7 @@ type Stacker interface {
 }
 
 // Chainer is implemented by components which want to provided nested
-// components in a horizontal manner.
+// components horizontally chained.
 type Chainer interface {
 
 	// ForChained calls back for each component of this Chainer
@@ -182,8 +182,21 @@ func (s Stacking) ForStacked(cb func(Componenter) (stop bool)) {
 }
 
 // Chaining embedded in a component makes the component implement the
-// Chainer interface.  Typically the Componenter slice is filled in a
-// component's OnInit-listener.
+// Chainer interface.  Typically the Componenter slice CC is filled in a
+// component's OnInit-listener:
+//
+//	type chainedCmp struct { lines.Component }
+//
+//	type myCmp struct{
+//		lines.Component
+//		lines.Chaining
+//	}
+//
+//	func (c *myCmp) OnInit(_ *lines.Env) {
+//		for i := 0; i < 3; i++ {
+//			c.CC = append(c.CC, &chainedCmp{})
+//		}
+//	}
 type Chaining struct{ CC []Componenter }
 
 // ForChained calls back for each component of this Chainer respectively

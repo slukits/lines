@@ -11,16 +11,18 @@ import (
 )
 
 // StyleAttributeMask defines the looks of a style, i.e. the looks of a print
-// to the screen/window.
+// to the screen/window.  E.g. bold, blinking, dimmed etc.
 type StyleAttributeMask = api.StyleAttributeMask
 
-// DefaultStyle has no attributes and "default" colors.  The semantics
-// of the later is decided by the backend implementation.  Use the With*
-// methods to create new styles from the default style.
+// The DefaultStyle has no style attributes and "default" colors.  The
+// semantics of the later is determined by the backend implementation.
+// Use the With* methods to create new styles from the default style:
+//
+//	myStyle := lines.DefaultStyle.WithFG(lines.Yellow).WithBG(lines.Blue)
 var DefaultStyle = api.DefaultStyle
 
 const (
-	Bold          StyleAttributeMask = api.Blink
+	Bold          StyleAttributeMask = api.Bold
 	Blink         StyleAttributeMask = api.Blink
 	Reverse       StyleAttributeMask = api.Reverse
 	Underline     StyleAttributeMask = api.Underline
@@ -31,13 +33,17 @@ const (
 	ZeroStyle     StyleAttributeMask = api.ZeroStyle
 )
 
-// A Style structure provides fore- and background colors as well as set
-// style attributes.  Use the Style.With* constructors to create a new
-// style from a given style with given new properties.
+// Style represents what a print to the screen should look like.  A new
+// Style instance has fore- and background color set to black.  Use its
+// With* methods to create a style with desired properties:
+//
+// myStyle := (lines.Style{}).WithFG(lines.White)
 type Style = api.Style
 
-// NewStyle creates a new style with given style attribute, foreground
-// color and background color.
+// NewStyle creates a new style with given style attributes and given fore-
+// and background color:
+//
+//	myStyle := lines.NewStyle(lines.Bold|lines.Dim, lines.White, lines.Black)
 var NewStyle = api.NewStyle
 
 // Range is a two component array of which the first component

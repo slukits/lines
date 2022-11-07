@@ -524,7 +524,8 @@ func (ff *features) add(f FeatureMask, recursive bool) {
 }
 
 // FeatureKey represents a key bound to a feature with its Modifier and
-// Key value.  FeatureKey instances must be also provided to SetKeysOf.
+// Key value.  FeatureKey instances must be also provided to
+// [Features.SetKeysOf].
 type FeatureKey struct {
 	Mod Modifier
 	Key Key
@@ -532,7 +533,7 @@ type FeatureKey struct {
 
 // FeatureKeys are provided by KeysOf of an Features instance reporting
 // the keys bound to a given feature.  FeaturesKeys may be also used as
-// variadic argument for an Features instance's SetKeysOf.
+// variadic argument for an Features instance's [Features.SetKeysOf].
 type FeatureKeys []FeatureKey
 
 // Equals returns true if both slices contain the same FeatureKey
@@ -604,16 +605,16 @@ func (ff *features) setKeysOf(
 
 // FeatureButton represents a button (mask) bound to a feature with its
 // Modifier and Button value.  FeatureButton instances must be also
-// provided to SetButtonsOf.
+// provided to [Features.SetButtonsOf].
 type FeatureButton struct {
 	Mod    Modifier
 	Button ButtonMask
 }
 
-// FeatureButtons are provided by ButtonsOf of an Features instance
-// reporting the mouse buttons bound to a given feature.
+// FeatureButtons are provided by [Features.ButtonsOf] of an Features
+// instance reporting the mouse buttons bound to a given feature.
 // FeatureButtons may be also used as variadic argument for an Features
-// instance's SetButtonsOf.
+// instance's [Features.SetButtonsOf].
 type FeatureButtons []FeatureButton
 
 // Equals returns true if receiving and given FeatureButtons contain the

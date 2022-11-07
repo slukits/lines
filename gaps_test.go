@@ -401,8 +401,8 @@ func (s *_gaps) Have_set_at_writer_style(t *T) {
 	})
 
 	t.Eq(" --top-- ", tt.CellsOf(cmp)[0])
-	frame, title := api.NewStyle(Bold, Yellow, Blue), api.NewStyle(
-		Blink, Blue, Yellow)
+	frame := (Style{}).WithAA(Bold).WithFG(Yellow).WithBG(Blue)
+	title := NewStyle(Blink, Blue, Yellow)
 	for _, c := range tt.CellsOf(cmp)[0] {
 		switch c.Rune {
 		case '-':
@@ -451,15 +451,15 @@ func (s *_gaps) Adapt_fillers_on_layout_change(t *T) {
 
 	t.Eq(strings.TrimSpace(lytChange), tt.ScreenOf(cmp))
 	cc := tt.CellsOf(cmp)
-	t.True(cc[0].HasAttr(0, Reverse))
-	t.True(cc[0].HasAttr(10, Reverse))
-	t.True(cc[0].HasAttr(3, Bold))
-	t.True(cc[0].HasAttr(4, Blink))
-	t.True(cc[0].HasAttr(6, Blink))
-	t.True(cc[0].HasAttr(7, Bold))
-	t.True(cc[4].HasAttr(0, Dim))
-	t.True(cc[5].HasAttr(1, Dim))
-	t.True(cc[5].HasAttr(0, Reverse))
+	t.True(cc[0].HasAA(0, Reverse))
+	t.True(cc[0].HasAA(10, Reverse))
+	t.True(cc[0].HasAA(3, Bold))
+	t.True(cc[0].HasAA(4, Blink))
+	t.True(cc[0].HasAA(6, Blink))
+	t.True(cc[0].HasAA(7, Bold))
+	t.True(cc[4].HasAA(0, Dim))
+	t.True(cc[5].HasAA(1, Dim))
+	t.True(cc[5].HasAA(0, Reverse))
 }
 
 func TestGaps(t *testing.T) {

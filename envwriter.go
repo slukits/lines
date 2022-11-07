@@ -4,7 +4,7 @@
 
 package lines
 
-// EnvWriter instances provide an API for styling and formatting the
+// An EnvWriter instance provides an API for styling and formatting the
 // writing to a component's line(s) starting at its first line.
 type EnvWriter struct {
 	cmp cmpWriter
@@ -35,7 +35,7 @@ func (w *EnvWriter) BG(color Color) *EnvWriter {
 	return w
 }
 
-// AA sets the next write's style attributes like bold.
+// AA sets the next write's style attributes like [Bold].
 func (w *EnvWriter) AA(aa StyleAttributeMask) *EnvWriter {
 	var sty Style
 	if w.sty == nil {
@@ -59,8 +59,8 @@ func (w *EnvWriter) Write(bb []byte) (int, error) {
 	return w.cmp.write(bb, 0, -1, w.sty)
 }
 
-// EnvLineWriter instances provide an API for styling and formatting the
-// writing to a component's n-th line(s).
+// An EnvLineWriter provides an API for styling and formatting the
+// writing to a selected and its following component-lines.
 type EnvLineWriter struct {
 	sty  *Style
 	line int
@@ -91,7 +91,7 @@ func (w *EnvLineWriter) BG(color Color) *EnvLineWriter {
 	return w
 }
 
-// AA sets the next write's style attributes like bold.
+// AA sets the next write's style attributes like [Bold].
 func (w *EnvLineWriter) AA(aa StyleAttributeMask) *EnvLineWriter {
 	var sty Style
 	if w.sty == nil {
@@ -103,19 +103,24 @@ func (w *EnvLineWriter) AA(aa StyleAttributeMask) *EnvLineWriter {
 	return w
 }
 
-// Write to a specific line an onward.
+// Write given bytes bb to a selected line and its following by
+// splitting bb in screen lines at new lines.  Optionally set style
+// attributes or fore- and background colors are applied for these
+// lines.
 func (w *EnvLineWriter) Write(bb []byte) (int, error) {
 	return w.cmp.write(bb, w.line, -1, w.sty)
 }
 
 // At returns a writer which writes at given line writer w's line at
-// given cell.  Note you need to use the [lines.Print]-function to write
+// given cell.  Note you need to use the [lines.Print]-function to print
 // to an at-writer and can only provide a rune or a rune-slice.  Styles
 // of an at-writer are only applied for the printed range of runes.
 func (w *EnvLineWriter) At(cell int) *EnvAtWriter {
 	return &EnvAtWriter{line: w.line, cell: cell, cmp: w.cmp, sty: w.sty}
 }
 
+// An EnvAtWriter writes to a selected line at a selected cell and allows
+// to set style information for this write.
 type EnvAtWriter struct {
 	sty        *Style
 	line, cell int
@@ -146,7 +151,7 @@ func (w *EnvAtWriter) BG(color Color) *EnvAtWriter {
 	return w
 }
 
-// AA sets the next write's style attributes like bold.
+// AA sets the next write's style attributes like [Bold].
 func (w *EnvAtWriter) AA(aa StyleAttributeMask) *EnvAtWriter {
 	var sty Style
 	if w.sty == nil {
@@ -170,8 +175,8 @@ func (w *EnvAtWriter) Filling() *envAtFillingWriter {
 }
 
 // WriteAt writes given runes rr to provided line and cell indices with
-// set style information.  If there is style information it will be only
-// applied for given rune sequence rr.
+// optionally set style information.  If there is style information it
+// will be only applied for given rune sequence rr.
 func (w *EnvAtWriter) WriteAt(rr []rune) {
 	if len(rr) == 0 {
 		return

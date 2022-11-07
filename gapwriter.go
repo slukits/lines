@@ -4,26 +4,55 @@
 
 package lines
 
-type gapsWriter struct {
-	gg          *gaps
-	gm          gapMask
-	level       int
-	sty         *Style
-	Top         *gapWriter
-	Bottom      *gapWriter
-	Left        *gapWriter
-	Right       *gapWriter
-	Horizontal  *gapWriter
-	Vertical    *gapWriter
-	TopLeft     *cornerWriter
-	TopRight    *cornerWriter
+// GapsWriter allows to get more specific gap writer to create gaps
+// between contents of different components.  Use [Component.Gaps]
+// method of a component c to obtain a gaps writer for c.
+type GapsWriter struct {
+	gg    *gaps
+	gm    gapMask
+	level int
+	sty   *Style
+
+	// Top writes to the top gap, i.e. first line of a component's
+	// screen area (plus provided level).
+	Top *gapWriter
+
+	// Bottom writes to the bottom gap, i.e. last line of a component's
+	// screen area (minus provided level).
+	Bottom *gapWriter
+
+	// Left writes to the left gap, i.e. first column of a component's
+	// screen area (plus provided level).
+	Left *gapWriter
+
+	// Right writes to the right gap, i.e. last column of a component's
+	// screen area (minus provided level).
+	Right *gapWriter
+
+	// Horizontal writes to bottom and top gap.
+	Horizontal *gapWriter
+
+	// Vertical writes to left and right gap.
+	Vertical *gapWriter
+
+	// TopLeft writes to the top left corner at provided level.
+	TopLeft *cornerWriter
+
+	// TopRight writes to the top right corner at provided level.
+	TopRight *cornerWriter
+
+	// BottomRight writes to the bottom right corner at provided level.
 	BottomRight *cornerWriter
-	BottomLeft  *cornerWriter
-	Corners     *cornerWriter
+
+	// BottomLeft writes to the bottom left corner at provided level.
+	BottomLeft *cornerWriter
+
+	// Corners writes to all corners at provided level.
+	Corners *cornerWriter
 }
 
-func newGapsWriter(level int, gg *gaps) *gapsWriter {
-	ggw := &gapsWriter{
+func newGapsWriter(level int, gg *gaps) *GapsWriter {
+	ggw := &GapsWriter{
 		gg:          gg,
 		gm:          top | right | bottom | left,
 		level:       level,
@@ -49,15 +78,15 @@ type styler interface {
 	withBG(int, Color)
 }
 
-func (ggw *gapsWriter) initStyle(sty Style) {
+func (ggw *GapsWriter) initStyle(sty Style) {
 	ggw.gg.forStyler(func(s styler) {
 		s.setDefaultStyle(ggw.level, sty)
 	})
 	ggw.sty = &sty
 }
 
-// AA stets given style attributes of selected gap-level.
-func (ggw *gapsWriter) AA(aa StyleAttributeMask) *gapsWriter {
+// AA stets given style attributes aa of selected gap-level.
+func (ggw *GapsWriter) AA(aa StyleAttributeMask) *GapsWriter {
 	if ggw.sty == nil {
 		ggw.initStyle(ggw.gg.sty.WithAA(aa))
 		return ggw
@@ -68,7 +97,8 @@ func (ggw *gapsWriter) AA(aa StyleAttributeMask) *gapsWriter {
 	return ggw
 }
 
-func (ggw *gapsWriter) FG(c Color) *gapsWriter {
+// FG sets given color c as foreground color of selected gap-level.
+func (ggw *GapsWriter) FG(c Color) *GapsWriter {
 	if ggw.sty == nil {
 		ggw.initStyle(ggw.gg.sty.WithFG(c))
 		return ggw
@@ -79,7 +109,8 @@ func (ggw *gapsWriter) FG(c Color) *gapsWriter {
 	return ggw
 }
 
-func (ggw *gapsWriter) BG(c Color) *gapsWriter {
+// BG sets given color c as background color of selected gap-level.
+func (ggw *GapsWriter) BG(c Color) *GapsWriter {
 	if ggw.sty == nil {
 		ggw.initStyle(ggw.gg.sty.WithBG(c))
 		return ggw
@@ -90,11 +121,13 @@ func (ggw *gapsWriter) BG(c Color) *gapsWriter {
 	return ggw
 }
 
-func (ggw *gapsWriter) Filling() *allGapsWriter {
+// Filling returns a writer filling all gaps of selected gap-level with
+// what's printed to it.
+func (ggw *GapsWriter) Filling() *allGapsWriter {
 	return &allGapsWriter{ggw: ggw}
 }
 
-type allGapsWriter struct{ ggw *gapsWriter }
+type allGapsWriter struct{ ggw *GapsWriter }
 
 func (agg *allGapsWriter) Write(bb []byte) (int, error) {
 	for _, g := range selectGaps(agg.ggw.gg, top|right|bottom|left) {
@@ -105,7 +138,7 @@ func (agg *allGapsWriter) Write(bb []byte) (int, error) {
 
 type gapWriter struct {
 	gm    gapMask
-	ggw   *gapsWriter
+	ggw   *GapsWriter
 	level int
 	sty   *Style
 }
@@ -159,7 +192,8 @@ func (g *gapWriter) initStyle(sty Style) {
 	g.sty = &sty
 }
 
-// AA stets given style attributes of selected gap-level.
+// AA stets given style attributes aa for selected gap's next write at
+// selected level.
 func (g *gapWriter) AA(aa StyleAttributeMask) *gapWriter {
 	if g.sty == nil {
 		g.initStyle(g.ggw.gg.sty.WithAA(aa))
@@ -171,6 +205,8 @@ func (g *gapWriter) AA(aa StyleAttributeMask) *gapWriter {
 	return g
 }
 
+// FG stets given color c as foreground color for selected gap's next
+// write at selected level.
 func (g *gapWriter) FG(c Color) *gapWriter {
 	if g.sty == nil {
 		g.initStyle(g.ggw.gg.sty.WithFG(c))
@@ -182,6 +218,8 @@ func (g *gapWriter) FG(c Color) *gapWriter {
 	return g
 }
 
+// BG stets given color c as background color for selected gap's next
+// write at selected level.
 func (g *gapWriter) BG(c Color) *gapWriter {
 	if g.sty == nil {
 		g.initStyle(g.ggw.gg.sty.WithBG(c))
@@ -194,18 +232,23 @@ func (g *gapWriter) BG(c Color) *gapWriter {
 }
 
 type gapAtWriter struct {
-	ggw   *gapsWriter
+	ggw   *GapsWriter
 	sty   *Style
 	gm    gapMask
 	level int
 	at    int
 }
 
+// Filling indicates that the first rune of the next write is flagged as
+// filling at the select position of selected gap at selected level.
 func (aw *gapAtWriter) Filling() *gapAtWriter {
 	aw.gm |= filling
 	return aw
 }
 
+// WriteAt writes given runes rr at the select position of selected gap
+// at selected level.  Applying optionally set style information over
+// the range of printed runes.
 func (aw *gapAtWriter) WriteAt(rr []rune) {
 	if len(rr) == 0 {
 		return

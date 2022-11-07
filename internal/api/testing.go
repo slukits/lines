@@ -47,6 +47,8 @@ type Tester interface {
 	PostResize(width, height int) error
 }
 
+// StringLine is a line of a [StringScreen] providing the sequence of
+// runes displayed in a particular screen line.
 type StringLine string
 
 func (l StringLine) isBlank() bool {
@@ -74,7 +76,8 @@ func (l StringLine) indentWidth() (int, int) {
 }
 
 // StringScreen is the string representation of the screen lines at a
-// particular point in time.
+// particular point in time.  Note use [StringScreen.Trimmed] to
+// minimize reported screen content.
 type StringScreen []string
 
 // String joins the lines of given screen string representation with
@@ -144,13 +147,17 @@ type TestCell struct {
 	Style Style
 }
 
-// CellsLine represents a line of a [lines.CellsScreen].
+// CellsLine represents a line of a [CellsScreen] providing of each cell
+// in the line its displayed rune and style information for
+// test-evaluations.
 type CellsLine []TestCell
 
 func (l CellsLine) isValidCell(x int) bool {
 	return x >= 0 && x < len(l)
 }
 
+// HasBG returns true if line cell at given position x in given line
+// cells l has given background color.
 func (l CellsLine) HasBG(x int, c Color) bool {
 	if !l.isValidCell(x) {
 		return false
@@ -158,6 +165,8 @@ func (l CellsLine) HasBG(x int, c Color) bool {
 	return l[x].Style.BG() == c
 }
 
+// HasFG returns true if line cell at given position x in given line
+// cells l has given foreground color.
 func (l CellsLine) HasFG(x int, c Color) bool {
 	if !l.isValidCell(x) {
 		return false
@@ -165,15 +174,16 @@ func (l CellsLine) HasFG(x int, c Color) bool {
 	return l[x].Style.FG() == c
 }
 
-// HasAttr returns true if given style attribute mask is set in the
-// style at given cell.
-func (l CellsLine) HasAttr(x int, aa StyleAttributeMask) bool {
+// HasAA returns true if line cell at given position x in given line
+// cells l has given foreground color.
+func (l CellsLine) HasAA(x int, aa StyleAttributeMask) bool {
 	if !l.isValidCell(x) {
 		return false
 	}
 	return l[x].Style.AA()&aa == aa
 }
 
+// String returns a string representation of given line cells l.
 func (l CellsLine) String() string {
 	b := strings.Builder{}
 	for _, c := range l {
@@ -215,9 +225,11 @@ func (l CellsLine) indentWidth() (int, int) {
 }
 
 // CellsScreen is a screen representation at a specific point in time of
-// lines of cells which also provide information about their styling.
+// [CellsLine] instances.  NOTE use [CellsScreen.Trimmed] to minimize the
+// reported screen area.
 type CellsScreen []CellsLine
 
+// String returns a string representation of given screen cells cs.
 func (cs CellsScreen) String() string {
 	ll := []string{}
 	for _, l := range cs {
@@ -232,6 +244,8 @@ func (cs CellsScreen) isValidLine(y int) bool {
 	return y >= 0 && y < len(cs)
 }
 
+// HasFG returns true if the screen cell at given coordinates x and y in
+// given screen cells cs have given foreground color c.
 func (cs CellsScreen) HasFG(x, y int, c Color) bool {
 	if !cs.isValidLine(y) {
 		return false
@@ -239,6 +253,8 @@ func (cs CellsScreen) HasFG(x, y int, c Color) bool {
 	return cs[y].HasFG(x, c)
 }
 
+// HasBG returns true if the screen cell at given coordinates x and y in
+// given screen cells cs have given background color c.
 func (cs CellsScreen) HasBG(x, y int, c Color) bool {
 	if !cs.isValidLine(y) {
 		return false
@@ -246,25 +262,29 @@ func (cs CellsScreen) HasBG(x, y int, c Color) bool {
 	return cs[y].HasBG(x, c)
 }
 
-func (cs CellsScreen) HasAttr(x, y int, aa StyleAttributeMask) bool {
+// HasAA returns true if the screen cell at given coordinates x and y in
+// given screen cells cs have given style attributes aa.
+func (cs CellsScreen) HasAA(x, y int, aa StyleAttributeMask) bool {
 	if !cs.isValidLine(y) {
 		return false
 	}
-	return cs[y].HasAttr(x, aa)
+	return cs[y].HasAA(x, aa)
 }
 
-// Trimmed reduces given screen-cells matrix to its minimum number of
-// non-empty cells whereas the cells-lines are trimmed to contain all non
-// white space cells:
-//
-//	+--------------------+
-//	|                    |       +------------+
-//	|   upper left       |       |upper left  |
-//	|                    |  =>   |            |
-//	|          right     |       |       right|
-//	|      bottom        |       |   bottom   |
-//	|                    |       +------------+
-//	+--------------------+
+/*
+Trimmed reduces given screen-cells matrix to its minimum number of
+non-empty cells whereas the cells-lines are trimmed to contain all non
+white space cells:
+
+	+--------------------+
+	|                    |       +------------+
+	|   upper left       |       |upper left  |
+	|                    |  =>   |            |
+	|          right     |       |       right|
+	|      bottom        |       |   bottom   |
+	|                    |       +------------+
+	+--------------------+
+*/
 func (cs CellsScreen) Trimmed() CellsScreen {
 	start, end := trimVertical(cs)
 	if end == 0 {

@@ -53,7 +53,7 @@ func (s *AComponent) Creates_needed_lines_on_write(t *T) {
 func (s *AComponent) Doesnt_change_line_count_on_line_overwrite(t *T) {
 	tt, cmp := cmpfx(t)
 	t.FatalOn(tt.Lines.Update(cmp, nil, func(e *Env) {
-		cmp.Mod(Overwriting)
+		cmp.LL.Mod(Overwriting)
 		fmt.Fprint(e, "two\nlines")
 		t.Eq(2, cmp.Len())
 		fmt.Fprint(e, "one line")
@@ -67,7 +67,7 @@ func (s *AComponent) Doesnt_change_line_count_on_line_overwrite(t *T) {
 func (s *AComponent) Has_a_line_more_after_appending_an_line(t *T) {
 	tt, cmp := cmpfx(t)
 	t.FatalOn(tt.Lines.Update(cmp, nil, func(e *Env) {
-		cmp.Mod(Appending)
+		cmp.LL.Mod(Appending)
 		fmt.Fprint(e, "two\nlines")
 		fmt.Fprint(e, "one line")
 		t.Eq(3, cmp.Len())
@@ -77,7 +77,7 @@ func (s *AComponent) Has_a_line_more_after_appending_an_line(t *T) {
 func (s *AComponent) Has_a_line_more_after_writing_to_tailing(t *T) {
 	tt, cmp := cmpfx(t)
 	t.FatalOn(tt.Lines.Update(cmp, nil, func(e *Env) {
-		cmp.Mod(Tailing)
+		cmp.LL.Mod(Tailing)
 		fmt.Fprint(e, "two\nlines")
 		fmt.Fprint(e, "one line")
 		t.Eq(3, cmp.Len())
@@ -88,7 +88,7 @@ func (s *AComponent) Shows_last_line_clipped_above_if_tailing(t *T) {
 	tt, cmp := cmpfx(t)
 	tt.FireResize(20, 2)
 	t.FatalOn(tt.Lines.Update(cmp, nil, func(e *Env) {
-		cmp.Mod(Tailing)
+		cmp.LL.Mod(Tailing)
 		fmt.Fprint(e, "three\nlines\nat last")
 	}))
 	t.Eq("lines  \nat last", tt.Screen().Trimmed().String())
