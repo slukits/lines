@@ -133,7 +133,7 @@ func (s *_gaps) Prints_to_all_gaps_of_given_level(t *T) {
 	exp := " • \n• •\n • "
 
 	tt.Lines.Update(tt.Root(), nil, func(e *Env) {
-		fmt.Fprint(cmp.Gaps(0).Filling(), "•")
+		Print(cmp.Gaps(0).Filling(), '•')
 	})
 	t.Eq(exp, tt.ScreenOf(cmp))
 }
@@ -307,7 +307,7 @@ func (s *_gaps) Style_defaults_to_component_s_style(t *T) {
 	})
 	tt.Lines.Update(cmp, nil, func(e *Env) {
 		cmp.AA(Reverse).FG(Blue).BG(Yellow)
-		fmt.Fprint(cmp.Gaps(0).Filling(), " ")
+		Print(cmp.Gaps(0).Filling(), ' ')
 		fmt.Fprint(cmp.Gaps(0).Corners, " ")
 	})
 
@@ -460,6 +460,24 @@ func (s *_gaps) Adapt_fillers_on_layout_change(t *T) {
 	t.True(cc[4].HasAA(0, Dim))
 	t.True(cc[5].HasAA(1, Dim))
 	t.True(cc[5].HasAA(0, Reverse))
+}
+
+var fillAll = `
+••••••••
+•      •
+•      •
+••••••••
+`
+
+func (s *_gaps) Filler_fills_whole_level(t *T) {
+	tt, cmp := s.fx(t, func(c *icmpFX, e *Env) {
+		c.Dim().SetWidth(8).SetHeight(4)
+	})
+	tt.Lines.Update(cmp, nil, func(e *Env) {
+		Print(cmp.Gaps(0).Filling(), '•')
+		fmt.Fprint(cmp.Gaps(0).Corners, "•")
+	})
+	t.Eq(strings.TrimSpace(fillAll), tt.ScreenOf(cmp))
 }
 
 func TestGaps(t *testing.T) {

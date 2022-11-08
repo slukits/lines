@@ -157,7 +157,7 @@ type KeyEventer interface {
 	Key() Key
 
 	// Mod reports the pressed modifier key like shift, alt, ...
-	Mod() Modifier
+	Mod() ModifierMask
 }
 
 // RuneEventer implementation is reported on a user rune input event.
@@ -168,7 +168,7 @@ type RuneEventer interface {
 	Rune() rune
 
 	// Mod reports the pressed modifier key like shift, alt, ...
-	Mod() Modifier
+	Mod() ModifierMask
 }
 
 // MouseEventer implementation is reported on a user-input mouse event.
@@ -179,7 +179,7 @@ type MouseEventer interface {
 	Button() ButtonMask
 
 	// Mod reports the pressed modifier key like shift, alt, ...
-	Mod() Modifier
+	Mod() ModifierMask
 
 	// Pos returns the x- and y-screen-coordinates of a mouse event.
 	Pos() (int, int)
@@ -194,10 +194,4 @@ type ResizeEventer interface {
 	// screen/window line, and the height, i.e. the number of lines fitting on
 	// the screen/window, of the resize event.
 	Size() (int, int)
-}
-
-type QuitEventer interface {
-	Eventer
-	// Quitting is only defined to discriminate from Eventer.
-	Quitting()
 }

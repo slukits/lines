@@ -6,7 +6,8 @@ package lines
 
 // Initer is implemented by components which want to be notified for
 // initialization purposes before the first layout and before user input
-// events are processed.
+// events are processed.  Note implement [Layouter] to be notified after
+// each layout calculation of a component.
 type Initer interface {
 
 	// OnInit provides to its implementation an environment before it is
@@ -41,14 +42,14 @@ type FocusLooser interface {
 
 // Updater is implemented by components which want to be informed about
 // update events.  NOTE an Update event reaches only an Updater
-// interface if the Update-call on Events was NOT provided with an
-// event listener.
+// interface implementation if the [Lines.Update]-call was NOT provided
+// with an event listener.
 type Updater interface {
 
 	// OnUpdate is reported for update requests without listener;
-	// *Env.Evt.(*lines.UpdateEvent).Data provides the data optionally
+	// e.Evt.(*lines.UpdateEvent).Data provides the data optionally
 	// provided to the update event registration.
-	OnUpdate(*Env)
+	OnUpdate(e *Env)
 }
 
 type rprContext struct {
@@ -116,7 +117,8 @@ func reportUpdate(cntx *rprContext, evt *UpdateEvent) {
 }
 
 func reportMoveFocus(cntx *rprContext, evt *moveFocusEvent) {
-	if !evt.cmp.isInitialized() {
+	if !evt.cmp.isInitialized() ||
+		evt.cmp.layoutComponent().wrapped().dim.IsOffScreen() {
 		return
 	}
 	moveFocus(evt.cmp, cntx)

@@ -28,7 +28,7 @@ package lines
 
 // StyleType constants identify a style for a certain function, e.g.
 // default fore- and background color and style attributes of a
-// component or fore-/background color and style attributes for a
+// component, or fore-/background color and style attributes for a
 // component's highlighted line.
 type StyleType uint
 

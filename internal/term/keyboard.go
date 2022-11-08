@@ -255,7 +255,7 @@ var tcellToApiKeys = map[tcell.Key]api.Key{
 	tcell.KeyF64:       api.F64,
 }
 
-var apiToTcellMods = map[api.Modifier]tcell.ModMask{
+var apiToTcellMods = map[api.ModifierMask]tcell.ModMask{
 	api.Shift:        tcell.ModShift,
 	api.Ctrl:         tcell.ModCtrl,
 	api.Alt:          tcell.ModAlt,
@@ -263,7 +263,7 @@ var apiToTcellMods = map[api.Modifier]tcell.ModMask{
 	api.ZeroModifier: tcell.ModNone,
 }
 
-var tcellToApiMods = map[tcell.ModMask]api.Modifier{
+var tcellToApiMods = map[tcell.ModMask]api.ModifierMask{
 	tcell.ModShift: api.Shift,
 	tcell.ModCtrl:  api.Ctrl,
 	tcell.ModAlt:   api.Alt,
@@ -273,7 +273,7 @@ var tcellToApiMods = map[tcell.ModMask]api.Modifier{
 
 type keyEvent struct{ evt *tcell.EventKey }
 
-func newKeyEvent(k api.Key, m api.Modifier) api.KeyEventer {
+func newKeyEvent(k api.Key, m api.ModifierMask) api.KeyEventer {
 	return &keyEvent{evt: tcell.NewEventKey(
 		apiToTcellKeys[k],
 		rune(tcell.KeyRune),
@@ -285,7 +285,7 @@ func (e *keyEvent) Key() api.Key {
 	return tcellToApiKeys[e.evt.Key()]
 }
 
-func (e *keyEvent) Mod() api.Modifier {
+func (e *keyEvent) Mod() api.ModifierMask {
 	return tcellToApiMods[e.evt.Modifiers()]
 }
 
@@ -295,7 +295,7 @@ func (e *keyEvent) Source() interface{} { return e.evt }
 
 type runeEvent struct{ evt *tcell.EventKey }
 
-func newRuneEvent(r rune, m api.Modifier) api.RuneEventer {
+func newRuneEvent(r rune, m api.ModifierMask) api.RuneEventer {
 	return &runeEvent{evt: tcell.NewEventKey(
 		tcell.KeyNUL, r, apiToTcellMods[m],
 	)}
@@ -303,7 +303,7 @@ func newRuneEvent(r rune, m api.Modifier) api.RuneEventer {
 
 func (e *runeEvent) Rune() rune { return e.evt.Rune() }
 
-func (e *runeEvent) Mod() api.Modifier {
+func (e *runeEvent) Mod() api.ModifierMask {
 	return tcellToApiMods[e.evt.Modifiers()]
 }
 

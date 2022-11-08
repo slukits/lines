@@ -169,14 +169,14 @@ const (
 
 const k = tcell.KeyBEL
 
-// Modifier mask is used to provide pressed modifiers of a
+// ModifierMask mask is used to provide pressed modifiers of a
 // reported/posted key/rune user input event.
-type Modifier int32
+type ModifierMask int32
 
 const (
-	Shift Modifier = 1 << iota
+	Shift ModifierMask = 1 << iota
 	Ctrl
 	Alt
 	Meta
-	ZeroModifier Modifier = 0
+	ZeroModifier ModifierMask = 0
 )

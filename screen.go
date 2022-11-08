@@ -14,12 +14,12 @@ import (
 type Layouter interface {
 
 	// OnLayout is called after the layout manager has changed the
-	// available screen area of a component.
+	// screen area of a component.
 	OnLayout(*Env)
 }
 
 // Stacker is implemented by components which want to provide nested
-// components vertically stacked.
+// components which are vertically stacked in the layout.
 type Stacker interface {
 
 	// ForStacked calls back for each component of this Stacker
@@ -28,7 +28,7 @@ type Stacker interface {
 }
 
 // Chainer is implemented by components which want to provided nested
-// components horizontally chained.
+// components which are horizontally chained in the layout.
 type Chainer interface {
 
 	// ForChained calls back for each component of this Chainer
@@ -168,7 +168,20 @@ func (s *screen) syncDirty() {
 
 // Stacking embedded in a component makes the component implement the
 // Stacker interface.  Typically the Componenter slice is filled in a
-// component's OnInit-listener.
+// component's [Initer]-listener:
+//
+//	type stackedCmp struct { lines.Component }
+//
+//	type myCmp struct{
+//		lines.Component
+//		lines.Stacking
+//	}
+//
+//	func (c *myCmp) OnInit(_ *lines.Env) {
+//		for i := 0; i < 3; i++ {
+//			c.CC = append(c.CC, &stackedCmp{})
+//		}
+//	}
 type Stacking struct{ CC []Componenter }
 
 // ForStacked calls back for each component of this Stacker respectively

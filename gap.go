@@ -16,15 +16,15 @@ const (
 
 type gap struct {
 	gm gapMask
-	ll []*line
+	ll []*Line
 }
 
-func (g *gap) ensureLevel(l int) *line {
+func (g *gap) ensureLevel(l int) *Line {
 	if len(g.ll) > l {
 		return g.ll[l]
 	}
 	for i := len(g.ll); i <= l; i++ {
-		g.ll = append(g.ll, &line{ff: dirty})
+		g.ll = append(g.ll, &Line{ff: dirty})
 	}
 	return g.ll[l]
 }

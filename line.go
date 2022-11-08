@@ -9,16 +9,18 @@ import (
 	"strings"
 )
 
-// LineFlags provide additional information for a displayed line
-// relative to component features.
+// LineFlags control the behavior and layout of a displayed line.
 type LineFlags uint64
 
 const (
 	dirty LineFlags = 1 << iota
+
 	// NotFocusable flagged line can not be focused
 	NotFocusable
+
 	// Highlighted flagged line has additive the global highlight style applied
 	Highlighted
+
 	// TrimmedHighlighted flagged line has additive the global highlight
 	// style applied except on leading and trailing spaces.
 	TrimmedHighlighted
@@ -27,17 +29,18 @@ const (
 	ZeroLineFlag LineFlags = 0
 )
 
-// A line structure stores the content, style-information and line
-// filler of a line and provides operations to calculate certain display
-// representations of a line's content.
-type line struct {
+// A Line structure stores a Line's flags, its content,
+// style-information and line filler and provides methods to modify its
+// flags and styles.  A [Component]'s Line instance is obtained through
+// its LL property (see [ComponentLines.By]).
+type Line struct {
 	ff     LineFlags
 	rr     []rune
 	ss     styleRanges
 	fillAt []int
 }
 
-func (l *line) reset(ff LineFlags, s *Style) *line {
+func (l *Line) reset(ff LineFlags, s *Style) *Line {
 	l.ff = ff
 	l.rr = nil
 	if s != nil {
@@ -50,13 +53,13 @@ func (l *line) reset(ff LineFlags, s *Style) *line {
 	return l
 }
 
-func (l *line) setFlags(ff LineFlags) {
+func (l *Line) setFlags(ff LineFlags) {
 	l.ff = ff | dirty
 }
 
 // Switch turns given flag(s) on if they are not all set otherwise these
 // flags are removed.
-func (l *line) Switch(ff LineFlags) {
+func (l *Line) Switch(ff LineFlags) {
 	l.setDirty()
 	if l.ff&ff == ff {
 		l.ff &^= ff
@@ -72,7 +75,7 @@ func (l *line) Switch(ff LineFlags) {
 	l.ff |= ff
 }
 
-func (l *line) Flag(ff LineFlags) {
+func (l *Line) Flag(ff LineFlags) {
 	if l.ff&ff == ff {
 		return
 	}
@@ -82,12 +85,12 @@ func (l *line) Flag(ff LineFlags) {
 
 // IsFlagged returns true if given line l has given flags ff set; false
 // otherwise.
-func (l *line) IsFlagged(ff LineFlags) bool {
+func (l *Line) IsFlagged(ff LineFlags) bool {
 	return l.ff&ff == ff
 }
 
 // Unflag removes given flags ff from given line l.
-func (l *line) Unflag(ff LineFlags) { l.ff &^= ff }
+func (l *Line) Unflag(ff LineFlags) { l.ff &^= ff }
 
 // cleanForFlagging removes inconsistent flags preferring usually
 // the more specific one.
@@ -101,14 +104,14 @@ func cleanForFlagging(ff LineFlags) LineFlags {
 }
 
 // setDirty sets the dirty flag if not set.
-func (l *line) setDirty() {
+func (l *Line) setDirty() {
 	if l.isDirty() {
 		return
 	}
 	l.ff |= dirty
 }
 
-func (l *line) setClean() {
+func (l *Line) setClean() {
 	if !l.isDirty() {
 		return
 	}
@@ -116,20 +119,20 @@ func (l *line) setClean() {
 }
 
 // isDirty returns true if the dirty flag is set.
-func (l *line) isDirty() bool {
+func (l *Line) isDirty() bool {
 	return l.ff&dirty != 0
 }
 
 // setDefaultStyle sets given line l's zeroRange style of its style
 // ranges.
-func (l *line) setDefaultStyle(s Style) {
+func (l *Line) setDefaultStyle(s Style) {
 	l.ss = newStyleRanges(s)
 	l.setDirty()
 }
 
 // ensureStyleRanges returns given line l's style ranges and initializes
 // them first if necessary.
-func (l *line) ensureStyleRanges() styleRanges {
+func (l *Line) ensureStyleRanges() styleRanges {
 	if l.ss == nil {
 		l.ss = newStyleRanges(DefaultStyle)
 	}
@@ -139,7 +142,7 @@ func (l *line) ensureStyleRanges() styleRanges {
 // withAA sets of given line l its default style's style attributes.
 // NOTE if no default style has been set (see line.setDefaultStyle) the
 // DefaultStyle is used and modified with given attributes.
-func (l *line) withAA(aa StyleAttributeMask) {
+func (l *Line) withAA(aa StyleAttributeMask) {
 	l.ensureStyleRanges().withAA(aa)
 	l.setDirty()
 }
@@ -147,7 +150,7 @@ func (l *line) withAA(aa StyleAttributeMask) {
 // withFG sets of given line l its default style's foreground color.
 // NOTE if no default style has been set (see line.setDefaultStyle) the
 // DefaultStyle is used and modified with given foreground color.
-func (l *line) withFG(c Color) {
+func (l *Line) withFG(c Color) {
 	l.ensureStyleRanges().withFG(c)
 	l.setDirty()
 }
@@ -155,14 +158,14 @@ func (l *line) withFG(c Color) {
 // withBG sets of given line l its default style's background color.
 // NOTE if no default style has been set (see line.setDefaultStyle) the
 // DefaultStyle is used and modified with given background color.
-func (l *line) withBG(c Color) {
+func (l *Line) withBG(c Color) {
 	l.ensureStyleRanges().withBG(c)
 	l.setDirty()
 }
 
 // set sets given line l's content converting given string s to a rune
 // slice.
-func (l *line) set(s string) {
+func (l *Line) set(s string) {
 	l.rr = []rune(s)
 	if len(l.fillAt) > 0 {
 		l.fillAt = []int{}
@@ -186,7 +189,7 @@ func (l *line) set(s string) {
 // a default style d which differs from provided style and the display
 // is wider than the l's content then the remaining blanks have the
 // style d.
-func (l *line) setStyled(s string, sty Style) {
+func (l *Line) setStyled(s string, sty Style) {
 	l.set(s)
 	l.ss = styleRanges{Range{0, len(l.rr)}: sty}
 	l.setDirty()
@@ -195,7 +198,7 @@ func (l *line) setStyled(s string, sty Style) {
 // setAt sets given rune slice rr at given position p in given line l's
 // content overwriting what has been at and after this position.  If
 // needed rr is padded with spaces to p.
-func (l *line) setAt(p int, rr []rune) {
+func (l *Line) setAt(p int, rr []rune) {
 	if p < -1 {
 		return
 	}
@@ -220,7 +223,7 @@ func (l *line) setAt(p int, rr []rune) {
 
 // truncateAt truncates fillers and styles at and after given position
 // p.
-func (l *line) truncateAt(p int) {
+func (l *Line) truncateAt(p int) {
 	truncate := -1
 	for i, f := range l.fillAt {
 		if f < p {
@@ -244,7 +247,7 @@ func (l *line) truncateAt(p int) {
 // line l's content overwriting what has been at and after this position
 // and adds a corresponding style range.  If needed l's content is
 // padded with spaces until p.
-func (l *line) setStyledAt(at int, rr []rune, sty Style) {
+func (l *Line) setStyledAt(at int, rr []rune, sty Style) {
 	l.setAt(at, rr)
 	if at == -1 {
 		l.setDefaultStyle(sty)
@@ -258,7 +261,7 @@ func (l *line) setStyledAt(at int, rr []rune, sty Style) {
 
 // setAtFilling sets given rune r at given position p of given line l's
 // content truncating all possibly following content.
-func (l *line) setAtFilling(p int, r rune) {
+func (l *Line) setAtFilling(p int, r rune) {
 	l.padTo(p)
 	l.truncateAt(p)
 	l.rr = append(l.rr[:p], r)
@@ -269,7 +272,7 @@ func (l *line) setAtFilling(p int, r rune) {
 // setStyledAtFilling sets given rune r at given position p of given
 // line l's content truncating all possibly following content and adds
 // a corresponding style range.
-func (l *line) setStyledAtFilling(at int, r rune, sty Style) {
+func (l *Line) setStyledAtFilling(at int, r rune, sty Style) {
 	l.setAtFilling(at, r)
 	if l.ss == nil {
 		l.ss = styleRanges{}
@@ -280,7 +283,7 @@ func (l *line) setStyledAtFilling(at int, r rune, sty Style) {
 
 // AddStyleRange adds given style ranges sr and rr to given line l's
 // style ranges iff they don't overlap with already existing style ranges.
-func (l *line) AddStyleRange(sr SR, rr ...SR) {
+func (l *Line) AddStyleRange(sr SR, rr ...SR) {
 	if l.ss == nil {
 		l.ss = styleRanges{}
 	}
@@ -298,7 +301,7 @@ type runeWriter interface {
 // sync writes given line l's expanded and styled runes at coordinates x
 // and y to the screen with given rune writer rw.  Is l wider than given
 // width w it is truncated at w.
-func (l *line) sync(x, y, width int, rw runeWriter, gg *globals) {
+func (l *Line) sync(x, y, width int, rw runeWriter, gg *globals) {
 	l.setClean()
 	rr, ss := l.display(width, gg)
 	for i, r := range rr {
@@ -309,7 +312,7 @@ func (l *line) sync(x, y, width int, rw runeWriter, gg *globals) {
 	}
 }
 
-func (l *line) vsync(x, y, height int, rw runeWriter, gg *globals) {
+func (l *Line) vsync(x, y, height int, rw runeWriter, gg *globals) {
 	l.setClean()
 	rr, ss := l.display(height, gg)
 	for i, r := range rr {
@@ -323,7 +326,7 @@ func (l *line) vsync(x, y, height int, rw runeWriter, gg *globals) {
 // display returns a line's calculated content depending on given width
 // and set filler as well as corresponding style ranges ready to print
 // to the screen.
-func (l *line) display(width int, gg *globals) ([]rune, styleRanges) {
+func (l *Line) display(width int, gg *globals) ([]rune, styleRanges) {
 	ss := l.ss.copyWithDefault(gg.Style(Default))
 	if len(l.rr) == 0 {
 		return l.displayEmpty(width, gg, ss)
@@ -347,7 +350,7 @@ func (l *line) display(width int, gg *globals) ([]rune, styleRanges) {
 
 // displayEmpty returns width many space runes and adjust styles in case
 // given line l is highlighted.
-func (l *line) displayEmpty(width int, g *globals, ss styleRanges) (
+func (l *Line) displayEmpty(width int, g *globals, ss styleRanges) (
 	[]rune, styleRanges,
 ) {
 	rr := []rune(strings.Repeat(" ", width))
@@ -359,7 +362,7 @@ func (l *line) displayEmpty(width int, g *globals, ss styleRanges) (
 
 // displayOverflowing trims given runes to given width and adjusts given
 // style ranges ss in case given line l is highlighted.
-func (l *line) displayOverflowing(
+func (l *Line) displayOverflowing(
 	width int, g *globals, rr []rune, ss styleRanges,
 ) ([]rune, styleRanges) {
 	if l.ff&(Highlighted|TrimmedHighlighted) != 0 {
@@ -373,7 +376,7 @@ func (l *line) displayOverflowing(
 // ranges accordingly.  Note a previous tab-expansion shifting the
 // filler positions is taken into account by evaluating given tag count
 // tc and given globals providing the tab-width.
-func (l *line) expandFillerAt(
+func (l *Line) expandFillerAt(
 	rr []rune, width int, ss styleRanges, tc int, gg *globals,
 ) ([]rune, styleRanges) {
 	fillAt := append([]int{}, l.fillAt...)
@@ -406,7 +409,7 @@ func (l *line) expandFillerAt(
 	return _rr, l.adjustFillerExpansionStyles(ff, ss)
 }
 
-func (l *line) adjustFillerExpansionStyles(
+func (l *Line) adjustFillerExpansionStyles(
 	filler map[int][]rune, ss styleRanges,
 ) styleRanges {
 	ff := make([]int, 0, len(filler))
@@ -422,7 +425,7 @@ func (l *line) adjustFillerExpansionStyles(
 	return ss
 }
 
-func (l *line) expandLeadingTabs(
+func (l *Line) expandLeadingTabs(
 	rr []rune, ss styleRanges, tabWidth int,
 ) ([]rune, styleRanges, int) {
 
@@ -449,7 +452,7 @@ func (l *line) expandLeadingTabs(
 // highlighted highlights the whole line; i.e. the global highlight
 // style is applied by switching its style attributes and setting
 // non-default colors for each style range.
-func (l *line) highlighted(
+func (l *Line) highlighted(
 	rr []rune, ss styleRanges, gg *globals,
 ) styleRanges {
 
@@ -467,7 +470,7 @@ func (l *line) highlighted(
 // accordingly before the sub-range inside the trim-range is highlighted
 // by the global highlight style, i.e. switching its style attributes
 // and setting non-default colors.
-func (l *line) highlightTrimmed(
+func (l *Line) highlightTrimmed(
 	rr []rune, ss styleRanges, gg *globals,
 ) styleRanges {
 	tl, tr := trim(rr)
@@ -563,7 +566,7 @@ func trimRight(rr []rune) int {
 }
 
 // padTo pads a line's l content rr to given position p with spaces.
-func (l *line) padTo(p int) {
+func (l *Line) padTo(p int) {
 	if len(l.rr) >= p {
 		return
 	}
@@ -573,7 +576,7 @@ func (l *line) padTo(p int) {
 // pad returns a rune slice whose len is given width by padding given
 // rune slice rr with spaces accordingly.  pad will panic if len(rr) >
 // width.
-func (l *line) pad(rr []rune, width int) []rune {
+func (l *Line) pad(rr []rune, width int) []rune {
 	c := width - len(rr)
 	return append(rr, []rune(strings.Repeat(" ", c))...)
 }

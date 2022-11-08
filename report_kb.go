@@ -8,23 +8,6 @@ import (
 	"github.com/slukits/lines/internal/api"
 )
 
-// Keyer is implemented by components who want to take over the user's
-// key-input if they are focused.
-type Keyer interface {
-
-	// OnKey is provided with every key-press and reported modifiers which
-	// were pressed at the same time.
-	OnKey(*Env, Key, Modifier)
-}
-
-// Runer is implemented by components who want to take over the user's
-// rune-input if they are focused.
-type Runer interface {
-
-	// OnRune is provided with every rune-input.
-	OnRune(*Env, rune, Modifier)
-}
-
 func reportKey(cntx *rprContext, evt api.KeyEventer) (quit bool) {
 	sb := false
 	stopBubbling := func() bool {
@@ -62,7 +45,7 @@ func reportKeyListener(
 }
 
 func keyCurry(
-	evt api.KeyEventer, cb func(*Env, api.Key, api.Modifier),
+	evt api.KeyEventer, cb func(*Env, api.Key, api.ModifierMask),
 ) func(*Env) {
 	return func(e *Env) {
 		cb(e, evt.Key(), evt.Mod())
@@ -129,7 +112,7 @@ func reportRuneListener(
 }
 
 func runeCurry(
-	evt RuneEventer, cb func(*Env, rune, Modifier),
+	evt RuneEventer, cb func(*Env, rune, ModifierMask),
 ) func(*Env) {
 	return func(e *Env) { cb(e, evt.Rune(), evt.Mod()) }
 }

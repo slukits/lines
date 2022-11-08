@@ -4,8 +4,9 @@
 
 package lines
 
-// A LineFocus instance is associated with each initialized
-// lines-component and provides the api for focusing component lines.
+// A LineFocus instance is associated with each initialized [Component]
+// through its LL property (see [ComponentLines]) and provides the api
+// for focusing component lines.
 type LineFocus struct {
 	c       *Component
 	current int
@@ -29,9 +30,9 @@ func (s *LineFocus) Trimmed() {
 	s.hlType = TrimmedHighlighted
 }
 
-// Next returns the index of the next (relative to Current) selectable
-// line l.  l is flagged as highlighted while the line highlighted
-// before is not highlighted anymore.
+// Next focuses the next focusable line after [LineFocus.Current] and
+// returns its index.  If highlighted is true the highlight of the
+// current line is removed while the next is highlighted.
 func (s *LineFocus) Next(highlighted bool) int {
 	if s.current+1 == len(*s.c.ll) {
 		s.Reset(highlighted)
@@ -59,6 +60,9 @@ func (s *LineFocus) Next(highlighted bool) int {
 	return s.current
 }
 
+// Previous focuses the first focusable line previous to [LineFocus.Current]
+// and  returns its index.  If highlighted is true the highlight of the
+// current line is removed while the previous line is highlighted.
 func (s *LineFocus) Previous(highlighted bool) int {
 	initI := s.current - 1
 	if s.current == -1 {

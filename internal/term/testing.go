@@ -96,14 +96,14 @@ func (tt *Fixture) Display(s string, sty api.Style) {
 	}
 }
 
-func (tt *Fixture) PostKey(k api.Key, m api.Modifier) {
+func (tt *Fixture) PostKey(k api.Key, m api.ModifierMask) {
 	tt.t.Helper()
 	if err := tt.ui.Post(newKeyEvent(k, m)); err != nil {
 		tt.t.Fatalf("post: key: %v", err)
 	}
 }
 
-func (tt *Fixture) PostRune(r rune, m api.Modifier) {
+func (tt *Fixture) PostRune(r rune, m api.ModifierMask) {
 	tt.t.Helper()
 	if err := tt.ui.Post(newRuneEvent(r, m)); err != nil {
 		tt.t.Fatalf("post: rune: %v", err)
@@ -111,7 +111,7 @@ func (tt *Fixture) PostRune(r rune, m api.Modifier) {
 }
 
 func (tt *Fixture) PostMouse(
-	x, y int, b api.ButtonMask, m api.Modifier,
+	x, y int, b api.ButtonMask, m api.ModifierMask,
 ) {
 	tt.t.Helper()
 	if err := tt.ui.Post(newMouseEvent(x, y, b, m)); err != nil {

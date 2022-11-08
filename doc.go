@@ -40,7 +40,7 @@ user input and programmatically posted events to listener of client
 provided components embedding the [Component]-type.  While client
 listener implementations print to an provided environment [Env] which is
 associated with the component's portion of the screen.  lines is
-designed to add further backends like "shiny" of "fyne" for graphical
+designed to add further backends like "shiny" or "fyne" for graphical
 displays.  As of now lines has only a terminal backend which is a
 wrapper around [tcell].
 
@@ -76,7 +76,7 @@ what does work
 	    }(e.Lines)
 	}
 
-Also using functionality or properties provided by embedded Component
+Also using functionality or properties provided by embedded [Component]
 instance in a function that doesn't return in the executing listener
 won't work.
 
@@ -106,25 +106,27 @@ suppress bubbling: e.StopBubbling().
 
 lines comes with a layout manager which does most of the work for you.
 If fine grained control is needed the embedded Component's Dim method
-informs about positioning and size and also provides features to change
-the later.  One can also control there if a component is filling, i.e.
-uses up unused space, or if its size is fixed.  Components can be
-arbitrarily nested by embedding *either* the Stacking or Chaining type
-in a component or by implementing the Stacker or Chainer interface.
+(see [Component.Dim]) informs about positioning and size and also
+provides features to change the later.  One can also control there if a
+component is filling, i.e.  uses up unused space, or if its size is
+fixed.  Components can be arbitrarily nested by embedding either the
+Stacking or Chaining type in a component or by implementing either the
+Stacker or Chainer interface.
 
 # Content and format handling
 
 The Env(ironment) instance passed to a event listener is associated with
 the screen portion of the component the event is reported to.  Printing
 to the environment prints provided content to its screen portion.  Env's
-methods LL, At, AA, FG and BG give fine grained control of what is
-printed where and how.  While printing directly to an environment will
-always clear the component before it prints to its first screen line the
-LL method lets you select which line to print to.  A subsequent call of
-At defines the position in selected line.  AA sets style attributes
-while FG and BG set the fore- and background color of the next print.
-Each of these methods return a writer implementation, i.e. we can do
-this
+methods [Env.LL], [Env.Sty], [Env.AA], [Env.FG] and [Env.BG] give fine
+grained control over what is printed where and how.  While printing
+directly to an environment will always clear the component before it
+prints to its first screen line the LL method lets you select which line
+to print to.  A subsequent call of At defines the position in selected
+line.  AA sets style attributes while FG and BG set the fore- and
+background color of the next print.  Sty on the other hand sets
+attributes and colors in one go.  Each of these methods return a writer
+implementation, i.e. we can do this
 
 	fmt.Fprint(e.LL(5).AA(lines.Bold),
 	    lines.Filler + "a centered bold line" + lines.Filler)
@@ -132,12 +134,12 @@ this
 The above prints "a centered bold line" centered in bold letters into
 the component's fifth line.  Note here again the line will stay centered
 if the component's size changes.  A similar API is provided by embedded
-Component's Gaps(index)-method
+Component's Gaps(index)-method (see [Component.Gaps])
 
-	c.Gaps(0).Sty(lines.Reverse)
-	c.Gaps(0).Corners.Sty(lines.Revers)
+	c.Gaps(0).AA(lines.Reverse)
+	c.Gaps(0).Corners.AA(lines.Revers)
 
-above is as of now the simplest way to frame a component.  Gaps allow to
+Above is as of now the simplest way to frame a component.  Gaps allow to
 do all sorts of framing, padding and guttering of a component.
 
 # Feature handling

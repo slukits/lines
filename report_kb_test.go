@@ -92,14 +92,14 @@ type kbFX struct {
 	stopBubblingOnKey, stopBubblingOnRune bool
 }
 
-func (fx *kbFX) OnKey(e *Env, k Key, mm Modifier) {
+func (fx *kbFX) OnKey(e *Env, k Key, mm ModifierMask) {
 	fx.append(e.Evt, onKey)
 	if fx.stopBubblingOnKey {
 		e.StopBubbling()
 	}
 }
 
-func (fx *kbFX) OnRune(e *Env, r rune, mm Modifier) {
+func (fx *kbFX) OnRune(e *Env, r rune, mm ModifierMask) {
 	fx.append(e.Evt, onRune)
 	if fx.stopBubblingOnRune {
 		e.StopBubbling()

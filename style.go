@@ -10,8 +10,8 @@ import (
 	"github.com/slukits/lines/internal/api"
 )
 
-// StyleAttributeMask defines the looks of a style, i.e. the looks of a print
-// to the screen/window.  E.g. bold, blinking, dimmed etc.
+// StyleAttributeMask defines the looks of a rune on the screen; e.g.
+// bold, blinking, dimmed etc.
 type StyleAttributeMask = api.StyleAttributeMask
 
 // The DefaultStyle has no style attributes and "default" colors.  The
@@ -48,7 +48,8 @@ var NewStyle = api.NewStyle
 
 // Range is a two component array of which the first component
 // represents the (inclusive) start of a range while the seconde is the
-// (exclusive) end of the range.
+// (exclusive) end of the range.  Range is typically used to define
+// style ranges for rune-sequences in a [Line] (see [Line.AddStyleRange]).
 type Range [2]int
 
 // Start returns the inclusive start-point of given range r.
@@ -79,8 +80,9 @@ func (r Range) contains(i int) bool {
 	return r.Start() <= i && i < r.End()
 }
 
-// SR represents a ranged style which may be set for a line see
-// [Env.AddStyleRange].
+// SR represents a ranged style which is used internally to style a
+// sequence of runes in a [Component]'s [Line] or may be passed to
+// [Line.AddStyleRange] calls.
 type SR struct {
 	Range
 	Style

@@ -34,13 +34,13 @@ type Tester interface {
 	Display(string, Style)
 
 	// PostKey emulates a user-key-input with underlying backend.
-	PostKey(Key, Modifier) error
+	PostKey(Key, ModifierMask) error
 
 	// PostKey emulates a user-rune-input with underlying backend.
-	PostRune(rune, Modifier) error
+	PostRune(rune, ModifierMask) error
 
 	// PostKey emulates a user-mouse-input with underlying backend.
-	PostMouse(x, y int, _ ButtonMask, _ Modifier) error
+	PostMouse(x, y int, _ ButtonMask, _ ModifierMask) error
 
 	// PostKey emulates a resize event of the available display area
 	// with underlying backend.

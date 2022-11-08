@@ -14,7 +14,7 @@ import (
 
 type lineFX struct {
 	api.Displayer
-	line
+	Line
 	w, h int
 	gg   *globals
 }

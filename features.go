@@ -68,7 +68,7 @@ package lines
 // Features provides access and fine grained control over the behavior
 // of a component provided by lines.  Its methods will panic used
 // outside an event reporting listener-callback.  Typically you will use
-// a components FF-property to manipulate the components supported
+// a component's FF-property to manipulate a component's supported
 // features, e.g.
 //
 //	type Cmp { lines.Component }
@@ -102,29 +102,35 @@ func (ff *Features) AddRecursive(f FeatureMask) {
 	ff.ensureInitialized().add(f, true)
 }
 
-func (ff *Features) OfKey(k Key, mm Modifier) FeatureMask {
+// OfKey returns the feature bound to given key k with given modifiers
+// mm.
+func (ff *Features) OfKey(k Key, mm ModifierMask) FeatureMask {
 	return ff.ensureInitialized().keyFeature(k, mm)
 }
 
-func (ff *Features) OfRune(r rune, mm Modifier) FeatureMask {
+// OfRune returns the feature bound to given rune r with given modifiers
+// mm.
+func (ff *Features) OfRune(r rune, mm ModifierMask) FeatureMask {
 	return ff.ensureInitialized().runeFeature(r, mm)
 }
 
+// OfButton returns the feature bound to given buttons b with given modifiers
+// mm.
 func (ff *Features) OfButton(
-	b ButtonMask, mm Modifier,
+	bb ButtonMask, mm ModifierMask,
 ) FeatureMask {
 	ff.ensureInitialized()
-	return ff.c.ff.buttonFeature(b, mm)
+	return ff.c.ff.buttonFeature(bb, mm)
 }
 
 // Has returns true if receiving component features have key, rune or
-// button bindings for given feature(s)
+// button bindings for given feature(s).
 func (ff *Features) Has(f FeatureMask) bool {
 	return ff.ensureInitialized().has(f)
 }
 
 // All returns all features for which currently key, rune or button
-// bindings are registered. (note Has is faster to determine if a
+// bindings are registered. (note [Features.Has] is faster to determine if a
 // particular feature is set.)
 func (ff *Features) All() FeatureMask {
 	return ff.ensureInitialized().all()
@@ -183,34 +189,14 @@ func (ff *Features) SetRunesOf(
 
 // Delete removes all runes, key or button bindings of given feature(s)
 // except for Quitable.  The two default Quitable bindings ctrl-c and
-// ctrl-d remain.  NOTE you can prevent the processing of the default
-// quit bindings by adding to your root component listeners for these
-// keys which call StopBubbling on their environment:
-//
-//	type Root struct { lines.Component }
-//
-//	func (c *Root) OnInit(e *lines.Env) { fmt.Fprint(e, "hello world") }
-//
-//	func (c *Root) Keys(register lines.KeyRegistration) {
-//	    register(lines.CtrlC, lines.ZeroModifier, func(e *Env) {
-//	        e.StopBubbling()
-//	    })
-//	    register(lines.CtrlD, ZeroModifier, func(e *Env) {
-//	        e.StopBubbling()
-//	    })
-//	}
-//
-//	lines.New(&Root{}).Listen()
-//
-// gives you an application which can't be quit by its users.
+// ctrl-d remain.  NOTE use a *Kiosk constructor like [TermKiosk] for a
+// [Lines]-instance to avoid having Quitable set by default.
 func (ff *Features) Delete(f FeatureMask) {
 	ff.ensureInitialized().delete(f)
 }
 
-// FeatureMask classifies keys/runes/buttons for usability features.
-// I.e. features enable certain default UI-behavior for components
-// having this feature to be used by a user of the final terminal
-// application.  E.g. scrolling, editing ...
+// FeatureMask classifies keys/runes/buttons for a components default
+// behavior like focusable, scrollable etc.
 type FeatureMask uint64
 
 const (
@@ -265,7 +251,7 @@ const (
 	PreviousLineFocusable
 
 	// NextLineFocusable a component's next focusable line can receive
-	// the focus. (default down-key and 'j')
+	// the focus. (default up-key and 'k')
 	NextLineFocusable
 
 	// LineUnfocusable a component's set line-focus can be removed
@@ -338,9 +324,9 @@ const (
 // a copy of the *DefaultFeatures* features-instance initialized which
 // holds the quit-feature only.
 type features struct {
-	keys    map[Modifier]map[Key]FeatureMask
-	runes   map[Modifier]map[rune]FeatureMask
-	buttons map[Modifier]map[ButtonMask]FeatureMask
+	keys    map[ModifierMask]map[Key]FeatureMask
+	runes   map[ModifierMask]map[rune]FeatureMask
+	buttons map[ModifierMask]map[ButtonMask]FeatureMask
 	have    FeatureMask
 }
 
@@ -367,9 +353,9 @@ func (ff *features) runeQuits(r rune) bool {
 func (ff *features) copy() *features {
 
 	cpy := features{
-		keys:    map[Modifier]map[Key]FeatureMask{},
-		runes:   map[Modifier]map[rune]FeatureMask{},
-		buttons: map[Modifier]map[ButtonMask]FeatureMask{},
+		keys:    map[ModifierMask]map[Key]FeatureMask{},
+		runes:   map[ModifierMask]map[rune]FeatureMask{},
+		buttons: map[ModifierMask]map[ButtonMask]FeatureMask{},
 		have:    ff.have,
 	}
 
@@ -523,21 +509,21 @@ func (ff *features) add(f FeatureMask, recursive bool) {
 	}
 }
 
-// FeatureKey represents a key bound to a feature with its Modifier and
-// Key value.  FeatureKey instances must be also provided to
-// [Features.SetKeysOf].
+// FeatureKey represents a key with its modifier and key value
+// which is typically bound to a feature using [Features.SetKeysOf].
 type FeatureKey struct {
-	Mod Modifier
+	Mod ModifierMask
 	Key Key
 }
 
-// FeatureKeys are provided by KeysOf of an Features instance reporting
-// the keys bound to a given feature.  FeaturesKeys may be also used as
-// variadic argument for an Features instance's [Features.SetKeysOf].
+// FeatureKeys are reported by [Features.KeysOf] providing the keys
+// bound to a given feature.  FeatureKeys may be also used as variadic
+// argument for [Features.SetKeysOf] to bind several [FeatureKey] to the
+// same feature.
 type FeatureKeys []FeatureKey
 
-// Equals returns true if both slices contain the same FeatureKey
-// values.
+// Equals returns true iff given feature keys fk and given other feature
+// keys contain the same FeatureKey values.
 func (fk FeatureKeys) Equals(other FeatureKeys) bool {
 	if len(fk) != len(other) {
 		return false
@@ -603,22 +589,21 @@ func (ff *features) setKeysOf(
 	ff.have = ff.all()
 }
 
-// FeatureButton represents a button (mask) bound to a feature with its
-// Modifier and Button value.  FeatureButton instances must be also
-// provided to [Features.SetButtonsOf].
+// FeatureButton represents a button with its modifier and button value
+// which is typically bound to a feature using [Features.SetButtonsOf].
 type FeatureButton struct {
-	Mod    Modifier
+	Mod    ModifierMask
 	Button ButtonMask
 }
 
-// FeatureButtons are provided by [Features.ButtonsOf] of an Features
-// instance reporting the mouse buttons bound to a given feature.
-// FeatureButtons may be also used as variadic argument for an Features
-// instance's [Features.SetButtonsOf].
+// FeatureButtons are reported by [Features.ButtonsOf] providing the
+// mouse buttons bound to a given feature.  FeatureButtons may be also
+// used as variadic argument of [Features.SetButtonsOf] to bind several
+// [FeatureButton] to the same feature.
 type FeatureButtons []FeatureButton
 
-// Equals returns true if receiving and given FeatureButtons contain the
-// same buttons.
+// Equals returns true if given feature buttons fb and given other
+// feature buttons contain the same feature buttons.
 func (fb FeatureButtons) Equals(other FeatureButtons) bool {
 	if len(fb) != len(other) {
 		return false
@@ -680,18 +665,21 @@ func (ff *features) setButtonsOf(
 	ff.have = ff.all()
 }
 
+// FeatureRune represents a rune with its modifier and rune value
+// which is typically bound to a feature using [Features.SetRunesOf].
 type FeatureRune struct {
 	Rune rune
-	Mod  Modifier
+	Mod  ModifierMask
 }
 
-// FeatureRunes are provided by RunesOf of an Features instance
-// reporting the runes bound to a given feature.  FeaturesRunes may be
-// also used as variadic argument for an Features instance's SetRunesOf.
+// FeatureRunes are reported by [Features.RunesOf] providing the runes
+// bound to a given feature.  FeatureRunes may be also used as variadic
+// argument of [Features.SetRunesOf] to bind several [FeatureRune]
+// to the same feature.
 type FeatureRunes []FeatureRune
 
-// Equals returns true if receiving and given FeatureRunes contain the
-// same runes.
+// Equals returns true if given feature runes fr and given other
+// feature runes contain the same feature runes.
 func (fr FeatureRunes) Equals(other FeatureRunes) bool {
 	if len(fr) != len(other) {
 		return false
@@ -834,7 +822,7 @@ var allButtons = []ButtonMask{
 
 // keyFeature maps a key to its associated feature or to NoEvent if not
 // registered.
-func (ff *features) keyFeature(k Key, m Modifier) FeatureMask {
+func (ff *features) keyFeature(k Key, m ModifierMask) FeatureMask {
 	if ff == nil || ff.keys == nil || ff.keys[m] == nil {
 		return NoFeature
 	}
@@ -845,7 +833,7 @@ func (ff *features) keyFeature(k Key, m Modifier) FeatureMask {
 // keyFeature maps a key to its associated feature or to NoEvent if not
 // registered.
 func (ff *features) buttonFeature(
-	b ButtonMask, m Modifier,
+	b ButtonMask, m ModifierMask,
 ) FeatureMask {
 
 	if ff == nil || ff.buttons[m] == nil {
@@ -857,7 +845,7 @@ func (ff *features) buttonFeature(
 
 // runeFeature maps a rune to its associated feature or to NoEvent if not
 // registered.
-func (ff *features) runeFeature(r rune, m Modifier) FeatureMask {
+func (ff *features) runeFeature(r rune, m ModifierMask) FeatureMask {
 	if ff == nil || ff.runes == nil || ff.runes[ZeroModifier] == nil {
 		return NoFeature
 	}
@@ -880,19 +868,19 @@ var allFeatures = []FeatureMask{
 // with (end-user) features.  NOTE defaultFeatures cannot be
 // modified, a copy of them can!
 var defaultFeatures = &features{
-	keys: map[Modifier]map[Key]FeatureMask{
+	keys: map[ModifierMask]map[Key]FeatureMask{
 		ZeroModifier: {
 			CtrlC: Quitable,
 			CtrlD: Quitable,
 		},
 	},
-	runes: map[Modifier]map[rune]FeatureMask{
+	runes: map[ModifierMask]map[rune]FeatureMask{
 		ZeroModifier: {
 			0:   NoFeature, // indicates the immutable default features
 			'q': Quitable,
 		},
 	},
-	buttons: map[Modifier]map[ButtonMask]FeatureMask{},
+	buttons: map[ModifierMask]map[ButtonMask]FeatureMask{},
 	have:    Quitable,
 }
 
@@ -958,9 +946,23 @@ var defaultBindings = map[FeatureMask]*bindings{
 	},
 }
 
-type LineSelecter interface{ OnLineSelection(*Env, int) }
+// LineSelecter is implemented by a component who wants to be informed
+// when its focused line was selected.
+type LineSelecter interface {
 
-type LineFocuser interface{ OnLineFocus(*Env, int) }
+	// OnLineSelection is called by Lines if the focused line having
+	// index i of implementing component was selected.
+	OnLineSelection(_ *Env, i int)
+}
+
+// LineFocuser is implemented by a component who wants to be informed when
+// one of its lines receives the focus.
+type LineFocuser interface {
+
+	// OnLineFocus is called by Lines if the line with given index i of
+	// implementing component receives the focus.
+	OnLineFocus(_ *Env, i int)
+}
 
 func execute(cntx *rprContext, usr Componenter, f FeatureMask) {
 	switch f {

@@ -6,10 +6,16 @@ package lines
 
 import "github.com/slukits/lines/internal/api"
 
-// A KeyEventer is implemented by a reported key-event.
+// A KeyEventer is implemented by a reported key-event.  Key events may
+// be received from a [Componenter] by implementing the [Keyer] interface.
+// KeyEventer.Source() provides the backend event triggering the key
+// event.
 type KeyEventer = api.KeyEventer
 
-// A RuneEventer is implemented by a reported rune-event.
+// A RuneEventer is implemented by a reported rune-event.  Rune events may
+// be received from a [Componenter] by implementing the [Runer] interface.
+// RuneEventer.Source() provides the backend event triggering the rune
+// event.
 type RuneEventer = api.RuneEventer
 
 // A Key is the pressed key of a key event.
@@ -173,14 +179,33 @@ const (
 	Esc            Key = api.Esc
 )
 
-// A Modifier mask are the pressed modifier keys of a key, rune or mouse
-// event.  Note that the shift modifier of a rune event is not reported.
-type Modifier = api.Modifier
+// A ModifierMask are the pressed modifier keys of a key, rune or mouse
+// event.  Note that the shift modifier of a capital rune event is not
+// reported.
+type ModifierMask = api.ModifierMask
 
 const (
-	Shift        Modifier = api.Shift
-	Ctrl         Modifier = api.Ctrl
-	Alt          Modifier = api.Alt
-	Meta         Modifier = api.Meta
-	ZeroModifier Modifier = api.ZeroModifier
+	Shift        ModifierMask = api.Shift
+	Ctrl         ModifierMask = api.Ctrl
+	Alt          ModifierMask = api.Alt
+	Meta         ModifierMask = api.Meta
+	ZeroModifier ModifierMask = api.ZeroModifier
 )
+
+// Keyer is implemented by components who want to take over the user's
+// key-input if they are focused.  Note a [Component]'s Register property
+// allows to register handler for specific keys (see [Listeners.Key]).
+type Keyer interface {
+
+	// OnKey is provided with every key-press and reported modifiers which
+	// were pressed at the same time.
+	OnKey(*Env, Key, ModifierMask)
+}
+
+// Runer is implemented by components who want to take over the user's
+// rune-input if they are focused.
+type Runer interface {
+
+	// OnRune is provided with every rune-input.
+	OnRune(*Env, rune, ModifierMask)
+}

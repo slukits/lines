@@ -18,17 +18,19 @@ import (
 // Env.Evt.Source() provides the backend event if there is any.
 type Eventer = api.Eventer
 
-// QuitEventer is reported when a Lines-instance is quit.
-type QuitEventer = api.QuitEventer
-
-// ResizeEventer is reported when the Lines-display was resized.
-type ResizeEventer = api.ResizeEventer
+// resizeEventer is reported when the Lines-display was resized.
+type resizeEventer = api.ResizeEventer
 
 // Dimer provides dimensions of a component in the layout.  Note each
 // type embedding [lines.Component] implements the Dimer interface.
 type Dimer = lyt.Dimer
 
+// Lines listens to a backend implementation's reporting of events and
+// controls the event reporting to client components (see [Component])
+// and their layout accordingly.  Use one of the constructors [Term],
+// [TermKiosk] or [TermFixture] to obtain a Lines-instance.
 type Lines struct {
+
 	// scr to report resize events to screen components.
 	scr *screen
 
@@ -45,7 +47,7 @@ type Lines struct {
 // reporting events to given component cmp and its nested components.
 // cmp has the Quitable feature set to 'q', ctrl-c and ctrl-d.  The
 // binding to 'q' may be removed.  The bindings to ctrl-c and ctrl-d may
-// not be removed.  Use the TermKiosk constructor for an setup without
+// not be removed.  Use the [TermKiosk] constructor for an setup without
 // any quit bindings.  Term panics if the terminal screen can't be
 // obtained.  NOTE to create a Componenter-instance define a type which
 // embeds the [Component] type:
@@ -56,8 +58,9 @@ type Lines struct {
 // Leverage [Lines.OnQuit] registration if you want to be informed about
 // the quit event which is triggered by user-input that is associated
 // with the quitable feature or by calling [Lines.Quit].  After your
-// application is initialized you typically will want to wait until the
-// quit event occurs using [Lines.WaitForQuit].
+// application is initialized you typically will want to wait while
+// processing user input until the quit event occurs using
+// [Lines.WaitForQuit].
 func Term(cmp Componenter) *Lines {
 	ll := Lines{}
 	ll.backend = term.New(ll.listen)
@@ -130,17 +133,18 @@ type Componenter interface {
 // default.
 func TermKiosk(cmp Componenter) *Lines {
 	defaultFeatures = &features{
-		keys: map[Modifier]map[Key]FeatureMask{},
-		runes: map[Modifier]map[rune]FeatureMask{ZeroModifier: {
+		keys: map[ModifierMask]map[Key]FeatureMask{},
+		runes: map[ModifierMask]map[rune]FeatureMask{ZeroModifier: {
 			0: NoFeature, // indicates the immutable default features
 		}},
-		buttons: map[Modifier]map[ButtonMask]FeatureMask{},
+		buttons: map[ModifierMask]map[ButtonMask]FeatureMask{},
 	}
 	return Term(cmp)
 }
 
-// Quit quits given lines instance's backend and unblocks WaitForQuit.
-func (ee *Lines) Quit() { ee.backend.Quit() }
+// Quit posts a quit event which consequently closes given Lines
+// instance's backend and unblocks WaitForQuit.
+func (ll *Lines) Quit() { ll.backend.Quit() }
 
 // OnQuit registers given function to be called on quitting
 // event-polling and -reporting.
@@ -149,7 +153,7 @@ func (ll *Lines) OnQuit(listener func()) { ll.backend.OnQuit(listener) }
 // WaitForQuit blocks until given Lines-instance is quit.  (Except a
 // Lines instance provided by a [Fixture] in which case WaitForQuit is
 // not blocking.)
-func (ee *Lines) WaitForQuit() { ee.backend.WaitForQuit() }
+func (ll *Lines) WaitForQuit() { ll.backend.WaitForQuit() }
 
 // Update posts an update event into the event queue which is reported
 // either to given listener if not nil or to given componenter if given
@@ -169,10 +173,19 @@ func (ll *Lines) Update(
 	})
 }
 
-// UpdateEvent is created by an Update call on Lines.  Its Data field
-// provides the data which was passed to that Update call.
+// UpdateEvent is created by an [Lines.Update] call.  Its Data field
+// provides the data which was passed to that Update call.  To get
+// notified of an update event a component must implement [Updater]:
+//
+//	func (c *myCmp) OnUpdate(e *lines.Env) {
+//	    d := e.Evt.(*lines.UpdateEvent).Data
+//	}
+//
+// Note was an explicit listener passed to [Lines.Update] the event is not
+// reported to the component.
 type UpdateEvent struct {
 	when time.Time
+
 	// NOTE we can not extract the componenter from the component
 	// without risking a race condition hence we leave it to the
 	// reporter to do so.
@@ -190,7 +203,7 @@ func (u *UpdateEvent) Source() interface{} { return u }
 
 func (l *Lines) listen(evt api.Eventer) {
 	switch evt := evt.(type) {
-	case ResizeEventer:
+	case resizeEventer:
 		width, height := evt.Size()
 		l.scr.setWidth(width).setHeight(height)
 		reportInit(l, l.scr)
@@ -210,7 +223,8 @@ func (l *Lines) listen(evt api.Eventer) {
 // implementation while given component's OnFocus implementation is
 // executed.  Finally the focus is set to given component.  MoveFocus
 // fails if the event-loop is full returned error will wrap tcell's
-// *PostEvent* error.  MoveFocus is an no-op if Componenter is nil.
+// *PostEvent* error.  MoveFocus is an no-op if Componenter is nil, is
+// not part of the layout, is off-screen or is already focused.
 func (c *Lines) Focus(cmp Componenter) error {
 	return c.backend.Post(&moveFocusEvent{
 		when: time.Now(),

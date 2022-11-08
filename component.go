@@ -177,12 +177,12 @@ func (c *Component) layoutComponent() layoutComponenter {
 
 func (c *Component) embedded() *Component { return c }
 
-// Gaps returns a gap writer at given leven allowing to do framing,
+// Gaps returns a gaps writer at given leven allowing to do framing,
 // padding or guttering around a component's content:
 //
 //	fmt.Fprint(c.Gaps(0).AA(Reverse).Filling(), "•")
 //	fmt.Fprint(c.Gaps(0).Corners.AA(Reverse), "•")
-//	c.Gaps(1).AA(Reverse).Filling()
+//	c.Gaps(1).AA(Reverse)
 //	c.Gaps(1).Corners.AA(Reverse)
 func (c *Component) Gaps(level int) *GapsWriter {
 	if c.gaps == nil {

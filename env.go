@@ -78,6 +78,15 @@ func (e *Env) Write(bb []byte) (int, error) {
 	return e.cmp.(cmpWriter).write(bb, -1, -1, nil)
 }
 
+// Sty sets the next lines write's style, i.e. its style attributes and
+// fore- and background color.
+func (e *Env) Sty(s Style) *EnvWriter {
+	return &EnvWriter{
+		cmp: e.cmp.(cmpWriter),
+		sty: &s,
+	}
+}
+
 // AA sets the next write's style attributes like [Bold].
 func (e *Env) AA(aa StyleAttributeMask) *EnvWriter {
 	sty := e.cmp.embedded().gg.Style(Default).WithAdded(aa)

@@ -57,7 +57,7 @@ func (cll *ComponentLines) Len() int { return cll.c.Len() }
 // By returns the component line with given non negative index idx.  By
 // panics if idx is negative.  Is idx < [ComponentLines.Len] lines are
 // padded accordingly.
-func (cll *ComponentLines) By(idx int) *line {
+func (cll *ComponentLines) By(idx int) *Line {
 	if idx < 0 {
 		panic("lines: component lines: negative line index given")
 	}
@@ -71,13 +71,13 @@ func newComponentLines(c *Component) *ComponentLines {
 	}
 }
 
-type lines []*line
+type lines []*Line
 
 // append given content lines to current content
 func (ll *lines) append(sty *Style, cc ...[]byte) {
 
 	for _, c := range cc {
-		l := line{rr: []rune(string(c)), ff: dirty}
+		l := Line{rr: []rune(string(c)), ff: dirty}
 		if sty != nil {
 			l.setDefaultStyle(*sty)
 		}
@@ -96,7 +96,7 @@ func (ll *lines) replaceAt(
 		return
 	}
 	for idx+len(cc) > len(*ll) {
-		l := line{ff: dirty}
+		l := Line{ff: dirty}
 		*ll = append(*ll, &l)
 	}
 	l := (*ll)[idx]
@@ -117,12 +117,12 @@ func (ll *lines) replaceAt(
 	}
 }
 
-func (ll *lines) padded(idx int) *line {
+func (ll *lines) padded(idx int) *Line {
 	if idx < len(*ll) {
 		return (*ll)[idx]
 	}
 	for idx >= len(*ll) || idx == 0 && len(*ll) == 0 {
-		l := line{ff: dirty}
+		l := Line{ff: dirty}
 		*ll = append(*ll, &l)
 	}
 	return (*ll)[idx]
@@ -143,7 +143,7 @@ func (ll lines) IsDirty() bool {
 }
 
 // ForDirty calls back for every dirty line.
-func (ll lines) ForDirty(offset int, cb func(int, *line) (stop bool)) {
+func (ll lines) ForDirty(offset int, cb func(int, *Line) (stop bool)) {
 	for i, l := range ll[offset:] {
 		if !l.isDirty() {
 			continue
@@ -156,7 +156,7 @@ func (ll lines) ForDirty(offset int, cb func(int, *line) (stop bool)) {
 
 // For calls back for every line of given lines ll starting at given
 // offset.
-func (ll lines) For(offset int, cb func(int, *line) (stop bool)) {
+func (ll lines) For(offset int, cb func(int, *Line) (stop bool)) {
 	for i, l := range ll[offset:] {
 		if cb(i, l) {
 			return

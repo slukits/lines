@@ -11,6 +11,13 @@ type EnvWriter struct {
 	sty *Style
 }
 
+// Sty sets the next write's style, i.e. its style attributes and
+// colors.
+func (w *EnvWriter) Sty(s Style) *EnvWriter {
+	w.sty = &s
+	return w
+}
+
 // FG sets the next write's foreground color.
 func (w *EnvWriter) FG(color Color) *EnvWriter {
 	var sty Style
@@ -65,6 +72,13 @@ type EnvLineWriter struct {
 	sty  *Style
 	line int
 	cmp  cmpWriter
+}
+
+// Sty sets the next write's style, i.e. its style attributes and
+// colors.
+func (w *EnvLineWriter) Sty(s Style) *EnvLineWriter {
+	w.sty = &s
+	return w
 }
 
 // FG sets the next write's foreground color.
@@ -127,6 +141,13 @@ type EnvAtWriter struct {
 	cmp        cmpWriter
 }
 
+// Sty sets the next write's style, i.e. its style attributes and
+// colors.
+func (w *EnvAtWriter) Sty(s Style) *EnvAtWriter {
+	w.sty = &s
+	return w
+}
+
 // FG sets the next write's foreground color.
 func (w *EnvAtWriter) FG(color Color) *EnvAtWriter {
 	var sty Style
@@ -174,7 +195,7 @@ func (w *EnvAtWriter) Filling() *envAtFillingWriter {
 	}
 }
 
-// WriteAt writes given runes rr to provided line and cell indices with
+// WriteAt writes given runes rr to selected line and cell indices with
 // optionally set style information.  If there is style information it
 // will be only applied for given rune sequence rr.
 func (w *EnvAtWriter) WriteAt(rr []rune) {

@@ -45,7 +45,7 @@ var tcellToApiButtons = map[tcell.ButtonMask]api.ButtonMask{
 
 type mouseEvent struct{ evt *tcell.EventMouse }
 
-func newMouseEvent(x, y int, b api.ButtonMask, m api.Modifier) api.MouseEventer {
+func newMouseEvent(x, y int, b api.ButtonMask, m api.ModifierMask) api.MouseEventer {
 	return &mouseEvent{evt: tcell.NewEventMouse(
 		x, y,
 		apiToTcellButtons[b],
@@ -59,7 +59,7 @@ func (e *mouseEvent) Button() api.ButtonMask {
 	return tcellToApiButtons[e.evt.Buttons()]
 }
 
-func (e *mouseEvent) Mod() api.Modifier {
+func (e *mouseEvent) Mod() api.ModifierMask {
 	return tcellToApiMods[e.evt.Modifiers()]
 }
 
