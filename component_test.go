@@ -402,10 +402,26 @@ func (s *AComponent) Updates_tab_expansions_on_tab_width_change(t *T) {
 	t.True(strings.HasPrefix(tt.Screen()[1], expTB+"2nd"))
 }
 
-func (s *AComponent) Updates_lines_style_on_global_style_change(t *T) {
-	tt, _ := cmpfx(t)
-	tt.FireResize(10, 1)
+func (s *AComponent) Updates_tab_expansions_on_propagated_tab_width(
+	t *T,
+) {
+	t.TODO()
+}
 
+func (s *AComponent) Updates_lines_style_on_global_style_change(t *T) {
+	t.TODO()
+}
+
+func (s *AComponent) Updates_lines_style_on_propagated_style(t *T) {
+	t.TODO()
+}
+
+func (s *AComponent) Updates_highlight_on_global_highlight_change(t *T) {
+	t.TODO()
+}
+
+func (s *AComponent) Updates_highlight_on_propagated_highlight(t *T) {
+	t.TODO()
 }
 
 func TestComponent(t *testing.T) {
