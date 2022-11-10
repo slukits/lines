@@ -18,15 +18,7 @@ jobs:
                   go-version: 1.19
 
             - name: Build
-              env:
-                  GITHUB_TOKEN: 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
-                  GOPRIVATE: github.com/slukits/
               run: go build -v ./...
 
             - name: Test
-              env:
-                  GITHUB_TOKEN: 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
-                  GOPRIVATE: github.com/slukits/
-              run: |
-                  git config --global url."https://$GITHUB_TOKEN:x-oauth-basic@github.com/".insteadOf "https://github.com/"
-                  go test -race -cover ./...
+              run: go test -race -cover ./...
