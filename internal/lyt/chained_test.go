@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	. "github.com/slukits/gounit"
+	"github.com/slukits/lines/internal/api"
 )
 
 type chainerFX struct {
@@ -55,6 +56,13 @@ func (cf *chainerFX) HasConsistentLayout() (ok bool) {
 	return cf.Dim().layoutWidth() == cf.SumLayoutWidths() && ok
 }
 
+type ggChainerFX struct {
+	chainerFX
+	gg api.Gaps
+}
+
+func (cf *ggChainerFX) Gaps() api.Gaps { return cf.gg }
+
 type chainerFactory struct{}
 
 var cf = &chainerFactory{}
@@ -68,10 +76,22 @@ func (cf *chainerFactory) New(dd ...Dimer) *chainerFX {
 	}
 }
 
+func (cf *chainerFactory) Gapped(
+	chainer Dimer, gg api.Gaps, dd ...Dimer,
+) *ggChainerFX {
+	return &ggChainerFX{
+		chainerFX: chainerFX{
+			Dimer: chainer,
+			dd:    dd,
+		},
+		gg: gg,
+	}
+}
+
 // Of produces a new Stacker-implementation instance wrapping given Dimer
 // and providing the remaining dimers.
-func (sf *chainerFactory) Of(d Dimer, dd ...Dimer) *stackerFX {
-	return &stackerFX{
+func (sf *chainerFactory) Of(d Dimer, dd ...Dimer) *chainerFX {
+	return &chainerFX{
 		Dimer: d,
 		dd:    dd,
 	}
@@ -274,6 +294,36 @@ func (s *chained) With_overflowing_height_are_clipped_to_height(t *T) {
 	t.Eq(5, gotFilled)
 	t.Eq(fx.Dim().height, fx.dd[0].Dim().layoutHeight())
 	t.Eq(fx.Dim().height, fx.dd[1].Dim().layoutHeight())
+}
+
+func (s *chained) Flags_nested_off_screen_if_chainer_gaps_fill_its_area(
+	t *T,
+) {
+	fx := cf.Gapped(df.FixedW(4), api.Gaps{Left: 2, Right: 2},
+		df.FixedW(2), df.FixedW(2))
+	t.FatalOn((&Manager{Root: fx}).Reflow(nil))
+	t.True(fx.dd[0].Dim().IsOffScreen())
+	t.True(fx.dd[1].Dim().IsOffScreen())
+
+	fx = cf.Gapped(df.FixedH(4), api.Gaps{Top: 2, Bottom: 2},
+		df.Filling(), df.Filling())
+	t.FatalOn((&Manager{Root: fx}).Reflow(nil))
+	t.True(fx.dd[0].Dim().IsOffScreen())
+	t.True(fx.dd[1].Dim().IsOffScreen())
+}
+
+func (s *chained) Nests_dimmer_accounting_for_chainer_s_gaps(t *T) {
+	fx := cf.Gapped(
+		df.FixedWH(20, 20),
+		api.Gaps{Top: 2, Right: 2, Bottom: 2, Left: 2},
+		df.FillingWH(1, 1), df.FillingWH(1, 1),
+	)
+	t.FatalOn((&Manager{Root: fx}).Reflow(nil))
+
+	x, y, w, h := fx.dd[0].Dim().Rect()
+	t.True(x == 2 && y == 2 && w == 8 && h == 16)
+	x, y, w, h = fx.dd[1].Dim().Rect()
+	t.True(x == 10 && y == 2 && w == 8 && h == 16)
 }
 
 func TestChained(t *testing.T) {

@@ -47,15 +47,14 @@ func (gg *gaps) forStyler(cb func(styler)) {
 // gaps.
 func (gg *gaps) sync(
 	x, y, width, height int, w runeWriter, ggl *globals,
-) (_, _, _, _ int) {
+) {
 	gglSty := ggl.Style(Default)
 	gg.topLeft.sync(x, y, width, height, w, gglSty)
 	gg.topRight.sync(x, y, width, height, w, gglSty)
 	gg.bottomRight.sync(x, y, width, height, w, gglSty)
 	gg.bottomLeft.sync(x, y, width, height, w, gglSty)
 	th := gg.top.sync(x+1, y, width-2, height, w, ggl)
-	bh := gg.bottom.sync(x+1, y+th, width-2, height-th, w, ggl)
+	gg.bottom.sync(x+1, y+th, width-2, height-th, w, ggl)
 	lw := gg.left.sync(x, y+1, width, height-2, w, ggl)
-	rw := gg.right.sync(x+lw, y+1, width-lw, height-2, w, ggl)
-	return x + lw, y + th, width - (lw + rw), height - (th + bh)
+	gg.right.sync(x+lw, y+1, width-lw, height-2, w, ggl)
 }

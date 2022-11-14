@@ -16,16 +16,18 @@ import (
 // component c:
 //
 //	func (c *cmp) OnInit(_ *lines.Env) {
-//		go func() {
-//			time.Sleep(1*time.Second)
-//			c.Dim().SetHeight(5) // will panic
-//		}
-//		c.Dim().SetHeight(5) // will not panic
+//	    go func() {
+//	        time.Sleep(1*time.Second)
+//	        c.Dim().SetHeight(5) // will panic
+//	    }
+//	    c.Dim().SetHeight(5) // will not panic
 //	}
 //
 // Next to embedding the Component type a client component will usually
-// also implement event listener interface to receive events like:
+// also implement event listener interfaces to receive events like:
 //   - [Initer] is informed once before a component becomes part of the layout
+//   - [AfterIniter] is informed once after all components are initialize
+//     before the layout is calculated
 //   - [Layouter] is informed that a component's layout was calculated
 //   - [Focuser]/[FocusLooser] is informed about focus gain/loss
 //   - [Keyer] is informed about any user special key-press like 'enter' or 'tab'
@@ -46,12 +48,6 @@ type Component struct {
 
 	// Scroll provides a component's API for scrolling.
 	Scroll *Scroller
-
-	// LL provides an API for ui-aspects of a component's lines like is
-	// a line focusable, are they tailing maintained etc.  To manipulate
-	// the content of component lines use an Env(ironment) instance of a
-	// reported event.
-	LL *ComponentLines
 
 	// bcknd to post Update and Focus events
 	bcknd api.UIer
@@ -116,8 +112,8 @@ func (c *Component) initialize(
 	}
 	c.FF = &Features{c: c}
 	c.Scroll = &Scroller{c: c}
-	c.LL = newComponentLines(c)
 	c.Register = &Listeners{c: c}
+	inner.LL = newComponentLines(c)
 	inner.gg.SetUpdateListener(cmpGlobalsClosure(inner))
 	switch userComponent.(type) {
 	case Stacker:
@@ -208,13 +204,22 @@ type component struct {
 	mod         ComponentMode
 	initialized bool
 	ll          *lines
-	lst         *listeners
-	ff          *features
-	gaps        *gaps
-	dirty       bool
 
-	// first holds the index of the first displayed line
-	first int
+	// LL provides an API for ui-aspects of a component's lines like is
+	// a line focusable, are they tailing maintained etc.  To manipulate
+	// the content of component lines use an Env(ironment) instance of a
+	// reported event.
+	LL *ComponentLines
+
+	lst   *listeners
+	ff    *features
+	gaps  *gaps
+	dirty bool
+
+	Src *ContentSource
+
+	// _first holds the index of the _first displayed line
+	_first int
 
 	// slctd hold the index of the currently selected line
 	slctd int
@@ -234,11 +239,12 @@ func (c *component) setInitialized() {
 	c.initialized = true
 }
 
-func (c *component) ensureFeatures() {
+func (c *component) ensureFeatures() *features {
 	if c.ff != nil {
-		return
+		return c.ff
 	}
 	c.ff = defaultFeatures.copy()
+	return c.ff
 }
 
 func (c *component) ensureListeners() {
@@ -265,6 +271,18 @@ type stackingWrapper struct {
 	*component
 }
 
+func (sw *stackingWrapper) Gaps() api.Gaps {
+	if sw.gaps == nil {
+		return api.Gaps{}
+	}
+	return api.Gaps{
+		Top:    len(sw.gaps.top.ll),
+		Right:  len(sw.gaps.right.ll),
+		Bottom: len(sw.gaps.bottom.ll),
+		Left:   len(sw.gaps.left.ll),
+	}
+}
+
 func (sw *stackingWrapper) ForStacked(cb func(lyt.Dimer) bool) {
 	sw.userCmp.(Stacker).ForStacked(func(cmp Componenter) bool {
 		if !cmp.hasLayoutWrapper() {
@@ -282,6 +300,18 @@ func (sw *stackingWrapper) ForStacked(cb func(lyt.Dimer) bool) {
 // layout-manager.
 type chainingWrapper struct {
 	*component
+}
+
+func (sw *chainingWrapper) Gaps() api.Gaps {
+	if sw.gaps == nil {
+		return api.Gaps{}
+	}
+	return api.Gaps{
+		Top:    len(sw.gaps.top.ll),
+		Right:  len(sw.gaps.right.ll),
+		Bottom: len(sw.gaps.bottom.ll),
+		Left:   len(sw.gaps.left.ll),
+	}
 }
 
 func (cw *chainingWrapper) ForChained(cb func(lyt.Dimer) bool) {

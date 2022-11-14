@@ -4,15 +4,27 @@
 
 package lyt
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/slukits/lines/internal/api"
+)
+
+type gapper interface {
+	Gaps() api.Gaps
+}
 
 func layoutChainer(c Chainer) (err error) {
 	minWidth, filler, n, err := minChainWidth(c)
 	if err != nil {
 		return err
 	}
-	_, _, stackerWidth, _ := c.Dim().Area()
-	if minWidth > stackerWidth {
+	_, _, chainerWidth, chainerHeight := area(c)
+	if chainerWidth <= 0 || chainerHeight <= 0 {
+		layoutChainedOffScreen(c)
+		return nil
+	}
+	if minWidth > chainerWidth {
 		layoutChainerOverflowing(c)
 		return nil
 	}
@@ -24,8 +36,15 @@ func layoutChainer(c Chainer) (err error) {
 	return err
 }
 
+func layoutChainedOffScreen(c Chainer) {
+	c.ForChained(func(d Dimer) (stop bool) {
+		d.Dim().setOffScreen()
+		return false
+	})
+}
+
 func layoutFilledChainer(c Chainer, minWidth, filler int) {
-	x, y, chainerWidth, chainerHeight := c.Dim().Area()
+	x, y, chainerWidth, chainerHeight := area(c)
 	distribute := (chainerWidth - minWidth) / filler
 	distributeModulo := (chainerWidth - minWidth) % filler
 	shiftX := 0
@@ -49,7 +68,7 @@ func layoutFilledChainer(c Chainer, minWidth, filler int) {
 }
 
 func layoutFixedChainerUnderflowing(c Chainer, minWidth, n int) {
-	x, y, chainerWidth, chainerHeight := c.Dim().Area()
+	x, y, chainerWidth, chainerHeight := area(c)
 	mm := calculateMargins(chainerWidth-minWidth, n)
 	shiftX, i := 0, 0
 	c.ForChained(func(d Dimer) (stop bool) {
@@ -63,7 +82,7 @@ func layoutFixedChainerUnderflowing(c Chainer, minWidth, n int) {
 }
 
 func layoutChainerOverflowing(c Chainer) {
-	x, y, chainerWidth, chainerHeight := c.Dim().Area()
+	x, y, chainerWidth, chainerHeight := area(c)
 	shiftX := 0
 	c.ForChained(func(d Dimer) (stop bool) {
 		if shiftX >= chainerWidth {
@@ -113,4 +132,16 @@ func minChainWidth(c Chainer) (minWidth, filler, n int, err error) {
 		return 0, 0, 0, err
 	}
 	return minWidth, filler, n, nil
+}
+
+func area(d Dimer) (x, y, w, h int) {
+	x, y, w, h = d.Dim().Area()
+	if ggr, ok := d.(gapper); ok {
+		gg := ggr.Gaps()
+		x += gg.Left
+		y += gg.Top
+		w -= (gg.Left + gg.Right)
+		h -= (gg.Top + gg.Bottom)
+	}
+	return x, y, w, h
 }

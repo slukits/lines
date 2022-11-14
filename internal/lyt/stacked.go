@@ -13,7 +13,11 @@ func layoutStacker(s Stacker) (err error) {
 	if err != nil {
 		return err
 	}
-	_, _, _, stackerHeight := s.Dim().Area()
+	_, _, stackerWidth, stackerHeight := area(s)
+	if stackerWidth <= 0 || stackerHeight <= 0 {
+		layoutStackedOffScreen(s)
+		return nil
+	}
 	if minHeight > stackerHeight {
 		layoutStackerOverflowing(s)
 		return nil
@@ -26,10 +30,17 @@ func layoutStacker(s Stacker) (err error) {
 	return err
 }
 
+func layoutStackedOffScreen(s Stacker) {
+	s.ForStacked(func(d Dimer) (stop bool) {
+		d.Dim().setOffScreen()
+		return false
+	})
+}
+
 // layoutFilledStacker not overflowing distributes remaining height
 // equally equally amongst fillers.
 func layoutFilledStacker(s Stacker, minHeight, filler int) {
-	x, y, stackerWidth, stackerHeight := s.Dim().Area()
+	x, y, stackerWidth, stackerHeight := area(s)
 	distribute := (stackerHeight - minHeight) / filler
 	distributeModulo := (stackerHeight - minHeight) % filler
 	shiftY := 0
@@ -55,7 +66,7 @@ func layoutFilledStacker(s Stacker, minHeight, filler int) {
 // layoutFixedStackerUnderflowing distributes remaining hight equally as
 // margins over the fixed height Dimers.
 func layoutFixedStackerUnderflowing(s Stacker, minHeight, n int) {
-	x, y, stackerWidth, stackerHeight := s.Dim().Area()
+	x, y, stackerWidth, stackerHeight := area(s)
 	mm := calculateMargins(stackerHeight-minHeight, n)
 	shiftY, i := 0, 0
 	s.ForStacked(func(d Dimer) (stop bool) {
@@ -112,7 +123,7 @@ func calculateMargins(l, n int) margins {
 // layoutStackerOverflowing set fillers to their minimum height and
 // clips/puts off-screen overflowing Dimers.
 func layoutStackerOverflowing(s Stacker) {
-	x, y, stackerWidth, stackerHeight := s.Dim().Area()
+	x, y, stackerWidth, stackerHeight := area(s)
 	shiftY := 0
 	s.ForStacked(func(d Dimer) (stop bool) {
 		if shiftY >= stackerHeight {

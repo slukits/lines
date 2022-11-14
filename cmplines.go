@@ -50,6 +50,30 @@ func (cll *ComponentLines) Mod(cm ComponentMode) {
 	}
 }
 
+// AA set the style attributes of all content lines of associated
+// component to given style attributes aa.
+func (cll *ComponentLines) AA(aa StyleAttributeMask) {
+	for _, l := range *cll.c.ll {
+		l.withAA(aa)
+	}
+}
+
+// FG set the foreground color of all content lines of associated
+// component to given color c.
+func (cll *ComponentLines) FG(c Color) {
+	for _, l := range *cll.c.ll {
+		l.withFG(c)
+	}
+}
+
+// BG set the background color of all content lines of associated
+// component to given color c.
+func (cll *ComponentLines) BG(c Color) {
+	for _, l := range *cll.c.ll {
+		l.withBG(c)
+	}
+}
+
 // Len returns the number of component lines, which is independent from
 // the number of screen lines.
 func (cll *ComponentLines) Len() int { return cll.c.Len() }

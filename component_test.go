@@ -36,8 +36,11 @@ func cmpfx(t *T, d ...time.Duration) (*Fixture, *cmpFX) {
 	return tt, cmp
 }
 
-func xcmpfx(t *T, cmp Componenter) *Fixture {
-	return TermFixture(t.GoT(), 0, cmp)
+func xcmpfx(t *T, cmp Componenter, d ...time.Duration) *Fixture {
+	if len(d) == 0 {
+		return TermFixture(t.GoT(), 0, cmp)
+	}
+	return TermFixture(t.GoT(), d[0], cmp)
 }
 
 func (s *AComponent) Creates_needed_lines_on_write(t *T) {
@@ -135,25 +138,25 @@ func (s *AComponent) Scrolls_by_one_line_if_height_is_one(t *T) {
 		fx.Dim().SetHeight(1)
 		fmt.Fprint(e, "first\nsecond")
 	}))
-	t.Eq("first", tt.Screen().Trimmed().String())
+	t.Eq("first", tt.Screen().Trimmed())
 
 	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
 		fx.Scroll.Down()
 	}))
-	t.Eq("second", tt.Screen().Trimmed().String())
+	t.Eq("second", tt.Screen().Trimmed())
 	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
 		fx.Scroll.Down()
 	}))
-	t.Eq("second", tt.Screen().Trimmed().String())
+	t.Eq("second", tt.Screen().Trimmed())
 
 	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
 		fx.Scroll.Up()
 	}))
-	t.Eq("first", tt.Screen().Trimmed().String())
+	t.Eq("first", tt.Screen().Trimmed())
 	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
 		fx.Scroll.Up()
 	}))
-	t.Eq("first", tt.Screen().Trimmed().String())
+	t.Eq("first", tt.Screen().Trimmed())
 }
 
 func (s *AComponent) Scrolls_to_last_line_if_last_displayed(t *T) {
@@ -162,12 +165,12 @@ func (s *AComponent) Scrolls_to_last_line_if_last_displayed(t *T) {
 		fx.Dim().SetHeight(3)
 		fmt.Fprint(e, "first\nsecond\nthird\nforth")
 	}))
-	t.Eq("first \nsecond\nthird ", tt.Screen().Trimmed().String())
+	t.Eq("first \nsecond\nthird ", tt.Screen().Trimmed())
 
 	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
 		fx.Scroll.Down()
 	}))
-	t.Eq("second\nthird \nforth ", tt.Screen().Trimmed().String())
+	t.Eq("second\nthird \nforth ", tt.Screen().Trimmed())
 }
 
 func (s *AComponent) Scrolls_to_first_line_if_first_displayed(t *T) {
@@ -275,8 +278,8 @@ func (s *AComponent) Scrolls_up_by_90_percent_height(t *T) {
 	}))
 
 	exp = []string{}
-	for i := 0; i < 15; i++ { // first is still at 52nd line
-		exp = append(exp, fmt.Sprintf("line %d", i+38))
+	for i := 0; i < 15; i++ {
+		exp = append(exp, fmt.Sprintf("line %d", i+32))
 	}
 	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
 		fx.Scroll.Up()

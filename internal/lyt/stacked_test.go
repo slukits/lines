@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	. "github.com/slukits/gounit"
+	"github.com/slukits/lines/internal/api"
 )
 
 type stackerFX struct {
@@ -56,6 +57,13 @@ func (sf *stackerFX) HasConsistentLayout() (ok bool) {
 	return sf.Dim().layoutHeight() == lHeightSum && ok
 }
 
+type ggStackerFX struct {
+	stackerFX
+	gg api.Gaps
+}
+
+func (cf *ggStackerFX) Gaps() api.Gaps { return cf.gg }
+
 type stackerFactory struct{}
 
 var sf = &stackerFactory{}
@@ -66,6 +74,18 @@ func (sf *stackerFactory) New(dd ...Dimer) *stackerFX {
 	return &stackerFX{
 		Dimer: df.Screen(),
 		dd:    dd,
+	}
+}
+
+func (cf *stackerFactory) Gapped(
+	stacker Dimer, gg api.Gaps, dd ...Dimer,
+) *ggStackerFX {
+	return &ggStackerFX{
+		stackerFX: stackerFX{
+			Dimer: stacker,
+			dd:    dd,
+		},
+		gg: gg,
 	}
 }
 
@@ -254,6 +274,36 @@ func (s *stacked) With_overflowing_width_are_clipped_to_width(t *T) {
 	t.Eq(10, gotFilled)
 	t.Eq(fx.Dim().width, fx.dd[0].Dim().layoutWidth())
 	t.Eq(fx.Dim().width, fx.dd[1].Dim().layoutWidth())
+}
+
+func (s *stacked) Flags_nested_off_screen_if_stacker_gaps_fill_its_area(
+	t *T,
+) {
+	fx := sf.Gapped(df.FixedW(4), api.Gaps{Left: 2, Right: 2},
+		df.FixedH(2), df.FixedH(2))
+	t.FatalOn((&Manager{Root: fx}).Reflow(nil))
+	t.True(fx.dd[0].Dim().IsOffScreen())
+	t.True(fx.dd[1].Dim().IsOffScreen())
+
+	fx = sf.Gapped(df.FixedH(4), api.Gaps{Top: 2, Bottom: 2},
+		df.Filling(), df.Filling())
+	t.FatalOn((&Manager{Root: fx}).Reflow(nil))
+	t.True(fx.dd[0].Dim().IsOffScreen())
+	t.True(fx.dd[1].Dim().IsOffScreen())
+}
+
+func (s *stacked) Nests_dimmer_accounting_for_stacker_s_gaps(t *T) {
+	fx := sf.Gapped(
+		df.FixedWH(20, 20),
+		api.Gaps{Top: 2, Right: 2, Bottom: 2, Left: 2},
+		df.FillingWH(1, 1), df.FillingWH(1, 1),
+	)
+	t.FatalOn((&Manager{Root: fx}).Reflow(nil))
+
+	x, y, w, h := fx.dd[0].Dim().Rect()
+	t.True(x == 2 && y == 2 && w == 16 && h == 8)
+	x, y, w, h = fx.dd[1].Dim().Rect()
+	t.True(x == 2 && y == 10 && w == 16 && h == 8)
 }
 
 func TestStacked(t *testing.T) {

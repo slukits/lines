@@ -195,3 +195,7 @@ type ResizeEventer interface {
 	// the screen/window, of the resize event.
 	Size() (int, int)
 }
+
+type Gaps struct {
+	Top, Right, Bottom, Left int
+}

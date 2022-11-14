@@ -480,6 +480,43 @@ func (s *_gaps) Filler_fills_whole_level(t *T) {
 	t.Eq(strings.TrimSpace(fillAll), tt.ScreenOf(cmp))
 }
 
+var nested = `
+•stacker•
+••inner••
+••     ••
+••     ••
+•••••••••
+•••••••••
+`
+
+type gapCmp struct {
+	Component
+	top string
+}
+
+func (c *gapCmp) OnInit(e *Env) {
+	Print(c.Gaps(0).Filling(), '•')
+	fmt.Fprint(c.Gaps(0).Top, c.top)
+	fmt.Fprint(c.Gaps(0).Corners, "•")
+}
+
+type gapStackerCmp struct {
+	gapCmp
+	Stacking
+}
+
+func (c *gapStackerCmp) OnInit(e *Env) {
+	c.CC = append(c.CC, &gapCmp{top: "inner"})
+	c.top = "stacker"
+	c.gapCmp.OnInit(e)
+}
+
+func (s *_gaps) Of_nested_components_are_displayed(t *T) {
+	tt := TermFixture(t.GoT(), 0, &gapStackerCmp{})
+	tt.FireResize(9, 6)
+	t.Eq(strings.TrimSpace(nested), tt.Screen())
+}
+
 func TestGaps(t *testing.T) {
 	t.Parallel()
 	Run(&_gaps{}, t)

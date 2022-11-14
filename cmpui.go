@@ -7,6 +7,7 @@ package lines
 import (
 	"bytes"
 
+	"github.com/slukits/ints"
 	"github.com/slukits/lines/internal/lyt"
 )
 
@@ -44,18 +45,22 @@ func (c *component) Sty(s Style) *component {
 	return c
 }
 
-// Len returns the number of lines currently stored in a component.
+// Len returns the number of lines currently maintained by a component.
 // Note the number of component lines is independent of a component's
 // available screen lines.
 func (c *component) Len() int {
+	if c.Src != nil {
+		if sl, ok := c.Src.Liner.(ScrollableLiner); ok {
+			return sl.Len()
+		}
+	}
 	return len(*c.ll)
 }
 
 // IsDirty is true if given component c is flagged dirty or one of its
 // lines or gaps.
 func (c *component) IsDirty() bool {
-	ll, gg := c.ll.IsDirty(), c.gaps.isDirty()
-	return ll || gg || c.dirty
+	return c.dirty || c.ll.IsDirty() || c.gaps.isDirty() || c.Src.IsDirty()
 }
 
 // SetDirty flags a component as dirty having the effect that at the
@@ -88,7 +93,6 @@ func (c *component) Reset(idx int, ff ...LineFlags) {
 	if idx < -1 || idx >= c.Len() {
 		return
 	}
-
 	_ff := LineFlags(0)
 	for _, f := range ff {
 		_ff |= f
@@ -96,7 +100,7 @@ func (c *component) Reset(idx int, ff ...LineFlags) {
 
 	if idx == -1 {
 		c.setFirst(0)
-		_, _, _, height := c.Dim().Area()
+		height := c.contentScreenLines()
 		if len(*c.ll) > height {
 			ll := (*c.ll)[:height]
 			c.ll = &ll
@@ -116,6 +120,9 @@ func (c *component) hardSync(rw runeWriter) {
 	if !c.dirty {
 		c.dirty = true
 	}
+	if c.first()+c.contentScreenLines() > c.Len() {
+		c.setFirst(ints.Max(0, c.Len()-c.contentScreenLines()))
+	}
 	c.sync(rw)
 }
 
@@ -127,68 +134,111 @@ func (c *component) sync(rw runeWriter) {
 		}
 		return
 	}
-	sx, sy, sw, sh := c.dim.Area()
-	if c.mod&Tailing == Tailing && c.Len() >= sh {
-		c.setFirst(c.Len() - sh)
+	cll := c.contentScreenLines()
+	if c.mod&Tailing == Tailing && c.Len() >= cll {
+		c.setFirst(c.Len() - cll)
 	}
 	if c.dirty {
 		c.syncCleared(rw)
 		return
 	}
 	if c.gaps != nil && c.gaps.isDirty() {
-		sx, sy, sw, sh = c.gaps.sync(sx, sy, sw, sh, rw, c.gg)
+		gx, gy, gw, gh := c.Dim().Area()
+		c.gaps.sync(gx, gy, gw, gh, rw, c.gg)
 	}
-	gg := c.gaps.isDirty()
-	_ = gg
-	if sw <= 0 || sh <= 0 {
+	cx, cy, cw, ch := c.ContentArea()
+	if cw <= 0 || ch <= 0 {
 		return
 	}
-	c.ll.ForDirty(c.first, func(i int, l *Line) (stop bool) {
-		if i >= sh {
+	if c.Src.IsDirty() {
+		c.Src.cleanup(c)
+	}
+	c.ll.ForDirty(c._first, func(i int, l *Line) (stop bool) {
+		if i >= ch {
 			return true
 		}
-		l.sync(sx, sy+i, sw, rw, c.gg)
+		l.sync(cx, cy+i, cw, rw, c.gg)
 		return false
 	})
 }
 
 // clear fills the receiving component's printable area with spaces.
 func (c *component) syncCleared(rw runeWriter) {
-	sx, sy, sw, sh := c.dim.Rect()
-	for y := sy; y < sy+sh; y++ {
-		for x := sx; x < sx+sw; x++ {
+	cx, cy, cw, ch := c.dim.Rect()
+	for y := cy; y < cy+ch; y++ {
+		for x := cx; x < cx+cw; x++ {
 			rw.Display(x, y, ' ', c.gg.Style(Default))
 		}
 	}
 	c.dirty = false
-	sx, sy, sw, sh = c.dim.Area()
 	if c.gaps != nil {
-		sx, sy, sw, sh = c.gaps.sync(sx, sy, sw, sh, rw, c.gg)
+		gx, gy, gw, gh := c.Dim().Area()
+		c.gaps.sync(gx, gy, gw, gh, rw, c.gg)
 	}
-	if sw <= 0 || sh <= 0 {
+	cx, cy, cw, ch = c.ContentArea()
+	if cw <= 0 || ch <= 0 {
 		return
 	}
-	c.ll.For(c.first, func(i int, l *Line) (stop bool) {
-		if i >= sh {
+	if c.Src.IsDirty() {
+		c.Src.cleanup(c)
+	} else if c.Src != nil {
+		c.Src.sync(ch, c)
+	}
+	c.ll.For(c._first, func(i int, l *Line) (stop bool) {
+		if i >= ch {
 			return true
 		}
-		l.sync(sx, sy+i, sw, rw, c.gg)
+		l.sync(cx, cy+i, cw, rw, c.gg)
 		return false
 	})
 }
 
+func (c *component) ContentArea() (x, y, w, h int) {
+	x, y, w, h = c.dim.Area()
+	if c.gaps == nil {
+		return
+	}
+	return x + len(c.gaps.left.ll),
+		y + len(c.gaps.top.ll),
+		w - len(c.gaps.left.ll) - len(c.gaps.right.ll),
+		h - len(c.gaps.top.ll) - len(c.gaps.bottom.ll)
+}
+
+func (c *component) contentScreenLines() int {
+	_, _, _, sh := c.dim.Area()
+	if c.gaps == nil {
+		return sh
+	}
+	return sh - (len(c.gaps.top.ll) + len(c.gaps.bottom.ll))
+}
+
 // setFirst sets the first displayed line and in case it changes given
-// component becomes also dirty (hence the indirection).
+// component it becomes also dirty (hence the indirection).  setFirst
+// takes also an optionally set component source into account.
 func (c *component) setFirst(f int) {
-	if f < 0 || f == c.first || f >= c.Len() {
+	if c.Src != nil {
+		c.Src.setFirst(f)
 		return
 	}
 
-	c.first = f
+	if f < 0 || f == c._first || f >= c.Len() {
+		return
+	}
+
+	c._first = f
 	if c.dirty {
 		return
 	}
 	c.dirty = true
+}
+
+// first returns the index of the first line displayed taking an
+// optionally set component source into account.
+func (c *component) first() int {
+	if c.Src != nil {
+		return c.Src.first
+	}
+	return c._first
 }
 
 func (c *component) write(

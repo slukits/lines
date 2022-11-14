@@ -228,7 +228,7 @@ func (s *lineFocus) Scrolls_to_next_highlighted_line(t *T) {
 
 	tt.FireKey(Down)
 
-	t.Eq("line 5\nline 6", tt.ScreenOf(fx).Trimmed().String())
+	t.Eq("line 5\nline 6", tt.ScreenOf(fx).Trimmed())
 
 	t.Eq(1, fx.lfN)
 }

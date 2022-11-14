@@ -121,15 +121,9 @@ a component or by implementing either the Stacker or Chainer interface.
 
 The Env(ironment) instance passed to a event listener is associated with
 the screen portion of the component the event is reported to.  Printing
-to the environment prints provided content to its screen portion.  Env's
-methods LL, Sty, AA, FG and BG give fine grained control over what is
-printed where and how.  While printing directly to an environment will
-always clear the component before it prints to its first screen line the
-LL method lets you select which line to print to.  A subsequent call of
-At defines the position in selected line.  AA sets style attributes
-while FG and BG set the fore- and background color of the next print.
-Sty on the other hand sets attributes and colors in one go.  Each of
-these methods return a writer implementation, i.e. we can do this
+to the environment prints provided content to its screen portion.  Env
+comes with a few methods which give fine grained control over what is
+printer where and how. e.g.:
 
 ```go
 fmt.Fprint(e.LL(5).AA(lines.Bold),
@@ -138,9 +132,18 @@ fmt.Fprint(e.LL(5).AA(lines.Bold),
 ```
 
 The above prints "a centered bold line" centered in bold letters into
-the component's fifth line.  Note here again the line will stay centered
-if the component's size changes.  A similar API is provided by embedded
-Component's Gaps(index)-method
+the component's fifth line.  Note the line will stay centered if the
+component's size changes.  If there should be many lines associated with
+a component cmp without storing them in the component a component's
+source can be set:
+
+```go
+cmp.Src = &lines.ComponentSource{Liner: MyLinerImplementation}
+```
+
+Whereas the liner implementation prints the lines as requested by cmp.
+A similar printing API is provided by embedded Component's
+Gaps(index)-method
 
 ```go
 c.Gaps(0).AA(lines.Reverse)
@@ -148,7 +151,9 @@ c.Gaps(0).Corners.AA(lines.Revers)
 ```
 
 above is as of now the simplest way to frame a component.  Gaps allow to
-do all sorts of framing, padding and guttering of a component.
+do all sorts of framing, padding and guttering of a component.  See
+examples/gaps for an introduction of what can be done with gaps.  Remember
+that Src and Gaps will panic if accessed outside a listener callback.
 
 # Feature handling
 
@@ -195,6 +200,12 @@ func (ws *Workspace) OnInit(e *lines.Env) {
 The above line makes all descendants of the workspace focusable, i.e.
 they receive the focus if clicked with the mouse on them.
 
+An other way to acquire features without fuss is to set a components
+content source which needs to have a Liner-implementation.  According to
+the features of such a Liner-implementation the component's features are
+set.  E.g. is a Liner a ScrollableLiner then the component gets
+automatically the scrollable feature set.  examples/scrolling has
+examples for features usage.
 
 # Testing
 

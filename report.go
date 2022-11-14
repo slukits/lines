@@ -6,21 +6,39 @@ package lines
 
 // Initer is implemented by components which want to be notified for
 // initialization purposes before the first layout and before user input
-// events are processed.  Note implement [Layouter] to be notified after
-// each layout calculation of a component.
+// events are processed.  Note implement [AfterIniter] to be notified
+// after all components were initialized; implement [Layouter] to be
+// notified after each layout calculation of a component.
 type Initer interface {
 
-	// OnInit provides to its implementation an environment before it is
-	// layouted the first time.  NOTE if several instances of a
-	// component type which implements OnInit are added then OnInit is
-	// reported to each of this components.
+	// OnInit is executed before a component's layout is calculated the
+	// first time.  Main use case of this event is to create nested
+	// components and print initial content to a component.  NOTE if
+	// several instances of a component type which implements OnInit are
+	// added then OnInit is reported to each of this components.
 	//
 	// If specific dimensions should be set before the first layout
 	// Env.ScreenSize provides the screen size to help with that.  If
-	// the calculated layout should be adapted OnLayout may be the
-	// better event to do so because it is called after the layout
-	// manager did its work.
+	// these dimensions depend on subsequently created components
+	// OnAfterInit is probably the right event.  If the calculated
+	// layout should be adapted OnLayout may be the better event to do
+	// so because it is called after the layout manager did its work.
 	OnInit(*Env)
+}
+
+// AfterInit is implemented by components which want to be notified
+// after all initial components have been created and their respective
+// OnInit event was reported, see [Initer]; but before the first layout,
+// see [Layouter].
+type AfterIniter interface {
+
+	// OnAfterInit is executed after all components have been
+	// initialized and their respective OnInit event was reported.  I.e.
+	// all components of an initial layout should be created and
+	// available now.  Hence the main use case are initializations
+	// depending on the existence of nested components. E.g. set the
+	// focus or do size calculations depending on nested components.
+	OnAfterInit(*Env)
 }
 
 // Focuser is implemented by components which want to be notified when
@@ -62,9 +80,9 @@ type rprContext struct {
 // haven't been initialized yet.
 func reportInit(ll *Lines, scr *screen) {
 
-	var reportedInit bool
 	cntx := &rprContext{ll: ll, scr: scr}
 
+	ii := []Componenter{}
 	scr.forUninitialized(func(cmp Componenter) {
 		if !cmp.hasLayoutWrapper() {
 			return
@@ -72,12 +90,15 @@ func reportInit(ll *Lines, scr *screen) {
 
 		if ic, ok := cmp.(Initer); ok {
 			callback(cmp, cntx, ic.OnInit)
-			if !reportedInit {
-				reportedInit = true
-			}
 		}
 		cmp.layoutComponent().wrapped().setInitialized()
+		ii = append(ii, cmp.layoutComponent().userComponent())
 	})
+	for _, i := range ii {
+		if ai, ok := i.(AfterIniter); ok {
+			callback(i, cntx, ai.OnAfterInit)
+		}
+	}
 }
 
 func report(
