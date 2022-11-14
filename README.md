@@ -72,7 +72,7 @@ what does work
 func (c *Cmp) OnInit(e *lines.Env) {
     go func(ll *lines.Lines) {
         time.Sleep(1*time.Second)
-        ee.Update(c, nil, func(e *lines.Env) {
+        ll.Update(c, nil, func(e *lines.Env) {
              fmt.Fprint(e, "awoken") // will not panic
         })
     }(e.Lines)
