@@ -60,7 +60,19 @@ func (c *component) Len() int {
 // IsDirty is true if given component c is flagged dirty or one of its
 // lines or gaps.
 func (c *component) IsDirty() bool {
-	return c.dirty || c.ll.IsDirty() || c.gaps.isDirty() || c.Src.IsDirty()
+	return c.dirty || c.ll.IsDirty() || c.gaps.isDirty() ||
+		c.Src.IsDirty() || c.haveDirtyNested()
+}
+
+func (c *component) haveDirtyNested() (dirty bool) {
+	c.forNested(func(n *component) (stop bool) {
+		if !n.IsDirty() {
+			return false
+		}
+		dirty = true
+		return true
+	})
+	return dirty
 }
 
 // SetDirty flags a component as dirty having the effect that at the
@@ -70,6 +82,10 @@ func (c *component) IsDirty() bool {
 // one of its global properties changed etc.
 func (c *component) SetDirty() {
 	c.dirty = true
+	c.forNested(func(n *component) (stop bool) {
+		n.SetDirty()
+		return false
+	})
 }
 
 // Dim provides a components layout dimensions and features to adapt
@@ -115,13 +131,10 @@ func (c *component) Reset(idx int, ff ...LineFlags) {
 }
 
 // hardSync clears the screen area of receiving component before its
-// content is written to the screen.
+// content is (re)written to the screen.
 func (c *component) hardSync(rw runeWriter) {
 	if !c.dirty {
-		c.dirty = true
-	}
-	if c.first()+c.contentScreenLines() > c.Len() {
-		c.setFirst(ints.Max(0, c.Len()-c.contentScreenLines()))
+		c.SetDirty()
 	}
 	c.sync(rw)
 }
@@ -140,10 +153,18 @@ func (c *component) sync(rw runeWriter) {
 	}
 	if c.dirty {
 		c.syncCleared(rw)
-		return
+	} else {
+		c.syncContent(rw)
 	}
+	c.forNested(func(n *component) (stop bool) {
+		n.sync(rw)
+		return false
+	})
+}
+
+func (c *component) syncContent(rw runeWriter) {
 	if c.gaps != nil && c.gaps.isDirty() {
-		gx, gy, gw, gh := c.Dim().Area()
+		gx, gy, gw, gh := c.Dim().Printable()
 		c.gaps.sync(gx, gy, gw, gh, rw, c.gg)
 	}
 	cx, cy, cw, ch := c.ContentArea()
@@ -164,7 +185,10 @@ func (c *component) sync(rw runeWriter) {
 
 // clear fills the receiving component's printable area with spaces.
 func (c *component) syncCleared(rw runeWriter) {
-	cx, cy, cw, ch := c.dim.Rect()
+	if c.first()+c.contentScreenLines() > c.Len() {
+		c.setFirst(ints.Max(0, c.Len()-c.contentScreenLines()))
+	}
+	cx, cy, cw, ch := c.dim.Screen()
 	for y := cy; y < cy+ch; y++ {
 		for x := cx; x < cx+cw; x++ {
 			rw.Display(x, y, ' ', c.gg.Style(Default))
@@ -172,7 +196,7 @@ func (c *component) syncCleared(rw runeWriter) {
 	}
 	c.dirty = false
 	if c.gaps != nil {
-		gx, gy, gw, gh := c.Dim().Area()
+		gx, gy, gw, gh := c.Dim().Printable()
 		c.gaps.sync(gx, gy, gw, gh, rw, c.gg)
 	}
 	cx, cy, cw, ch = c.ContentArea()
@@ -193,8 +217,27 @@ func (c *component) syncCleared(rw runeWriter) {
 	})
 }
 
+func (c *component) forNested(cb func(n *component) (stop bool)) {
+	lc := c.userCmp.layoutComponent()
+	var nested func(func(Dimer) (stop bool))
+	if s, ok := lc.(lyt.Stacker); ok {
+		nested = s.ForStacked
+	} else { // ignore chainer if stacker and chainer are provided
+		if c, ok := lc.(lyt.Chainer); ok {
+			nested = c.ForChained
+		}
+	}
+	if nested == nil {
+		return
+	}
+	nested(func(d Dimer) (stop bool) {
+		n := d.(layoutComponenter).wrapped()
+		return cb(n)
+	})
+}
+
 func (c *component) ContentArea() (x, y, w, h int) {
-	x, y, w, h = c.dim.Area()
+	x, y, w, h = c.dim.Printable()
 	if c.gaps == nil {
 		return
 	}
@@ -205,7 +248,7 @@ func (c *component) ContentArea() (x, y, w, h int) {
 }
 
 func (c *component) contentScreenLines() int {
-	_, _, _, sh := c.dim.Area()
+	_, _, _, sh := c.dim.Printable()
 	if c.gaps == nil {
 		return sh
 	}

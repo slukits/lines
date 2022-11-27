@@ -45,6 +45,10 @@ type UI struct {
 	*sync.Mutex
 
 	quitter []func()
+
+	// mouseAggregate is a closure receiving tcell mouse events as they
+	// come in and provides aggregations if any.
+	mouseAggregate func(*tcell.EventMouse) api.MouseEventer
 }
 
 func New(listener func(api.Eventer)) *UI {
@@ -67,12 +71,13 @@ func initUI(lib tcell.Screen, l func(api.Eventer)) *UI {
 	lib.EnableMouse()
 	lib.EnablePaste()
 	ui := &UI{
-		lib:          lib,
-		Mutex:        &sync.Mutex{},
-		defaultStyle: api.DefaultStyle,
-		styler:       apiToTcellStyleClosure(),
-		waitForQuit:  make(chan struct{}),
-		listener:     l,
+		lib:            lib,
+		Mutex:          &sync.Mutex{},
+		defaultStyle:   api.DefaultStyle,
+		styler:         apiToTcellStyleClosure(),
+		waitForQuit:    make(chan struct{}),
+		listener:       l,
+		mouseAggregate: mouseAggregator(),
 	}
 	go ui.poll()
 	return ui
@@ -156,6 +161,9 @@ func (u *UI) poll() {
 			lst(&keyEvent{evt: evt})
 		case *tcell.EventMouse:
 			lst(&mouseEvent{evt: evt})
+			if e := u.mouseAggregate(evt); e != nil {
+				lst(e)
+			}
 		case *tcell.EventPaste:
 			lst(&bracketPaste{evt: evt})
 		case *screenEvent:
@@ -164,6 +172,17 @@ func (u *UI) poll() {
 			u.quit()
 			u.handleTransactional()
 			return
+		case *frameEvent:
+			evt.Exec()
+		case api.MouseEventer:
+			lst(evt)
+			if _, ok := evt.Source().(*tcell.EventMouse); !ok {
+				break
+			}
+			e := u.mouseAggregate(evt.Source().(*tcell.EventMouse))
+			if e != nil {
+				lst(e)
+			}
 		default:
 			e, ok := evt.(api.Eventer)
 			if !ok {

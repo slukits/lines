@@ -4,9 +4,10 @@
 
 package lines
 
-func clickCurry(l func(*Env, int, int), x, y int) func(*Env) {
-	return func(e *Env) { l(e, x, y) }
-}
+import (
+	"github.com/slukits/lines/internal/api"
+	"github.com/slukits/lines/internal/lyt"
+)
 
 func mouseCurry(
 	l func(*Env, ButtonMask, int, int), bm ButtonMask, x, y int,
@@ -14,92 +15,321 @@ func mouseCurry(
 	return func(e *Env) { l(e, bm, x, y) }
 }
 
-// reportMouse makes sure that the smallest component containing
-// the click coordinates has the focus; then the click events are
-// reported bubbling.
-func reportMouse(cntx *rprContext, evt MouseEventer) {
+func continueReportOnModal(
+	mc Modaler, cntx *rprContext, evt MouseEventer,
+) bool {
+	x, y := evt.Pos()
+	continueReport := true
+	if !cntx.scr.focus.Dim().Contains(x, y) {
+		callback(cntx.scr.focus.userComponent(), cntx, func(e *Env) {
+			continueReport = mc.OnOutOfBoundClick(e)
+		})
+	}
+	return continueReport
+}
+
+func cancelOnModal(cntx *rprContext, evt MouseEventer) bool {
+	x, y := evt.Pos()
+	if _, ok := cntx.scr.focus.userComponent().(Modaler); ok {
+		if !cntx.scr.focus.Dim().Contains(x, y) {
+			return true
+		}
+	}
+	return false
+}
+
+func cancelOnModalDrag(cntx *rprContext, evt *MouseDrag) bool {
+	if _, ok := cntx.scr.focus.userComponent().(Modaler); !ok {
+		return false
+	}
+	drg, ok := cntx.scr.focus.userComponent().(Drager)
+	if !ok {
+		return true
+	}
+	x, y := evt.Pos()
+	callback(cntx.scr.focus.userComponent(), cntx,
+		mouseCurry(drg.OnDrag, evt.Button(), x, y))
+	return true
+}
+
+func cancelOnModalMove(cntx *rprContext, evt *MouseMove) bool {
+	if _, ok := cntx.scr.focus.userComponent().(Modaler); !ok {
+		return false
+	}
+	x, y := evt.Pos()
+	if cntx.scr.focus.Dim().Contains(x, y) {
+		return false
+	}
+	oob, ok := cntx.scr.focus.userComponent().(OutOfBoundMover)
+	if !ok {
+		return true
+	}
+	continueReport := false
+	callback(cntx.scr.focus.userComponent(), cntx, func(e *Env) {
+		continueReport = oob.OnOutOfBoundMove(e)
+	})
+	return !continueReport
+}
+
+func posCurry(l func(*Env, int, int), x, y int) func(*Env) {
+	return func(e *Env) { l(e, x, y) }
+}
+
+func reportMouseMove(cntx *rprContext, evt *MouseMove) {
+
+	if cancelOnModalMove(cntx, evt) {
+		return
+	}
 
 	x, y := evt.Pos()
 	path, err := cntx.scr.lyt.LocateAt(x, y)
-	if err != nil {
+	if err != nil || path == nil {
 		return
 	}
-	if len(path) == 0 {
+	reportEnterExit(cntx, path[len(path)-1].(layoutComponenter), evt)
+
+	reportBubbling(
+		cntx, path, x, y, true,
+		func(c Componenter) bool {
+			_, ok := c.(Mover)
+			return ok
+		},
+		func(c Componenter, x, y int) func(*Env) {
+			return posCurry(c.(Mover).OnMove, x, y)
+		},
+	)
+}
+
+func reportEnterExit(cntx *rprContext, in layoutComponenter, evt *MouseMove) {
+	x, y := evt.Pos()
+	if cntx.scr.mouseIn == nil {
+		if in.Dim().PrintableContains(x, y) {
+			cntx.scr.mouseIn = in
+			if e, ok := in.userComponent().(Enterer); ok {
+				callback(in.userComponent(), cntx, e.OnEnter)
+			}
+		}
 		return
 	}
-	lytCmp := path[len(path)-1].(layoutComponenter)
 
-	if lytCmp != cntx.scr.focus {
-		focusIfFocusable(cntx, lytCmp)
+	// NOTE we need compare user components because different
+	// layoutComponenter may wrap the same component if layered and
+	// un-layered.
+	if in.userComponent() == cntx.scr.mouseIn.userComponent() {
+		if !in.Dim().PrintableContains(x, y) {
+			cntx.scr.mouseIn = nil
+			if e, ok := in.userComponent().(Exiter); ok {
+				callback(in.userComponent(), cntx, e.OnExit)
+			}
+		}
+		return
 	}
 
+	ox, oy := evt.Origin()
+	if cntx.scr.mouseIn.Dim().PrintableContains(ox, oy) {
+		if e, ok := cntx.scr.mouseIn.userComponent().(Exiter); ok {
+			callback(cntx.scr.mouseIn.userComponent(), cntx, e.OnExit)
+		}
+	}
+
+	if !in.Dim().PrintableContains(x, y) {
+		cntx.scr.mouseIn = nil
+		return
+	}
+
+	cntx.scr.mouseIn = in
+	if e, ok := in.userComponent().(Enterer); ok {
+		callback(in.userComponent(), cntx, e.OnEnter)
+	}
+}
+
+func reportMouseClick(cntx *rprContext, evt *MouseClick) {
+	if evt.Button()&(api.Primary|api.Secondary) == 0 {
+		return
+	}
+	if mc, ok := cntx.scr.focus.userComponent().(Modaler); ok {
+		if !continueReportOnModal(mc, cntx, evt) {
+			return
+		}
+	}
+
+	x, y := evt.Pos()
+	path := focusedPath(cntx, evt, x, y)
+	if path == nil {
+		return
+	}
+
+	if evt.Button()&api.Primary == api.Primary {
+		reportPrimary(cntx, evt, path, x, y)
+		return
+	}
+	reportSecondary(cntx, evt, path, x, y)
+}
+
+// reportPrimary reports a "left"-click if an according mouse button
+// was received and the focused component implements corresponding
+// listener.
+func reportPrimary(
+	cntx *rprContext, evt *MouseClick, path []lyt.Dimer, x, y int,
+) {
+	reportBubbling(
+		cntx, path, x, y, true,
+		func(c Componenter) bool {
+			_, ok := c.(Clicker)
+			return ok
+		},
+		func(c Componenter, x, y int) func(*Env) {
+			return posCurry(c.(Clicker).OnClick, x, y)
+		},
+	)
+}
+
+func reportSecondary(
+	cntx *rprContext, evt *MouseClick, path []lyt.Dimer, x, y int,
+) {
+	reportBubbling(
+		cntx, path, x, y, true,
+		func(c Componenter) bool {
+			_, ok := c.(Contexter)
+			return ok
+		},
+		func(c Componenter, x, y int) func(*Env) {
+			return posCurry(c.(Contexter).OnContext, x, y)
+		},
+	)
+}
+
+func focusedPath(
+	cntx *rprContext, evt *MouseClick, x, y int,
+) []lyt.Dimer {
+
+	path, err := cntx.scr.lyt.LocateAt(x, y)
+	if err != nil || len(path) == 0 {
+		return nil
+	}
+
+	// find the deepest nested focusable component in the path ...
+	var focus layoutComponenter
+	for _, d := range path {
+		ff := d.(layoutComponenter).wrapped().ff
+		if ff == nil {
+			continue
+		}
+		f := ff.buttonFeature(evt.Button(), evt.Mod())
+		if f&(Focusable|_recursive) == Focusable|_recursive {
+			focus = path[len(path)-1].(layoutComponenter)
+			break
+		}
+		if f&Focusable == NoFeature {
+			continue
+		}
+		focus = d.(layoutComponenter)
+	}
+	if focus == nil {
+		return path
+	}
+	// ... and focus it
+	moveFocus(focus.userComponent(), cntx)
+	return path
+}
+
+func reportMouseDrag(cntx *rprContext, evt *MouseDrag) {
+	if cancelOnModalDrag(cntx, evt) {
+		return
+	}
+
+	x, y := evt.Pos()
+	path, err := cntx.scr.lyt.LocateAt(x, y)
+	if err != nil || path == nil {
+		return
+	}
+
+	reportBubbling(
+		cntx, path, x, y, false,
+		func(c Componenter) bool {
+			_, ok := c.(Drager)
+			return ok
+		},
+		func(c Componenter, x, y int) func(*Env) {
+			return mouseCurry(c.(Drager).OnDrag, evt.Button(), x, y)
+		},
+	)
+}
+
+func reportMouseDrop(cntx *rprContext, evt *MouseDrop) {
+	if cancelOnModal(cntx, evt) {
+		return
+	}
+
+	x, y := evt.Pos()
+	path, err := cntx.scr.lyt.LocateAt(x, y)
+	if err != nil || path == nil {
+		return
+	}
+
+	reportBubbling(
+		cntx, path, x, y, false,
+		func(c Componenter) bool {
+			_, ok := c.(Dropper)
+			return ok
+		},
+		func(c Componenter, x, y int) func(*Env) {
+			return mouseCurry(c.(Dropper).OnDrop, evt.Button(), x, y)
+		},
+	)
+}
+
+func reportMouse(cntx *rprContext, evt MouseEventer) {
+	if cancelOnModal(cntx, evt) {
+		return
+	}
+
+	path, err := cntx.scr.lyt.LocateAt(evt.Pos())
+	if err != nil || len(path) == 0 {
+		return
+	}
+
+	x, y := evt.Pos()
 	for i := len(path) - 1; i >= 0; i-- {
+
 		lc := path[i].(layoutComponenter)
+		clk, ok := lc.userComponent().(Mouser)
+		if !ok {
+			continue
+		}
+
 		rx := x - lc.Dim().X()
 		ry := y - lc.Dim().Y()
+		env := callback(lc.userComponent(), cntx, mouseCurry(
+			clk.OnMouse, evt.Button(), rx, ry))
 
-		if sb := reportClick(cntx, lc, rx, ry); sb {
-			break
-		}
-		if sb := reportContext(cntx, lc, rx, ry); sb {
-			break
-		}
-		if sb := reportOnMouse(cntx, lc, rx, ry); sb {
+		if env&envStopBubbling == envStopBubbling {
 			break
 		}
 	}
 }
 
-// reportClick reports a "left"-click if an according mouse button
-// was received and the focused component implements corresponding
-// listener.
-func reportClick(
-	cntx *rprContext, lc layoutComponenter, x, y int,
-) (stopBubbling bool) {
+func reportBubbling(
+	cntx *rprContext, path []lyt.Dimer, x, y int, relative bool,
+	implements func(Componenter) bool,
+	curry func(_ Componenter, x, y int) func(*Env),
+) {
+	for i := len(path) - 1; i >= 0; i-- {
 
-	if cntx.evt.(MouseEventer).Button()&Primary == ZeroButton {
-		return
+		usrCmp := path[i].(layoutComponenter).userComponent()
+		if !implements(usrCmp) {
+			continue
+		}
+
+		ax, ay, _, _ := usrCmp.layoutComponent().Dim().Printable()
+		rx, ry := x, y
+		if relative {
+			rx, ry = rx-ax, ry-ay
+		}
+		env := callback(usrCmp, cntx, curry(usrCmp, rx, ry))
+
+		if env&envStopBubbling == envStopBubbling {
+			break
+		}
 	}
-
-	clk, ok := lc.userComponent().(Clicker)
-	if !ok {
-		return
-	}
-
-	env := callback(nil, cntx, clickCurry(clk.OnClick, x, y))
-	return env&envStopBubbling == envStopBubbling
-}
-
-// reportContext reports a "right"-click if an according mouse button
-// was received and the focused component implements corresponding
-// listener.
-func reportContext(
-	cntx *rprContext, lc layoutComponenter, x, y int,
-) (stopBubbling bool) {
-
-	if cntx.evt.(MouseEventer).Button()&Secondary ==
-		ZeroButton {
-		return
-	}
-
-	clk, ok := lc.userComponent().(Contexter)
-	if !ok {
-		return
-	}
-
-	env := callback(nil, cntx, clickCurry(clk.OnContext, x, y))
-	return env&envStopBubbling == envStopBubbling
-}
-
-func reportOnMouse(
-	cntx *rprContext, lc layoutComponenter, x, y int,
-) (stopBubbling bool) {
-
-	msr, ok := lc.userComponent().(Mouser)
-	if !ok {
-		return false
-	}
-	env := callback(nil, cntx, mouseCurry(
-		msr.OnMouse, cntx.evt.(MouseEventer).Button(), x, y))
-	return env&envStopBubbling == envStopBubbling
 }

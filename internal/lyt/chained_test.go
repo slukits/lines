@@ -240,7 +240,7 @@ func (s *chained) Width_filler_have_width_evenly_distributed(t *T) {
 	fx := cf.New(df.Filling(), df.Filling(), df.Filling())
 	t.FatalOn((&Manager{Root: fx}).Reflow(nil))
 	for i, d := range fx.dd {
-		_, _, got, _ := d.Dim().Area()
+		_, _, got, _ := d.Dim().Printable()
 		switch i {
 		case 2:
 			t.Eq(26, got)
@@ -264,10 +264,10 @@ func (s *chained) Height_fillers_have_no_top_or_bottom_margins(t *T) {
 
 func (s *chained) Height_fillers_consume_all_height(t *T) {
 	fx := cf.New(df.Filling(), df.Filling(), df.Filling())
-	_, _, _, exp := fx.Dim().Area()
+	_, _, _, exp := fx.Dim().Printable()
 	t.FatalOn((&Manager{Root: fx}).Reflow(nil))
 	for _, d := range fx.dd {
-		_, _, _, got := d.Dim().Area()
+		_, _, _, got := d.Dim().Printable()
 		t.Eq(exp, got)
 	}
 }
@@ -320,9 +320,9 @@ func (s *chained) Nests_dimmer_accounting_for_chainer_s_gaps(t *T) {
 	)
 	t.FatalOn((&Manager{Root: fx}).Reflow(nil))
 
-	x, y, w, h := fx.dd[0].Dim().Rect()
+	x, y, w, h := fx.dd[0].Dim().Screen()
 	t.True(x == 2 && y == 2 && w == 8 && h == 16)
-	x, y, w, h = fx.dd[1].Dim().Rect()
+	x, y, w, h = fx.dd[1].Dim().Screen()
 	t.True(x == 10 && y == 2 && w == 8 && h == 16)
 }
 

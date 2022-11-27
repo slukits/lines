@@ -704,7 +704,7 @@ func (s *ASourcedComponent) Gets_its_selected_lines_reported(t *T) {
 	t.Eq(1, cmp.lsN)
 }
 
-func TestALiner(t *testing.T) {
+func TestASourcedComponent(t *testing.T) {
 	t.Parallel()
 	Run(&ASourcedComponent{}, t)
 }

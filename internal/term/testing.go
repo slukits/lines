@@ -110,12 +110,103 @@ func (tt *Fixture) PostRune(r rune, m api.ModifierMask) {
 	}
 }
 
+func newMouseEvent(
+	x, y int, b api.ButtonMask, m api.ModifierMask,
+) api.MouseEventer {
+	return &mouseEvent{evt: tcell.NewEventMouse(
+		x, y,
+		apiToTcellButtons[b],
+		apiToTcellMods[m],
+	)}
+}
+
 func (tt *Fixture) PostMouse(
 	x, y int, b api.ButtonMask, m api.ModifierMask,
 ) {
 	tt.t.Helper()
 	if err := tt.ui.Post(newMouseEvent(x, y, b, m)); err != nil {
 		tt.t.Fatalf("post: mouse: %v", err)
+	}
+}
+
+type frameEvent struct {
+	exec func()
+	when time.Time
+}
+
+func (f *frameEvent) Source() interface{} { return f }
+func (f *frameEvent) When() time.Time     { return f.when }
+
+func (f *frameEvent) Exec() {
+	f.exec()
+}
+
+func (tt *Fixture) PostClick(
+	x, y int, b api.ButtonMask, m api.ModifierMask,
+) {
+	tt.t.Helper()
+	if b == 0 {
+		return
+	}
+	err := tt.ui.Post(&frameEvent{exec: func() {
+		if err := tt.ui.Post(newMouseEvent(x, y, b, m)); err != nil {
+			tt.t.Fatalf("post click: mouse down: %v", err)
+		}
+		if err := tt.ui.Post(newMouseEvent(x, y, 0, 0)); err != nil {
+			tt.t.Fatalf("post click: mouse up: %v", err)
+		}
+	}})
+	if err != nil {
+		tt.t.Fatalf("post click: %v", err)
+	}
+}
+
+func (tt *Fixture) PostMove(x, y int, xy ...int) {
+	tt.t.Helper()
+	err := tt.ui.Post(&frameEvent{exec: func() {
+		if len(xy) >= 2 {
+			err := tt.ui.Post(newMouseEvent(xy[0], xy[1], 0, 0))
+			if err != nil {
+				tt.t.Fatalf("post move origin: %v", err)
+			}
+			err = tt.ui.Post(newMouseEvent(xy[0], xy[1], 0, 0))
+			if err != nil {
+				tt.t.Fatalf("post move origin: stop: %v", err)
+			}
+		}
+		if err := tt.ui.Post(newMouseEvent(x, y, 0, 0)); err != nil {
+			tt.t.Fatalf("post move: %v", err)
+		}
+		if err := tt.ui.Post(newMouseEvent(x, y, 0, 0)); err != nil {
+			tt.t.Fatalf("post move: stop: %v", err)
+		}
+	}})
+	if err != nil {
+		tt.t.Fatalf("post move: %v", err)
+	}
+}
+
+func (tt *Fixture) PostDrag(
+	x, y int, b api.ButtonMask, m api.ModifierMask,
+) (drop func(x, y int)) {
+	return func(dx, dy int) {
+		err := tt.ui.Post(&frameEvent{exec: func() {
+			err := tt.ui.Post(newMouseEvent(x, y, b, m))
+			if err != nil {
+				tt.t.Fatalf("post drag origin: %v", err)
+			}
+			err = tt.ui.Post(newMouseEvent(dx, dy, b, m))
+			if err != nil {
+				tt.t.Fatalf("post drag: %v", err)
+			}
+			err = tt.ui.Post(newMouseEvent(dx, dy, 0, 0))
+			if err != nil {
+				tt.t.Fatalf("post drag drop: %v", err)
+			}
+		}})
+		if err != nil {
+			tt.t.Fatalf("post drag 'n' drop: %v", err)
+		}
 	}
 }
 

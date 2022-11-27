@@ -18,6 +18,37 @@ type KeyEventer = api.KeyEventer
 // event.
 type RuneEventer = api.RuneEventer
 
+// Keyer is implemented by components who want to take over the user's
+// key-input if they are focused.  Note a [Component]'s Register property
+// allows to register handler for specific keys (see [Listeners.Key]).
+type Keyer interface {
+
+	// OnKey is provided with every key-press and reported modifiers which
+	// were pressed at the same time.
+	OnKey(*Env, Key, ModifierMask)
+}
+
+// Runer is implemented by components who want to take over the user's
+// rune-input if they are focused.
+type Runer interface {
+
+	// OnRune is provided with every rune-input.
+	OnRune(*Env, rune, ModifierMask)
+}
+
+// A ModifierMask are the pressed modifier keys of a key, rune or mouse
+// event.  Note that the shift modifier of a capital rune event is not
+// reported.
+type ModifierMask = api.ModifierMask
+
+const (
+	Shift        ModifierMask = api.Shift
+	Ctrl         ModifierMask = api.Ctrl
+	Alt          ModifierMask = api.Alt
+	Meta         ModifierMask = api.Meta
+	ZeroModifier ModifierMask = api.ZeroModifier
+)
+
 // A Key is the pressed key of a key event.
 type Key = api.Key
 
@@ -178,34 +209,3 @@ const (
 	Backspace      Key = api.Backspace
 	Esc            Key = api.Esc
 )
-
-// A ModifierMask are the pressed modifier keys of a key, rune or mouse
-// event.  Note that the shift modifier of a capital rune event is not
-// reported.
-type ModifierMask = api.ModifierMask
-
-const (
-	Shift        ModifierMask = api.Shift
-	Ctrl         ModifierMask = api.Ctrl
-	Alt          ModifierMask = api.Alt
-	Meta         ModifierMask = api.Meta
-	ZeroModifier ModifierMask = api.ZeroModifier
-)
-
-// Keyer is implemented by components who want to take over the user's
-// key-input if they are focused.  Note a [Component]'s Register property
-// allows to register handler for specific keys (see [Listeners.Key]).
-type Keyer interface {
-
-	// OnKey is provided with every key-press and reported modifiers which
-	// were pressed at the same time.
-	OnKey(*Env, Key, ModifierMask)
-}
-
-// Runer is implemented by components who want to take over the user's
-// rune-input if they are focused.
-type Runer interface {
-
-	// OnRune is provided with every rune-input.
-	OnRune(*Env, rune, ModifierMask)
-}

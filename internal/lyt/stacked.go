@@ -46,9 +46,9 @@ func layoutFilledStacker(s Stacker, minHeight, filler int) {
 	shiftY := 0
 	s.ForStacked(func(d Dimer) (stop bool) {
 		d.Dim().setOrigin(x, y+shiftY)
-		d.Dim().setLayoutedWidth(stackerWidth, 0)
+		d.Dim().setLayedOutWidth(stackerWidth, 0)
 		if d.Dim().fillsHeight == 0 { // fixed height Dimer
-			d.Dim().setLayoutedHeight(d.Dim().height, 0)
+			d.Dim().setLayedOutHeight(d.Dim().height, 0)
 			shiftY += d.Dim().layoutHeight()
 			return false
 		}
@@ -57,7 +57,7 @@ func layoutFilledStacker(s Stacker, minHeight, filler int) {
 			distributeModulo--
 			fillerHeight++
 		}
-		d.Dim().setLayoutedHeight(fillerHeight, 0)
+		d.Dim().setLayedOutHeight(fillerHeight, 0)
 		shiftY += d.Dim().layoutHeight()
 		return false
 	})
@@ -71,8 +71,8 @@ func layoutFixedStackerUnderflowing(s Stacker, minHeight, n int) {
 	shiftY, i := 0, 0
 	s.ForStacked(func(d Dimer) (stop bool) {
 		d.Dim().setOrigin(x, y+shiftY)
-		d.Dim().setLayoutedWidth(stackerWidth, 0)
-		d.Dim().setLayoutedHeight(d.Dim().height+mm.sum(i), mm.bottom(i))
+		d.Dim().setLayedOutWidth(stackerWidth, 0)
+		d.Dim().setLayedOutHeight(d.Dim().height+mm.sum(i), mm.bottom(i))
 		shiftY += d.Dim().layoutHeight()
 		i++
 		return false
@@ -131,23 +131,23 @@ func layoutStackerOverflowing(s Stacker) {
 			return false
 		}
 		d.Dim().setOrigin(x, y+shiftY)
-		d.Dim().setLayoutedWidth(stackerWidth, 0)
+		d.Dim().setLayedOutWidth(stackerWidth, 0)
 		if d.Dim().fillsHeight == 0 {
 			if stackerHeight-shiftY-d.Dim().height < 0 { // overflow?
-				d.Dim().setLayoutedHeight(stackerHeight-shiftY, 0)
+				d.Dim().setLayedOutHeight(stackerHeight-shiftY, 0)
 				shiftY += d.Dim().layoutHeight()
 				return false
 			}
-			d.Dim().setLayoutedHeight(d.Dim().height, 0)
+			d.Dim().setLayedOutHeight(d.Dim().height, 0)
 			shiftY += d.Dim().layoutHeight()
 			return false
 		}
 		if stackerHeight-shiftY-d.Dim().fillsHeight < 0 { // overflow?
-			d.Dim().setLayoutedHeight(stackerHeight-shiftY, 0)
+			d.Dim().setLayedOutHeight(stackerHeight-shiftY, 0)
 			shiftY += d.Dim().layoutHeight()
 			return false
 		}
-		d.Dim().setLayoutedHeight(d.Dim().fillsHeight, 0)
+		d.Dim().setLayedOutHeight(d.Dim().fillsHeight, 0)
 		shiftY += d.Dim().layoutHeight()
 		return false
 	})

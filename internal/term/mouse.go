@@ -43,15 +43,9 @@ var tcellToApiButtons = map[tcell.ButtonMask]api.ButtonMask{
 	tcell.ButtonNone: api.ZeroButton,
 }
 
+// mouseEvent wraps a tcell mouse event to adapt it to the
+// api.MouseEventer interface.
 type mouseEvent struct{ evt *tcell.EventMouse }
-
-func newMouseEvent(x, y int, b api.ButtonMask, m api.ModifierMask) api.MouseEventer {
-	return &mouseEvent{evt: tcell.NewEventMouse(
-		x, y,
-		apiToTcellButtons[b],
-		apiToTcellMods[m],
-	)}
-}
 
 func (e *mouseEvent) Pos() (int, int) { return e.evt.Position() }
 
@@ -66,3 +60,92 @@ func (e *mouseEvent) Mod() api.ModifierMask {
 func (e *mouseEvent) When() time.Time { return e.evt.When() }
 
 func (e *mouseEvent) Source() interface{} { return e.evt }
+
+func mouseAggregator() func(e *tcell.EventMouse) api.MouseEventer {
+
+	var last *tcell.EventMouse
+	inDrag, ox, oy := false, 0, 0
+
+	var clear = func(e *tcell.EventMouse) {
+		last = nil
+		ox, oy = e.Position()
+		if inDrag {
+			inDrag = false
+		}
+	}
+
+	var eqBB = func(exp tcell.ButtonMask, ee ...*tcell.EventMouse) bool {
+		for _, e := range ee {
+			if exp == e.Buttons() {
+				continue
+			}
+			return false
+		}
+		return true
+	}
+
+	var eqPos = func(
+		e, other *tcell.EventMouse, ee ...*tcell.EventMouse,
+	) bool {
+		x, y := e.Position()
+		ox, oy := other.Position()
+		for _, _e := range ee {
+			_x, _y := _e.Position()
+			if x == _x && y == _y {
+				continue
+			}
+			return false
+		}
+		return x == ox && y == oy
+	}
+
+	var zeroEvt = func(e, other *tcell.EventMouse) bool {
+		return e.Buttons() == other.Buttons() && eqPos(e, other)
+	}
+
+	var zeroBtt = func(e *tcell.EventMouse) bool {
+		return e.Buttons() == tcell.ButtonNone
+	}
+
+	return func(e *tcell.EventMouse) (evt api.MouseEventer) {
+		switch last {
+		case nil:
+			if e.Buttons() == tcell.ButtonNone {
+				// ignore zero-button without movement
+				x, y := e.Position()
+				if ox == x && oy == y {
+					return
+				}
+				evt = api.NewMouseMove(ox, oy, &mouseEvent{evt: e})
+				clear(e)
+				return evt
+			}
+			last = e
+			ox, oy = e.Position()
+			return nil
+		default:
+			if zeroEvt(last, e) {
+				return nil
+			}
+			if eqBB(last.Buttons(), e) {
+				if !inDrag {
+					inDrag = true
+				}
+				last = e
+				return api.NewMouseDrag(ox, oy, &mouseEvent{evt: e})
+			}
+			if inDrag {
+				inDrag = false
+				evt = api.NewMouseDrop(&mouseEvent{evt: last})
+			} else {
+				evt = api.NewMouseClick(&mouseEvent{evt: last})
+			}
+			if zeroBtt(e) {
+				clear(e)
+				return evt
+			}
+			last = e
+			return evt
+		}
+	}
+}

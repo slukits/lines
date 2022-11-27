@@ -231,7 +231,7 @@ func (d *Dim) IsFillingWidth() bool { return d.fillsWidth > 0 }
 func (d *Dim) IsFillingHeight() bool { return d.fillsHeight > 0 }
 
 func (d *Dim) prepareLayout() *dim {
-	x, y, width, height := d.Area()
+	x, y, width, height := d.Printable()
 	before := &dim{x: x, y: y, width: width, hight: height}
 	if d.IsUpdated() {
 		d.fixateUpdate()
@@ -240,7 +240,7 @@ func (d *Dim) prepareLayout() *dim {
 }
 
 func (d *Dim) finalizeLayout(before *dim) {
-	x, y, width, height := d.Area()
+	x, y, width, height := d.Printable()
 	if before.x != x || before.y != y ||
 		before.width != width || before.hight != height {
 		d.isDirty = true
@@ -281,9 +281,9 @@ func (d *Dim) clearUpdate() {
 	}
 }
 
-// Area provides a Dimer's printable area in a layout, i.e. without
-// clippings and margins.
-func (d *Dim) Area() (x, y, width, height int) {
+// Printable provides a Dimer's printable area in a layout, i.e. with
+// clippings and without margins.
+func (d *Dim) Printable() (x, y, width, height int) {
 	if d.IsOffScreen() {
 		return 0, 0, 0, 0
 	}
@@ -304,15 +304,15 @@ func (d *Dim) Area() (x, y, width, height int) {
 	return x, y, width, height
 }
 
-// Rect provides a Dimer's screen area in the layout, i.e. with margins and
-// without clippings.
-func (d *Dim) Rect() (x, y, width, height int) {
+// Screen provides a Dimer's screen area in the layout, i.e. the
+// [Dim.Printable] rectangular with margins.
+func (d *Dim) Screen() (x, y, width, height int) {
 	if d.IsOffScreen() {
 		return 0, 0, 0, 0
 	}
 	mt, mr, mb, ml := d.Margin()
 	if mt == 0 && mr == 0 && mb == 0 && ml == 0 {
-		return d.Area()
+		return d.Printable()
 	}
 	width = d.width
 	if mr == 0 && ml == 0 {
@@ -333,6 +333,26 @@ func (d *Dim) Rect() (x, y, width, height int) {
 	return d.x, d.y, width, height
 }
 
+// Contains returns true if the dimers screen area (see [Dim.Rect])
+// contains given point with the coordinates x and y.
+func (d *Dim) Contains(x, y int) bool {
+	return d.contains(d.Screen, x, y)
+}
+
+// PrintableContains returns true if the dimers printable area (see
+// [Dim.Area]) contains given point with the coordinates x and y.
+func (d *Dim) PrintableContains(x, y int) bool {
+	return d.contains(d.Printable, x, y)
+}
+
+func (d *Dim) contains(a func() (x, y, w, h int), x, y int) bool {
+	ax, ay, aw, ah := a()
+	if ay <= y && ax <= x && aw+ax > x && ah+ay > y {
+		return true
+	}
+	return false
+}
+
 // Clip how much of the components (minimal) width and hight is clipped.
 func (d *Dim) Clip() (width, height int) {
 	return d.clipWidth, d.clipHeight
@@ -350,7 +370,7 @@ func (d *Dim) IsOffScreen() bool {
 	return d.clipWidth == d.width && d.clipHeight == d.height
 }
 
-func (d *Dim) setLayoutedWidth(w, mrgRight int) {
+func (d *Dim) setLayedOutWidth(w, mrgRight int) {
 	if d.width >= w || d.fillsWidth <= w {
 		if d.mrgLeft > 0 || d.mrgRight > 0 {
 			d.mrgLeft, d.mrgRight = 0, 0
@@ -387,7 +407,7 @@ func (d *Dim) setLayoutedWidth(w, mrgRight int) {
 	d.mrgRight = w - d.width - d.mrgLeft
 }
 
-func (d *Dim) setLayoutedHeight(h int, mrgBottom int) {
+func (d *Dim) setLayedOutHeight(h int, mrgBottom int) {
 	if d.height >= h || d.fillsHeight <= h {
 		if d.mrgTop > 0 || d.mrgBottom > 0 {
 			d.mrgTop, d.mrgBottom = 0, 0
@@ -430,6 +450,7 @@ func (d *Dim) setOrigin(x, y int) {
 	}
 	d.x = x
 	d.y = y
+	d.isDirty = true
 }
 
 // layoutedHeight is the height with without its clipping or with its

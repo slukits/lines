@@ -96,11 +96,12 @@ Lines-instance are used to report back to a component.
 
 The majority of lines' interfaces are for event handling.  Is such an
 interface implemented in a component, corresponding events are reported
-to that component.  E.g. OnKey, OnFocus, OnLayout are methods of such
-interfaces.  Keyboard and mouse events are bubbling up from the
-focused/clicked component through all enclosing ancestors.  The
-environment instance e of such a reported bubbling event may be used to
-suppress bubbling: e.StopBubbling().
+to that component.  See [lines.Eventer] for a list of reported events.
+OnKey, OnFocus, OnLayout are exemplary methods of such interfaces.
+Keyboard and mouse events are bubbling up from the focused/clicked
+component through all enclosing ancestors.  The environment instance e
+of such a reported bubbling event may be used to suppress bubbling:
+e.StopBubbling().  See [examples/layers] for how to work with events.
 
 # Layout handling
 
@@ -110,8 +111,11 @@ If fine grained control is needed the embedded Component's Dim method
 provides features to change the later.  One can also control there if a
 component is filling, i.e.  uses up unused space, or if its size is
 fixed.  Components can be arbitrarily nested by embedding either the
-Stacking or Chaining type in a component or by implementing either the
-Stacker or Chainer interface.
+[Stacking] or [Chaining] type in a component or by implementing either
+the [Stacker] or [Chainer] interface.  Finally components can be
+[Component.Layered] by other components which makes it possible to
+implement tooltip, context menu, menu bar or modal dialogs.  See
+[examples/layers] for how to work with layers.
 
 # Content and format handling
 
@@ -133,15 +137,16 @@ a component c without storing them in the component a component's
 	c.Src = &lines.ContentSource{Liner: MyLinerImplementation}
 
 Whereas the [Liner] implementation prints the lines as requested by c.
-A similar printing API is provided by embedded Component's
-Gaps(index)-method
+See [examples/scrolling] for a sourced component example.  A similar
+printing API is provided by embedded Component's Gaps(index)-method
 
 	c.Gaps(0).AA(lines.Reverse)
 	c.Gaps(0).Corners.AA(lines.Revers)
 
 Above is as of now the simplest way to frame a component.  Gaps allow to
-do all sorts of framing, padding and guttering of a component.  Remember
-that Src and Gaps will panic if accessed outside a listener callback.
+do all sorts of framing, padding and guttering of a component.  See
+[examples/gaps] for some show cases.  Remember that Src and Gaps will
+panic if accessed outside a listener callback.
 
 # Feature handling
 
@@ -188,7 +193,7 @@ An other way to acquire features without fuss is to set a components
 [ContentSource] which needs to have a [Liner]-implementation.  According
 to the features of such a Liner-implementation the component's features
 are set.  E.g. is a Liner a ScrollableLiner then the component gets
-automatically the scrollable feature set.  examples/scrolling has
+automatically the scrollable feature set.  [examples/scrolling] has
 examples for features usage.
 
 # Testing
@@ -233,6 +238,9 @@ Fixture-instance are:
 
 Enjoy!
 
+[examples/layers]: https://github.com/slukits/lines/tree/overlay/examples/layers
+[examples/scrolling]: https://github.com/slukits/lines/blob/overlay/examples/scrolling/scrolling.go
+[examples/gaps]: https://github.com/slukits/lines/blob/overlay/examples/gaps/gaps.go
 [tcell]: https://github.com/gdamore/tcell
 */
 package lines

@@ -220,7 +220,7 @@ func (s *stacked) Height_filler_have_height_evenly_distributed(t *T) {
 	fx := sf.New(df.Filling(), df.Filling(), df.Filling())
 	t.FatalOn((&Manager{Root: fx}).Reflow(nil))
 	for i, d := range fx.dd {
-		_, _, _, got := d.Dim().Area()
+		_, _, _, got := d.Dim().Printable()
 		switch i {
 		case 0:
 			t.Eq(9, got)
@@ -244,10 +244,10 @@ func (s *stacked) Width_fillers_have_no_left_or_right_margins(t *T) {
 
 func (s *stacked) Width_fillers_consume_all_width(t *T) {
 	fx := sf.New(df.Filling(), df.Filling(), df.Filling())
-	_, _, exp, _ := fx.Dim().Area()
+	_, _, exp, _ := fx.Dim().Printable()
 	t.FatalOn((&Manager{Root: fx}).Reflow(nil))
 	for _, d := range fx.dd {
-		_, _, got, _ := d.Dim().Area()
+		_, _, got, _ := d.Dim().Printable()
 		t.Eq(exp, got)
 	}
 }
@@ -300,9 +300,9 @@ func (s *stacked) Nests_dimmer_accounting_for_stacker_s_gaps(t *T) {
 	)
 	t.FatalOn((&Manager{Root: fx}).Reflow(nil))
 
-	x, y, w, h := fx.dd[0].Dim().Rect()
+	x, y, w, h := fx.dd[0].Dim().Screen()
 	t.True(x == 2 && y == 2 && w == 16 && h == 8)
-	x, y, w, h = fx.dd[1].Dim().Rect()
+	x, y, w, h = fx.dd[1].Dim().Screen()
 	t.True(x == 2 && y == 10 && w == 16 && h == 8)
 }
 

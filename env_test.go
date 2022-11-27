@@ -59,16 +59,14 @@ func (s *env) Provides_the_display_size(t *T) {
 }
 
 func (s *env) Prints_to_component_starting_at_top_left_corner(t *T) {
-	tt := s.tt(t, &stackedCmpFX{
-		cc: []Componenter{
-			&envCmpFX{fx: func(_ *envCmpFX, e *Env) {
-				fmt.Fprint(e, "1st")
-			}},
-			&envCmpFX{fx: func(_ *envCmpFX, e *Env) {
-				fmt.Fprint(e, "3rd")
-			}},
-		},
-	})
+	tt := s.tt(t, newStacking(
+		&envCmpFX{fx: func(_ *envCmpFX, e *Env) {
+			fmt.Fprint(e, "1st")
+		}},
+		&envCmpFX{fx: func(_ *envCmpFX, e *Env) {
+			fmt.Fprint(e, "3rd")
+		}},
+	))
 	tt.FireResize(4, 4)
 	t.Eq("1st \n    \n3rd \n    ", tt.Screen())
 }

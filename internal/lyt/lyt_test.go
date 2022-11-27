@@ -246,24 +246,24 @@ func (s *manager) Accounts_for_margins_checking_consistency(t *T) {
 func (s *manager) Leafs_printable_hight_after_update(t *T) {
 	fx := mf.Of(sf.Of(df.FixedWH(10, 10), df.FillingOne()))
 	fx.Reflow(nil)
-	_, _, _, h := fx.Root.(*stackerFX).dd[0].Dim().Area()
+	_, _, _, h := fx.Root.(*stackerFX).dd[0].Dim().Printable()
 	t.Eq(10, h)
 	fx.Root.(*stackerFX).dd[0].Dim().UpdateHeight(1)
 	fx.Reflow(nil)
 	t.Not.True(fx.Root.(*stackerFX).dd[0].Dim().IsDirty())
-	_, _, _, h = fx.Root.(*stackerFX).dd[0].Dim().Area()
+	_, _, _, h = fx.Root.(*stackerFX).dd[0].Dim().Printable()
 	t.Eq(10, h)
 }
 
 func (s *manager) Leafs_printable_width_after_update(t *T) {
 	fx := mf.Of(sf.Of(df.FixedWH(10, 10), df.FillingOne()))
 	fx.Reflow(nil)
-	_, _, w, _ := fx.Root.(*stackerFX).dd[0].Dim().Area()
+	_, _, w, _ := fx.Root.(*stackerFX).dd[0].Dim().Printable()
 	t.Eq(10, w)
 	fx.Root.(*stackerFX).dd[0].Dim().UpdateWidth(1)
 	fx.Reflow(nil)
 	t.Not.True(fx.Root.(*stackerFX).dd[0].Dim().IsDirty())
-	_, _, w, _ = fx.Root.(*stackerFX).dd[0].Dim().Area()
+	_, _, w, _ = fx.Root.(*stackerFX).dd[0].Dim().Printable()
 	t.Eq(10, w)
 }
 
@@ -271,14 +271,14 @@ func (s *manager) Updates_printable_height_after_update(t *T) {
 	fx := mf.Of(sf.Of(
 		df.FixedWH(10, 10), df.FillingOne(), df.FillingOne()))
 	fx.Reflow(nil)
-	_, _, _, h0 := fx.Root.(*stackerFX).dd[0].Dim().Area()
-	_, _, _, h1 := fx.Root.(*stackerFX).dd[1].Dim().Area()
+	_, _, _, h0 := fx.Root.(*stackerFX).dd[0].Dim().Printable()
+	_, _, _, h1 := fx.Root.(*stackerFX).dd[1].Dim().Printable()
 	t.Eq(5, h0)
 	t.Eq(5, h1)
 	fx.Root.(*stackerFX).dd[0].Dim().UpdateHeight(2)
 	fx.Reflow(nil)
-	_, _, _, h0 = fx.Root.(*stackerFX).dd[0].Dim().Area()
-	_, _, _, h1 = fx.Root.(*stackerFX).dd[1].Dim().Area()
+	_, _, _, h0 = fx.Root.(*stackerFX).dd[0].Dim().Printable()
+	_, _, _, h1 = fx.Root.(*stackerFX).dd[1].Dim().Printable()
 	t.True(fx.Root.(*stackerFX).dd[0].Dim().IsFillingHeight())
 	t.True(fx.Root.(*stackerFX).dd[1].Dim().IsFillingHeight())
 	t.Eq(7, h0)

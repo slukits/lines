@@ -10,7 +10,8 @@ lifting for you when it comes to
 * feature handling
 * testing
 
-Following example times out in the go playground since it is blocking:
+Following example will crash in the go playground since it can't grab a
+terminal:
 
 ```go
 package main
@@ -51,6 +52,11 @@ characters only.  Is that not guaranteed you will want to count runes
 instead of bytes.  Setting width and height is not necessary.  Left out
 in above example "hello world" is printed to the screen starting in the
 upper left corner.
+<p align="center">
+  <img width="480" src="layers.gif">
+</p>
+Note lines doesn't come with menu, context-menu or tool-tip components
+but with the means to implement them as intricate and complex as needed.
 
 
 # Concurrency safety
@@ -101,11 +107,14 @@ said Lines-instance are used to report back to a component.
 
 The majority of lines' interfaces are for event handling.  Is such an
 interface implemented in a component, corresponding events are reported
-to that component.  E.g. OnKey, OnFocus, OnLayout are methods of such
-interfaces.  Keyboard and mouse events are bubbling up from the
-focused/clicked component through all enclosing ancestors.  The
+to that component.  See
+[lines.Eventer](https://pkg.go.dev/github.com/slukits/lines#Eventer) for
+a list of reported events.  OnKey, OnFocus, OnLayout are exemplary
+methods of such interfaces.  Keyboard and mouse events are bubbling up
+from the focused/clicked component through all enclosing ancestors.  The
 environment instance e of such a reported bubbling event may be used to
-suppress bubbling: e.StopBubbling().
+suppress bubbling: e.StopBubbling().  See
+[examples/layers](examples/layers) for how to work with events.
 
 # Layout handling
 
@@ -114,8 +123,13 @@ If fine grained control is needed the embedded Component's Dim method
 informs about positioning and size and also provides features to change
 the later.  One can also control there if a component is filling, i.e.
 uses up unused space, or if its size is fixed.  Components can be
-arbitrarily nested by embedding either the Stacking or Chaining type in
+arbitrarily nested by embedding either the
+[Stacking](https://pkg.go.dev/github.com/slukits/lines#Stacking) or
+[Chaining](https://pkg.go.dev/github.com/slukits/lines#Chaining) type in
 a component or by implementing either the Stacker or Chainer interface.
+Finally components can be layered by other components which makes it
+possible to implement tooltip, context menu, menu bar or modal dialogs.
+See [examples/layers](examples/layers) for how to work with layers.
 
 # Content and format handling
 
@@ -152,8 +166,9 @@ c.Gaps(0).Corners.AA(lines.Revers)
 
 above is as of now the simplest way to frame a component.  Gaps allow to
 do all sorts of framing, padding and guttering of a component.  See
-examples/gaps for an introduction of what can be done with gaps.  Remember
-that Src and Gaps will panic if accessed outside a listener callback.
+[examples/gaps](examples/gaps) for an introduction of what can be done
+with gaps.  Remember that Src and Gaps will panic if accessed outside a
+listener callback.
 
 # Feature handling
 

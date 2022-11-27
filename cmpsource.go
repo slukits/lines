@@ -117,6 +117,9 @@ func (cs *ContentSource) initialize(c *component) {
 }
 
 func (cs *ContentSource) sync(n int, c *component) {
+	if cs == nil {
+		return
+	}
 	idx := cs.first
 	lw := &EnvLineWriter{cmp: c, line: idx - cs.first}
 	for cs.Print(idx, lw) && idx-cs.first < n {

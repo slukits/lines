@@ -14,13 +14,13 @@ import (
 // this information.
 type Dimer interface {
 
-	// Dim provides the dimensions of a layouted component which are
-	// used and adapted during the layout process.
+	// Dim provides the layout dimensions of a component which are used
+	// and adapted during the layout process.
 	Dim() *Dim
 }
 
 // Stacker is implemented by components who consist of stacked Dimers
-// which are layouted vertically.
+// which are arranged vertically.
 type Stacker interface {
 	Dimer
 
@@ -30,7 +30,7 @@ type Stacker interface {
 }
 
 // Chainer is implemented by components who consist of chained Dimers
-// which are layouted horizontally.
+// which are arranged horizontally.
 type Chainer interface {
 	Dimer
 
@@ -60,6 +60,12 @@ type Manager struct {
 	Width, Height int
 	width, height int
 	Root          Dimer
+	base          *Manager
+	Layers        *Layers
+}
+
+func (m *Manager) SetRoot(d Dimer) {
+	m.Root, m.width, m.height = d, 0, 0
 }
 
 func (m *Manager) validate() error {
@@ -84,29 +90,35 @@ func (m *Manager) validate() error {
 	return nil
 }
 
-// IsDirty returns true iff one of the layouted components has been
-// flagged as dirty.
+// IsDirty returns true iff one of the components in the layout has been
+// flagged as dirty, the set of layers has changed or one of the layers
+// is dirty.
 func (m *Manager) IsDirty() (dirty bool) {
 	if m.height != m.Height || m.width != m.Width {
 		return true
 	}
-	m.ForDimer(nil, func(d Dimer) (stop bool) {
+	ll := m.ForDimer(nil, func(d Dimer) (stop bool) {
 		if !d.Dim().IsDirty() && !d.Dim().IsUpdated() {
 			return false
 		}
 		dirty = true
 		return true
 	})
-	return
+	all := ll.all()
+
+	if m.base == nil {
+		return dirty || m.Layers.hasDelta(all) || all.isDirty()
+	}
+	return dirty
 }
 
 // HasConsistentLayout returns true iff the following invariants hold
-// true.  The layouted width of a Stacker's Dimer must be the layouted
-// width of the Stacker and the layouted heights of a Stacker's Dimers
-// must sum up the Stacker's layouted height.  The layouted heights of a
-// Chainer's Dimers must be the layouted height of the Chainer and all
-// layouted-widths of a Chainer's Dimers must sum up to the Chainer's
-// layouted width.  Whereas the layouted width/height is the
+// true.  The layed out width of a Stacker's Dimer must be the layed out
+// width of the Stacker and the layed out heights of a Stacker's Dimers
+// must sum up the Stacker's layed out height.  The layed out heights of a
+// Chainer's Dimers must be the layed out height of the Chainer and all
+// layed out widths of a Chainer's Dimers must sum up to the Chainer's
+// layed out width.  Whereas the layed out width/height is the
 // width/height reduced by its clipping or increased by its relevant
 // margins if there is/are any clipping or margins.  NOTE
 // HasConsistentLayout returns also false if a Manager is not properly
@@ -116,7 +128,7 @@ func (m *Manager) HasConsistentLayout() bool {
 		return false // TODO: coverage
 	}
 	consistent := true
-	forContainer(m.Root,
+	m.forContainer(m.Root,
 		func(s Stacker) (stop bool) {
 			if !isConsistentStacker(s) {
 				consistent = false
@@ -161,28 +173,59 @@ func isConsistentChainer(c Chainer) bool {
 	return lWidthSum == c.Dim().layoutWidth() && ok
 }
 
-// Reflow calculates the layout of all Dimer provided by Root and subsequent
-// Stacker and Chainers respecting potentially updated widths or heights
-// of layouted Dimer.  Given function will receive all dirty layout
-// components i.e. components whose area on the screen has changed in
-// origin or size.
+// Reflow calculates the layout of all Dimer provided by Root and
+// subsequent stacking, chaining and layered components respecting
+// potentially updated widths or heights of layed out Dimer.  Given
+// function will receive all dirty layout components i.e. components
+// whose area on the screen has changed in origin or size.  Note
+// provided layer and their components are always reported as dirty.
 func (m *Manager) Reflow(dirty func(Dimer)) (err error) {
 	if err := m.validate(); err != nil {
 		return err
 	}
 
-	// save the printable areas of all Dimers which are layouted to
+	ddBefore, ll, err := m.reflowLayer()
+	if err != nil {
+		return err
+	}
+	m.Layers = ll.all()
+
+	// if there is no callback we can clean everything up.
+	if dirty == nil {
+		if err := ll.reflow(nil); err != nil {
+			return err
+		}
+		m.ForDimer(nil, func(d Dimer) (stop bool) {
+			d.Dim().cleanUp()
+			return false
+		})
+		return
+	}
+
+	m.reportDirty(ddBefore, dirty)
+
+	if err := ll.reflow(dirty); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *Manager) reflowLayer() (
+	before map[Dimer]*dim, ll *Layers, err error,
+) {
+	// save the printable areas of all Dimers which are layed out to
 	// decide after the reflow if it has changed, i.e. if they are
 	// considered dirty.
 	ddBefore := map[Dimer]*dim{}
-	m.ForDimer(nil, func(d Dimer) (stop bool) {
+	ll = m.ForDimer(nil, func(d Dimer) (stop bool) {
 		ddBefore[d] = d.Dim().prepareLayout()
 		return false
 	})
 
 	// layout all containers.
-	forContainer(
-		m.layoutedRoot(),
+	m.forContainer(
+		m.layedOutRoot(),
 		func(s Stacker) (stop bool) {
 			if err = layoutStacker(s); err != nil {
 				return true
@@ -197,33 +240,23 @@ func (m *Manager) Reflow(dirty func(Dimer)) (err error) {
 		},
 	)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
+	return ddBefore, ll, nil
+}
 
-	// if there is no callback we can clean everything up.
-	if dirty == nil {
-		m.ForDimer(nil, func(d Dimer) (stop bool) {
-			d.Dim().cleanUp()
-			return false
-		})
-		return
-	}
-
-	// flag the Dimer with changed visible area as dirty and provide them
-	// to given callback.
+func (m *Manager) reportDirty(before map[Dimer]*dim, rpr func(Dimer)) {
 	m.ForDimer(nil, func(d Dimer) (stop bool) {
-		d.Dim().finalizeLayout(ddBefore[d])
+		d.Dim().finalizeLayout(before[d])
 		if d.Dim().IsDirty() {
-			dirty(d)
+			rpr(d)
 		}
 		d.Dim().cleanUp()
 		return false
 	})
-
-	return nil
 }
 
-func (m *Manager) layoutedRoot() Dimer {
+func (m *Manager) layedOutRoot() Dimer {
 	if m.width == m.Width && m.height == m.Height {
 		return m.Root
 	}
@@ -270,9 +303,12 @@ func (m *Manager) layoutedRoot() Dimer {
 // Locate returns a path of Stacker and Chainer whose last Stacker or
 // Chainer provides given Dimer and each Stacker/Chainer in it is
 // provided by its previous Stacker/Chainer (or is root).
-func (m *Manager) Locate(l Dimer) (path []Dimer, err error) {
+func (m *Manager) Locate(dr Dimer) (path []Dimer, err error) {
 	if err := m.validate(); err != nil {
 		return nil, err
+	}
+	if l := m.Layers.Containing(dr); l != nil {
+		return l.Locate(dr)
 	}
 	d, path := m.Root, []Dimer{}
 	dd, forDD := []Dimer{d}, (func(func(d Dimer) bool))(nil)
@@ -288,7 +324,7 @@ func (m *Manager) Locate(l Dimer) (path []Dimer, err error) {
 			path = path[:len(path)-1]
 			continue
 		}
-		if d == l {
+		if d == dr {
 			return path, nil // TODO: coverage
 		}
 		switch d := d.(type) {
@@ -303,7 +339,7 @@ func (m *Manager) Locate(l Dimer) (path []Dimer, err error) {
 		}
 		found := false
 		forDD(func(d Dimer) (stop bool) {
-			if d == l {
+			if d == dr {
 				found = true
 				return true
 			}
@@ -331,8 +367,12 @@ func (m *Manager) LocateAt(x, y int) (path []Dimer, err error) {
 	if err := m.validate(); err != nil {
 		return nil, err // TODO: coverage
 	}
-	if x < 0 || y < 0 || x >= m.Width || y >= m.Height {
+	rx, ry, rw, rh := m.Root.Dim().Screen()
+	if x < rx || y < ry || x >= rw+rx || y >= rh+ry {
 		return nil, nil // TODO: coverage
+	}
+	if l := m.Layers.Encloses(x, y); l != nil {
+		return l.LocateAt(x, y)
 	}
 	last, path := m.Root, []Dimer{}
 	forDD := (func(func(d Dimer) bool))(nil)
@@ -351,7 +391,7 @@ func (m *Manager) LocateAt(x, y int) (path []Dimer, err error) {
 			break
 		}
 		forDD(func(d Dimer) (stop bool) {
-			dx, dy, dw, dh := d.Dim().Rect()
+			dx, dy, dw, dh := d.Dim().Screen()
 			if dy <= y && dx <= x && dw+dx > x && dh+dy > y {
 				last = d
 				return true
@@ -364,49 +404,62 @@ func (m *Manager) LocateAt(x, y int) (path []Dimer, err error) {
 
 // forContainer iterates in a breadth-first manner over all stacker and
 // chainer found in a layout.
-func forContainer(
+func (m *Manager) forContainer(
 	d Dimer, s func(Stacker) (stop bool), c func(Chainer) (stop bool),
-) {
+) *Layers {
 	if d == nil {
-		return // TODO: coverage
+		return nil // TODO: coverage
 	}
 	dd, forDD := []Dimer{d}, (func(func(d Dimer) bool))(nil)
+	var oo Layereds
 	for len(dd) > 0 {
 		d, dd = dd[0], dd[1:]
 		switch d := d.(type) {
 		case Stacker:
 			if s(d) {
-				return
+				return newLayers(m, oo)
 			}
 			forDD = d.ForStacked
 		case Chainer:
 			if c(d) {
-				return
+				return newLayers(m, oo)
 			}
 			forDD = d.ForChained
+		case Layered:
+			return newLayers(m, append(oo, d))
 		default: // first d is implementing neither Stacker nor Chainer
-			return // TODO: coverage
+			return nil // TODO: coverage
+		}
+		if d, ok := d.(Layered); ok {
+			oo = append(oo, d)
 		}
 		forDD(func(d Dimer) (stop bool) {
-			if _, ok := d.(Stacker); ok {
+			switch d := d.(type) {
+			case Stacker:
 				dd = append(dd, d)
 				return false // Stacker supersedes Chainer
-			}
-			if _, ok := d.(Chainer); ok {
+			case Chainer:
 				dd = append(dd, d) // TODO: coverage
+			case Layered:
+				oo = append(oo, d)
 			}
 			return false
 		})
 	}
+	return newLayers(m, oo)
 }
 
-// ForDimer calls back for given Dimer and all nested Dimer.  Dimer
-// defaults to the Manager's Root Dimer if nil.
-func (m *Manager) ForDimer(d Dimer, cb func(Dimer) (stop bool)) {
+// ForDimer calls back for given Dimer and all nested Dimer and returns
+// all dimmer which provide overlays.  Dimer defaults to the Manager's
+// Root Dimer if nil.
+func (m *Manager) ForDimer(
+	d Dimer, cb func(Dimer) (stop bool),
+) *Layers {
 	if d == nil {
 		d = m.Root
 	}
 	dd, forDD := []Dimer{d}, (func(func(d Dimer) bool))(nil)
+	var oo Layereds
 	for len(dd) > 0 {
 		d, dd, forDD = dd[0], dd[1:], nil
 		switch d := d.(type) {
@@ -414,9 +467,41 @@ func (m *Manager) ForDimer(d Dimer, cb func(Dimer) (stop bool)) {
 			forDD = d.ForStacked
 		case Chainer:
 			forDD = d.ForChained
+		case Layered:
+			oo = append(oo, d)
 		}
 		if cb(d) {
-			return // TODO: coverage
+			return newLayers(m, oo) // TODO: coverage
+		}
+		if forDD == nil {
+			continue
+		}
+		if d, ok := d.(Layered); ok {
+			oo = append(oo, d)
+		}
+		forDD(func(d Dimer) (stop bool) {
+			dd = append(dd, d)
+			return false
+		})
+	}
+	return newLayers(m, oo)
+}
+
+func (m *Manager) Has(dr, in Dimer) bool {
+	if in == nil {
+		in = m.Root
+	}
+	d, dd, forDD := in, []Dimer{in}, (func(func(d Dimer) bool))(nil)
+	for len(dd) > 0 {
+		d, dd, forDD = dd[0], dd[1:], nil
+		if dr == d {
+			return true
+		}
+		switch d := d.(type) {
+		case Stacker:
+			forDD = d.ForStacked
+		case Chainer:
+			forDD = d.ForChained
 		}
 		if forDD == nil {
 			continue
@@ -426,4 +511,5 @@ func (m *Manager) ForDimer(d Dimer, cb func(Dimer) (stop bool)) {
 			return false
 		})
 	}
+	return false
 }

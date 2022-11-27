@@ -13,9 +13,32 @@ import (
 	"github.com/slukits/lines/internal/term"
 )
 
-// Eventer is the interface which all reported events implement.  Note
-// each Env instance has an Env.Evt property of type Eventer whereas
-// Env.Evt.Source() provides the backend event if there is any.
+/*
+Eventer is the interface which all reported events implement.  Note each
+Env instance has an Env.Evt property of type Eventer whereas
+Env.Evt.Source() provides the backend event if there is any.  The
+following event interfaces with their reported event are defined:
+  - [Initer]: OnInit(*Env): once before any other
+  - [AfterIniter]: OnAfterInit(*Env): once after OnInit
+  - [Focuser]: OnFocus(*Env): see [Lines.Focus], [Env.Focused]
+  - [FocusLooser]: OnFocusLost(*Env) see [Lines.Focus], [Env.Focused]
+  - [Updater]: OnUpdate(*Env, interface{}): see [Lines.Update]
+  - [Layouter]: OnLayout(*Env) bool: after layout change
+  - [Keyer]: OnKey(*Env, Key, ModifierMask): special key like Esc
+  - [Runer]: OnRune(*Env, rune, ModifierMask)
+  - [Enterer]: OnEnter(*Env): mouse-pointer entered component
+  - [Exiter]: OnExit(*Env): mouse-pointer entered component
+  - [Enterer]: OnEnter(*Env): mouse-pointer leaves component
+  - [Mouser]: OnMouse(*Env, ButtonMask, int, int): any mouse-event
+  - [Clicker]: OnClick(_ *Env, x, y int): primary button click
+  - [Contexter]: OnContext(_ *Env, x, y int): secondary button click
+  - [Drager]: OnDrag(*Env, ButtonMask, int, int): mouse-move with
+    pressed button
+  - [Dropper]: OnDrop(*Env, ButtonMask, int, int): button release after
+    mouse-move with pressed button
+  - [Modaler]: OnOutOfBoundClick(*Env) bool: for modal layers
+  - [OutOfBoundMover]: OnOutOfBoundMove(*env) bool: for modal layers
+*/
 type Eventer = api.Eventer
 
 // resizeEventer is reported when the Lines-display was resized.
@@ -140,6 +163,11 @@ func TermKiosk(cmp Componenter) *Lines {
 		buttons: map[ModifierMask]map[ButtonMask]FeatureMask{},
 	}
 	return Term(cmp)
+}
+
+// SetRoot replaces currently used root component by given component.
+func (ll *Lines) SetRoot(c Componenter) {
+	ll.scr.setRoot(c, ll.Globals)
 }
 
 // Quit posts a quit event which consequently closes given Lines

@@ -62,14 +62,14 @@ func (x *lineFX) highlighted(s Style) Style {
 // NOTE since the point here is to determine what a line provides for
 // the display it doesn't matter to what backend it goes as long as we
 // can figure out what went to the display with what style attributes.
-func fx(t *T) (*term.Fixture, *lineFX) {
+func newLineFX(t *T) (*term.Fixture, *lineFX) {
 	ui, tt := term.LstFixture(t.GoT(), nil, 0)
 	tt.PostResize(20, 1)
 	return tt, &lineFX{Displayer: ui, gg: newGlobals(nil)}
 }
 
-func fxDflt(t *T, s Style) (*term.Fixture, *lineFX) {
-	tt, fx := fx(t)
+func newLineFXDflt(t *T, s Style) (*term.Fixture, *lineFX) {
+	tt, fx := newLineFX(t)
 	fx.gg.SetStyle(Default, s)
 	return tt, fx
 }
@@ -79,7 +79,7 @@ type ALine struct{ Suite }
 func (s *ALine) SetUp(t *T) { t.Parallel() }
 
 func (s *ALine) Is_padded_with_spaces_if_zero(t *T) {
-	tt, fx := fx(t)
+	tt, fx := newLineFX(t)
 	scrLine := fx.redraw(tt)
 	for _, c := range scrLine {
 		t.True(c.Rune == ' ')
@@ -89,7 +89,7 @@ func (s *ALine) Is_padded_with_spaces_if_zero(t *T) {
 
 func (s *ALine) Uses_given_display_style_if_no_default_set(t *T) {
 	exp := NewStyle(Blink, Yellow, Blue)
-	tt, fx := fxDflt(t, exp)
+	tt, fx := newLineFXDflt(t, exp)
 	scrLine := fx.redraw(tt)
 	for _, c := range scrLine {
 		t.True(c.Rune == ' ')
@@ -98,7 +98,7 @@ func (s *ALine) Uses_given_display_style_if_no_default_set(t *T) {
 }
 
 func (s *ALine) Has_set_default_style_if_empty(t *T) {
-	tt, fx := fx(t)
+	tt, fx := newLineFX(t)
 	exp := NewStyle(Blink, Yellow, Blue)
 	fx.setDefaultStyle(exp)
 	scrLine := fx.redraw(tt)
@@ -109,7 +109,7 @@ func (s *ALine) Has_set_default_style_if_empty(t *T) {
 }
 
 func (s *ALine) Has_updated_default_style_attributes(t *T) {
-	tt, fx := fx(t)
+	tt, fx := newLineFX(t)
 	exp := DefaultStyle.WithAA(Dim)
 	fx.withAA(Dim)
 	scrLine := fx.redraw(tt)
@@ -120,7 +120,7 @@ func (s *ALine) Has_updated_default_style_attributes(t *T) {
 }
 
 func (s *ALine) Has_updated_default_foreground_color(t *T) {
-	tt, fx := fx(t)
+	tt, fx := newLineFX(t)
 	exp := DefaultStyle.WithFG(Green)
 	fx.withFG(Green)
 	scrLine := fx.redraw(tt)
@@ -131,7 +131,7 @@ func (s *ALine) Has_updated_default_foreground_color(t *T) {
 }
 
 func (s *ALine) Has_updated_default_background_color(t *T) {
-	tt, fx := fx(t)
+	tt, fx := newLineFX(t)
 	exp := DefaultStyle.WithBG(Red)
 	fx.withBG(Red)
 	scrLine := fx.redraw(tt)
@@ -142,7 +142,7 @@ func (s *ALine) Has_updated_default_background_color(t *T) {
 }
 
 func (s *ALine) Displays_set_content_space_padded_to_line_width(t *T) {
-	_, fx := fx(t)
+	_, fx := newLineFX(t)
 	fx.set("0123456789")
 	got, _ := fx.display(fx.width(), fx.gg)
 	t.Eq("0123456789", string(got[:10]))
@@ -150,7 +150,7 @@ func (s *ALine) Displays_set_content_space_padded_to_line_width(t *T) {
 }
 
 func (s *ALine) Truncates_line_with_width_overflowing_content(t *T) {
-	_, fx := fx(t)
+	_, fx := newLineFX(t)
 	fx.set("01234567890123456789012")
 	got, _ := fx.display(fx.width(), fx.gg)
 	t.Eq("01234567890123456789", string(got))
@@ -158,7 +158,7 @@ func (s *ALine) Truncates_line_with_width_overflowing_content(t *T) {
 
 func (s *ALine) Displays_content_with_set_style(t *T) {
 	exp := NewStyle(Blink, Yellow, Blue)
-	tt, fx := fx(t)
+	tt, fx := newLineFX(t)
 	fx.setStyled("0123456789", exp)
 	scrLine := fx.redraw(tt)
 	for _, c := range scrLine {
@@ -172,7 +172,7 @@ func (s *ALine) Displays_content_with_set_style(t *T) {
 }
 
 func (s *ALine) Has_content_set_at_zero_position(t *T) {
-	_, fx := fx(t)
+	_, fx := newLineFX(t)
 	fx.setAt(0, []rune("0123456789"))
 	got, _ := fx.display(fx.width(), fx.gg)
 	t.Eq("0123456789", string(got[:10]))
@@ -180,7 +180,7 @@ func (s *ALine) Has_content_set_at_zero_position(t *T) {
 }
 
 func (s *ALine) Has_content_set_at_given_position_space_padded(t *T) {
-	_, fx := fx(t)
+	_, fx := newLineFX(t)
 	fx.setAt(8, []rune("0123456789"))
 	got, _ := fx.display(fx.width(), fx.gg)
 	t.Eq("        ", string(got[:8]))
@@ -190,7 +190,7 @@ func (s *ALine) Has_content_set_at_given_position_space_padded(t *T) {
 
 func (s *ALine) Styles_content_set_at_given_position(t *T) {
 	exp := NewStyle(Blink, Yellow, Blue)
-	tt, fx := fx(t)
+	tt, fx := newLineFX(t)
 	fx.setStyledAt(5, []rune("0123456789"), exp)
 	scrLine := fx.redraw(tt)
 	for _, c := range scrLine {
@@ -204,7 +204,7 @@ func (s *ALine) Styles_content_set_at_given_position(t *T) {
 }
 
 func (s *ALine) Overwrites_content_after_given_position(t *T) {
-	_, fx := fx(t)
+	_, fx := newLineFX(t)
 	fx.set("0123456789")
 	got, _ := fx.display(10, fx.gg)
 	t.Eq("0123456789", string(got))
@@ -215,7 +215,7 @@ func (s *ALine) Overwrites_content_after_given_position(t *T) {
 }
 
 func (s *ALine) Fills_remaining_space_with_a_filling_rune(t *T) {
-	_, fx := fx(t)
+	_, fx := newLineFX(t)
 	fx.setAtFilling(0, 'a')
 	fx.setAt(1, []rune("0123456789"))
 	got, _ := fx.display(fx.width(), fx.gg)
@@ -240,7 +240,7 @@ func (s *ALine) Fills_remaining_space_with_a_filling_rune(t *T) {
 
 func (s *ALine) Expands_filler_style_preserving(t *T) {
 	s1, s2 := NewStyle(Blink, Yellow, Blue), NewStyle(Dim, Green, Red)
-	_, fx := fx(t)
+	_, fx := newLineFX(t)
 	fx.setStyledAtFilling(0, 'a', s1)
 	fx.setAt(1, []rune("0123456789"))
 	_, ss := fx.display(fx.width(), fx.gg)
@@ -288,7 +288,7 @@ func (s *ALine) Expands_filler_style_preserving(t *T) {
 
 func (s *ALine) Expands_leading_tabs_style_preserving(t *T) {
 	s1, s2 := NewStyle(Blink, Yellow, Blue), NewStyle(Dim, Green, Red)
-	tt, fx := fx(t)
+	tt, fx := newLineFX(t)
 	fx.gg.tabWidth = 5
 	fx.setStyledAt(0, []rune{'\t', '\t'}, s1)
 	fx.setStyledAt(2, []rune("0123456789"), s2)
@@ -307,7 +307,7 @@ func (s *ALine) Expands_leading_tabs_style_preserving(t *T) {
 }
 
 func (s *ALine) Is_highlighted_if_highlight_flag_set(t *T) {
-	tt, fx := fx(t)
+	tt, fx := newLineFX(t)
 	fx.Switch(Highlighted)
 	fx.gg.SetStyle(Default, fx.gg.Style(Default).WithAA(Dim))
 	fx.gg.SetStyle(Highlight,
@@ -325,7 +325,7 @@ func (s *ALine) Is_highlighted_if_highlight_flag_set(t *T) {
 }
 
 func (s *ALine) Is_highlighted_trimmed_if_corresponding_flag_set(t *T) {
-	tt, fx := fx(t)
+	tt, fx := newLineFX(t)
 	fx.Switch(TrimmedHighlighted)
 	fx.setAt(4, []rune("0123456789"))
 	l, hStyle := fx.redraw(tt), fx.highlighted(fx.gg.Style(Default))
@@ -342,7 +342,7 @@ func (s *ALine) Is_highlighted_trimmed_if_corresponding_flag_set(t *T) {
 
 func (s *ALine) Adapts_styles_overlapping_trimmed_highlighted_range(t *T) {
 	s1, s2 := NewStyle(Blink, Yellow, Blue), NewStyle(Dim, Green, Red)
-	tt, fx := fx(t)
+	tt, fx := newLineFX(t)
 	fx.Switch(TrimmedHighlighted)
 	fx.setStyledAt(2, []rune("  012"), s1)
 	fx.setAt(7, []rune("3456"))
@@ -372,7 +372,7 @@ func (s *ALine) Adapts_styles_overlapping_trimmed_highlighted_range(t *T) {
 
 func (s *ALine) Adapts_enclosed_styles_in_trimmed_highlighted(t *T) {
 	s1, s2 := NewStyle(Blink, Yellow, Blue), NewStyle(Dim, Green, Red)
-	tt, fx := fx(t)
+	tt, fx := newLineFX(t)
 	fx.Switch(TrimmedHighlighted)
 	fx.setAt(4, []rune("01"))
 	fx.setStyledAt(6, []rune("23"), s1)
@@ -404,7 +404,7 @@ func (s *ALine) Adapts_enclosed_styles_in_trimmed_highlighted(t *T) {
 
 func (s *ALine) Adapts_enclosing_style_of_trimmed_highlighted(t *T) {
 	s1 := NewStyle(Blink, Yellow, Blue)
-	tt, fx := fx(t)
+	tt, fx := newLineFX(t)
 	fx.Switch(TrimmedHighlighted)
 	fx.setStyledAt(3, []rune(" 0123456789 "), s1)
 	hs1 := fx.highlighted(s1)

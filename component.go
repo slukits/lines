@@ -23,6 +23,13 @@ import (
 //	    c.Dim().SetHeight(5) // will not panic
 //	}
 //
+// Note that there are three rectangles on the screen associated with
+// component:
+//
+//	c.Dim().Rect() // the component's "screen area" including margins
+//	c.Dim().Area() // the "printable area", i.e. without margins
+//	c.ContentArea() // the "content area", i.e. without margins and gaps
+//
 // Next to embedding the Component type a client component will usually
 // also implement event listener interfaces to receive events like:
 //   - [Initer] is informed once before a component becomes part of the layout
@@ -267,9 +274,7 @@ type layoutComponenter interface {
 
 // stackingWrapper wraps a stacking user-component for the
 // layout-manager.
-type stackingWrapper struct {
-	*component
-}
+type stackingWrapper struct{ *component }
 
 func (sw *stackingWrapper) Gaps() api.Gaps {
 	if sw.gaps == nil {
@@ -298,9 +303,7 @@ func (sw *stackingWrapper) ForStacked(cb func(lyt.Dimer) bool) {
 
 // chainingWrapper wraps a chaining user-component for the
 // layout-manager.
-type chainingWrapper struct {
-	*component
-}
+type chainingWrapper struct{ *component }
 
 func (sw *chainingWrapper) Gaps() api.Gaps {
 	if sw.gaps == nil {

@@ -381,7 +381,7 @@ func globalsPropagationClosure(
 ) func(func(globaler)) {
 
 	return func(f func(globaler)) {
-		scr.forComponent(func(lc layoutComponenter) {
+		scr.forBaseComponents(func(lc layoutComponenter) {
 			f(lc.wrapped())
 		})
 	}

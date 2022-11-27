@@ -15,7 +15,7 @@ type Layouter interface {
 
 	// OnLayout is called after the layout manager has changed the
 	// screen area of a component.
-	OnLayout(*Env)
+	OnLayout(*Env) (reflow bool)
 }
 
 // Stacker is implemented by components which want to provide nested
@@ -40,6 +40,7 @@ type screen struct {
 	lyt     *lyt.Manager
 	backend api.Displayer
 	focus   layoutComponenter
+	mouseIn layoutComponenter
 }
 
 func newScreen(backend api.UIer, cmp Componenter, gg *globals) *screen {
@@ -52,6 +53,16 @@ func newScreen(backend api.UIer, cmp Componenter, gg *globals) *screen {
 	scr.lyt = &lyt.Manager{Root: lc}
 	scr.focus = lc
 	return scr
+}
+
+func (s *screen) setRoot(c Componenter, gg *globals) {
+	if c == nil {
+		return
+	}
+	lc := c.initialize(c, s.backend.(api.UIer), gg.clone())
+	lc.wrapped().ensureFeatures()
+	s.lyt.SetRoot(lc)
+	s.focus = lc
 }
 
 func (s *screen) root() *component {
@@ -68,11 +79,36 @@ func (s *screen) setHeight(h int) *screen {
 	return s
 }
 
-func (s *screen) forComponent(cb func(layoutComponenter)) {
+// forBaseComponents calls back for the components of the base layer.
+func (s *screen) forBaseComponents(cb func(layoutComponenter)) {
 	s.lyt.ForDimer(nil, func(d lyt.Dimer) (stop bool) {
 		cb(d.(layoutComponenter))
 		return false
 	})
+}
+
+type dimerIterator interface {
+	ForDimer(lyt.Dimer, func(lyt.Dimer) bool) *lyt.Layers
+}
+
+// forComponent calls back for all components including components of
+// layers whereas the layers are processed in the order they where
+// provided to the layout manager.
+func (s *screen) forComponent(cb func(layoutComponenter)) {
+	var recurseOverComponents func(dimerIterator, func(layoutComponenter))
+	recurseOverComponents = func(
+		m dimerIterator, cb func(layoutComponenter),
+	) {
+		ll := m.ForDimer(nil, func(d lyt.Dimer) (stop bool) {
+			cb(d.(layoutComponenter))
+			return false
+		})
+		ll.For(func(l *lyt.Layer) (stop bool) {
+			recurseOverComponents(l, cb)
+			return
+		})
+	}
+	recurseOverComponents(s.lyt, cb)
 }
 
 func (s *screen) forUninitialized(cb func(Componenter)) {
@@ -111,59 +147,113 @@ func (s *screen) forBubbling(
 
 // hardSync reflows the layout and hard-syncs every component.
 func (s *screen) hardSync(ll *Lines) {
-	s.syncReLayout(ll, nil)
-	s.lyt.ForDimer(nil, func(d lyt.Dimer) (stop bool) {
-		wrapped := d.(layoutComponenter).wrapped()
-		wrapped.hardSync(s.backend)
+	s.syncReflowLayout(ll, nil)
+	s.lyt.Root.(layoutComponenter).wrapped().hardSync(s.backend)
+	s.lyt.Layers.For(func(l *lyt.Layer) (stop bool) {
+		l.Root.(layoutComponenter).wrapped().hardSync(s.backend)
 		return false
 	})
 	s.backend.Redraw()
+	s.ensureFocus(ll)
 }
 
 // softSync reflows the layout and  hard-syncs every component whose
 // layout changed and soft-syncs all remaining dirty components.
 // NOTE reflowing the layout is always necessary because we don't know
-// if the user added any new components.
+// if the user added/removed any components.
 func (s *screen) softSync(ll *Lines) {
-	s.syncReLayout(ll, func(cmp Componenter) {
-		cmp.layoutComponent().wrapped().hardSync(s.backend)
+	s.syncReflowLayout(ll, func(c Componenter) {
+		c.layoutComponent().wrapped().SetDirty()
 	})
-	s.syncDirty()
+	if !s.lyt.Root.(layoutComponenter).wrapped().IsDirty() &&
+		s.lyt.Layers == nil {
+		s.ensureFocus(ll)
+		return
+	}
+	if s.lyt.Root.(layoutComponenter).wrapped().IsDirty() {
+		s.lyt.Root.(layoutComponenter).wrapped().sync(s.backend)
+	}
+	s.lyt.Layers.For(func(l *lyt.Layer) (stop bool) {
+		l.Root.(layoutComponenter).wrapped().hardSync(s.backend)
+		return false
+	})
 	s.backend.Update()
+	s.ensureFocus(ll)
 }
 
-// syncReLayout reflows the layout and reports to every component with
-// changed layout implementing Layouter.  It also calls back for every
-// component with changed layout if callback not nil.
-func (s *screen) syncReLayout(ll *Lines, cb func(Componenter)) {
-	if s.lyt.IsDirty() {
-		reported := false
-		cntx := &rprContext{ll: ll, scr: s}
+type components []*component
+
+func (cc components) has(c *component) bool {
+	for _, _c := range cc {
+		if _c == c {
+			return true
+		}
+	}
+	return false
+}
+
+type layereder interface {
+	Layered() layoutComponenter
+}
+
+func (s *screen) ensureFocus(ll *Lines) {
+	if modal := s.haveModal(); modal != nil {
+		if modal == s.focus {
+			return
+		}
+		moveFocus(modal.userComponent(), &rprContext{ll: ll, scr: s})
+		return
+	}
+	if s.lyt.Has(s.focus, nil) || s.lyt.Layers.Have(s.focus) {
+		return
+	}
+	moveFocus(
+		s.lyt.Root.(layoutComponenter).userComponent(),
+		&rprContext{ll: ll, scr: s},
+	)
+}
+
+func (s *screen) haveModal() (lc layoutComponenter) {
+	s.lyt.Layers.ForReversed(func(l *lyt.Layer) (stop bool) {
+		_, ok := l.Root.(layoutComponenter).userComponent().(Modaler)
+		if !ok {
+			return false
+		}
+		lc = l.Root.(layoutComponenter)
+		return true
+	})
+	return lc
+}
+
+// syncReflowLayout reflows the layout and reports to every component
+// with changed layout implementing Layouter.  It also calls back for
+// every component with changed layout if callback not nil.
+func (s *screen) syncReflowLayout(lines *Lines, cb func(Componenter)) {
+	cntx := &rprContext{ll: lines, scr: s}
+	for reflow := s.lyt.IsDirty(); reflow; {
+		reflow = false
+		ll := s.lyt.Layers
 		s.lyt.Reflow(func(d lyt.Dimer) {
 			cmp := d.(layoutComponenter).userComponent()
 			if lyt, ok := cmp.(Layouter); ok {
-				callback(cmp, cntx, lyt.OnLayout)
-				if !reported {
-					reported = true
-				}
+				callback(cmp, cntx, func(e *Env) {
+					reflow = lyt.OnLayout(e)
+				})
 			}
 			if cb != nil {
 				cb(cmp)
 			}
 		})
-	}
-}
-
-// syncDirty syncs component with updated content.
-func (s *screen) syncDirty() {
-	s.lyt.ForDimer(nil, func(d lyt.Dimer) (stop bool) {
-		// cmp := d.(layoutComponenter).userComponent()
-		wrapped := d.(layoutComponenter).wrapped()
-		if wrapped.IsDirty() {
-			wrapped.sync(s.backend)
+		if cb != nil {
+			s.lyt.Layers.BaseDimerLayeredByReMovedLayers(
+				s.lyt, ll, func(d lyt.Dimer) {
+					cb(d.(layoutComponenter).userComponent())
+				})
 		}
-		return false
-	})
+		if reflow {
+			reportInit(lines, s)
+		}
+	}
 }
 
 // Stacking embedded in a component makes the component implement the

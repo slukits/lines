@@ -196,6 +196,11 @@ type ResizeEventer interface {
 	Size() (int, int)
 }
 
+// Gaps is internally used for layout calculations of nested components
+// of either stacking or chaining gaped components.  The layout wrapper
+// of stacking/chaining components created during a component's
+// initialization process provides a Gaps instance to the layout
+// manager.
 type Gaps struct {
 	Top, Right, Bottom, Left int
 }

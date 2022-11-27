@@ -139,28 +139,51 @@ func (tt *Fixture) FireKey(k api.Key, m ...ModifierMask) {
 	}
 }
 
+// FireMove posts a mouse move to given coordinates; an other two given
+// ints will be reported as the origin of the mouse move.  Are any given
+// coordinates outside the screen area the call is ignored.
+func (tt *Fixture) FireMove(x, y int, xy ...int) {
+	tt.t.Helper()
+	if !tt.validCoordinates(x, y, xy...) {
+		return
+	}
+	tt.PostMove(x, y, xy...)
+}
+
 // FireClick posts a first (left) button click at given coordinates and
 // returns after this event has been processed.  Are given coordinates
 // outside the printable screen area the call is ignored.
 func (tt *Fixture) FireClick(x, y int) {
 	tt.t.Helper()
-	width, height := tt.Lines.scr.backend.Size()
-	if x < 0 || y < 0 || x >= width || y >= height {
+	if !tt.validCoordinates(x, y) {
 		return
 	}
-	tt.PostMouse(x, y, api.Primary, api.ZeroModifier)
+	tt.PostClick(x, y, api.Primary, api.ZeroModifier)
 }
 
-// FireContext posts a second (right) button click at given coordinates
+// FireContext posts a secondary (right) button click at given coordinates
 // and returns after this event has been processed.  Are given
-// coordinates outside the printable screen area the call is ignored.
+// coordinates outside the screen area the call is ignored.
 func (tt *Fixture) FireContext(x, y int) {
 	tt.t.Helper()
-	width, height := tt.Lines.scr.backend.Size()
-	if x < 0 || y < 0 || x >= width || y >= height {
+	if !tt.validCoordinates(x, y) {
 		return
 	}
-	tt.PostMouse(x, y, api.Secondary, api.ZeroModifier)
+	tt.PostClick(x, y, api.Secondary, api.ZeroModifier)
+}
+
+func (tt *Fixture) FireDragNDrop(
+	x, y int, b ButtonMask, mm ModifierMask, xy ...int,
+) {
+	tt.t.Helper()
+	if !tt.validCoordinates(x, y, xy...) {
+		return
+	}
+	var dx, dy int
+	if len(xy) >= 2 {
+		dx, dy = xy[0], xy[1]
+	}
+	tt.PostDrag(dx, dy, b, mm)(x, y)
 }
 
 // FireMouse posts a mouse event with provided arguments and returns
@@ -170,11 +193,24 @@ func (tt *Fixture) FireMouse(
 	x, y int, bm api.ButtonMask, mm api.ModifierMask,
 ) {
 	tt.t.Helper()
-	width, height := tt.Lines.scr.backend.Size()
-	if x < 0 || y < 0 || x >= width || y >= height {
+	if !tt.validCoordinates(x, y) {
 		return
 	}
+
 	tt.PostMouse(x, y, bm, mm)
+}
+
+func (tt *Fixture) validCoordinates(x, y int, xy ...int) bool {
+	width, height := tt.Lines.scr.backend.Size()
+	if x < 0 || y < 0 || x >= width || y >= height {
+		return false
+	}
+	if len(xy) >= 2 {
+		if xy[0] < 0 || xy[1] < 0 || xy[0] >= width || xy[1] >= height {
+			return false
+		}
+	}
+	return true
 }
 
 // FireComponentClick posts an first (left) button click on given
@@ -213,7 +249,7 @@ func isInside(dim *lyt.Dim, x, y int) (ox, oy int, ok bool) {
 	if x < 0 || y < 0 || dim.IsOffScreen() {
 		return 0, 0, false
 	}
-	_, _, width, height := dim.Area()
+	_, _, width, height := dim.Printable()
 	if x >= width {
 		return 0, 0, false
 	}
@@ -236,7 +272,7 @@ func (tt *Fixture) ScreenOf(c Componenter) api.StringScreen {
 	if dim.IsOffScreen() {
 		return nil
 	}
-	return tt.ScreenArea(dim.Area())
+	return tt.ScreenArea(dim.Printable())
 }
 
 // CellsOf provides a lines of cells representation of given component's
@@ -254,5 +290,5 @@ func (tt *Fixture) CellsOf(c Componenter) api.CellsScreen {
 	if dim.IsOffScreen() {
 		return nil
 	}
-	return tt.CellsArea(dim.Area())
+	return tt.CellsArea(dim.Printable())
 }

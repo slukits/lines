@@ -22,8 +22,9 @@ type clickFX struct {
 	rx, ry              int
 }
 
-func (c *clickFX) OnLayout(_ *Env) {
-	c.x, c.y, c.width, c.height = c.Dim().Area()
+func (c *clickFX) OnLayout(_ *Env) bool {
+	c.x, c.y, c.width, c.height = c.Dim().Printable()
+	return false
 }
 
 func (c *clickFX) OnClick(_ *Env, rx, ry int) {

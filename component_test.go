@@ -361,9 +361,8 @@ func (c *rplStackFX) OnInit(_ *Env) {
 		}}}
 }
 
-func (c *rplStackFX) OnUpdate(e *Env) {
-	cmp := e.Evt.(*UpdateEvent).Data.(Componenter)
-	c.CC[1] = cmp
+func (c *rplStackFX) OnUpdate(e *Env, data interface{}) {
+	c.CC[1] = data.(Componenter)
 }
 
 func (s *AComponent) Is_replaceable(t *T) {
