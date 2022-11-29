@@ -58,23 +58,22 @@ type Fixture struct {
 }
 
 // TermFixture returns a Fixture instance with a slightly differently
-// behaving [Lines] instance and features useful for testing.
-// Potentially occurring errors during the usage of a Fixture fatales
-// given testing.T instance.
+// behaving [Lines] instance which has given component c as root and
+// features useful for testing.  Potentially occurring errors during the
+// usage of a Fixture fatales given testing instance t.
 //
 // The here created [Lines] instance has a non-blocking
 // [Lines.WaitForQuit] method and all its methods triggering events are
 // guaranteed to return after the event and subsequently triggered
 // events have been processed and the (simulation) screen is
-// synchronized.  Or an event triggering method fatales given testing.T
-// instance if given duration timeout has passed before all events have
-// been processed.
+// synchronized.  Or an event triggering method fatales t if given
+// duration timeout has passed before all events have been processed.
 //
 // Testing provides methods for firing user input events like
 // [Fixture.FireRune] and retrieving the content of the screen and its
 // stylings.  Also user input emulating events do not return before they
 // were processed along with subsequently triggered events and all
-// prints to the screen have been synchronized within given timeout.
+// prints to the screen have been synchronized within timeout.
 func TermFixture(
 	t *testing.T,
 	timeout time.Duration,
@@ -280,7 +279,7 @@ func (tt *Fixture) ScreenOf(c Componenter) api.StringScreen {
 // CellsScreen provides next to a string representation also style
 // information for each screen coordinate.  The returned CellsScreen is
 // nil if given componenter is not part of the layout or off-screen.
-// Note call CellsArea(c.Dim().Rect()) to get the screen area of a
+// Note call CellsArea(c.Dim().Screen()) to get the screen area of a
 // component including margins.
 func (tt *Fixture) CellsOf(c Componenter) api.CellsScreen {
 	if !c.hasLayoutWrapper() {

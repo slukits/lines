@@ -238,9 +238,9 @@ Fixture-instance are:
 
 Enjoy!
 
-[examples/layers]: https://github.com/slukits/lines/tree/overlay/examples/layers
-[examples/scrolling]: https://github.com/slukits/lines/blob/overlay/examples/scrolling/scrolling.go
-[examples/gaps]: https://github.com/slukits/lines/blob/overlay/examples/gaps/gaps.go
+[examples/layers]: https://github.com/slukits/lines/tree/main/examples/layers
+[examples/scrolling]: https://github.com/slukits/lines/blob/main/examples/scrolling/scrolling.go
+[examples/gaps]: https://github.com/slukits/lines/blob/main/examples/gaps/gaps.go
 [tcell]: https://github.com/gdamore/tcell
 */
 package lines

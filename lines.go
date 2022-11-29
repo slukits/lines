@@ -27,8 +27,7 @@ following event interfaces with their reported event are defined:
   - [Keyer]: OnKey(*Env, Key, ModifierMask): special key like Esc
   - [Runer]: OnRune(*Env, rune, ModifierMask)
   - [Enterer]: OnEnter(*Env): mouse-pointer entered component
-  - [Exiter]: OnExit(*Env): mouse-pointer entered component
-  - [Enterer]: OnEnter(*Env): mouse-pointer leaves component
+  - [Exiter]: OnExit(*Env): mouse-pointer leaves component
   - [Mouser]: OnMouse(*Env, ButtonMask, int, int): any mouse-event
   - [Clicker]: OnClick(_ *Env, x, y int): primary button click
   - [Contexter]: OnContext(_ *Env, x, y int): secondary button click
