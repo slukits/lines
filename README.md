@@ -170,6 +170,11 @@ do all sorts of framing, padding and guttering of a component.  See
 with gaps.  Remember that Src and Gaps will panic if accessed outside a
 listener callback.
 
+
+<p align="center">
+  <img width="480" src="gaps.png">
+</p>
+
 # Feature handling
 
 The feature concept answers the question after the default behavior of
