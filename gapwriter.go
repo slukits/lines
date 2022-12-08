@@ -15,25 +15,25 @@ type GapsWriter struct {
 
 	// Top writes to the top gap, i.e. first line of a component's
 	// screen area (plus provided level).
-	Top *gapWriter
+	Top *GapWriter
 
 	// Bottom writes to the bottom gap, i.e. last line of a component's
 	// screen area (minus provided level).
-	Bottom *gapWriter
+	Bottom *GapWriter
 
 	// Left writes to the left gap, i.e. first column of a component's
 	// screen area (plus provided level).
-	Left *gapWriter
+	Left *GapWriter
 
 	// Right writes to the right gap, i.e. last column of a component's
 	// screen area (minus provided level).
-	Right *gapWriter
+	Right *GapWriter
 
 	// Horizontal writes to bottom and top gap.
-	Horizontal *gapWriter
+	Horizontal *GapWriter
 
 	// Vertical writes to left and right gap.
-	Vertical *gapWriter
+	Vertical *GapWriter
 
 	// TopLeft writes to the top left corner at selected level.
 	TopLeft *cornerWriter
@@ -62,12 +62,12 @@ func newGapsWriter(level int, gg *gaps) *GapsWriter {
 		BottomLeft:  &cornerWriter{gg: gg, cm: bottomLeft, level: level},
 		Corners:     &cornerWriter{gg: gg, cm: allCorners, level: level},
 	}
-	ggw.Top = &gapWriter{ggw: ggw, gm: top, level: level}
-	ggw.Bottom = &gapWriter{ggw: ggw, gm: bottom, level: level}
-	ggw.Left = &gapWriter{ggw: ggw, gm: left, level: level}
-	ggw.Right = &gapWriter{ggw: ggw, gm: right, level: level}
-	ggw.Horizontal = &gapWriter{ggw: ggw, gm: top | bottom, level: level}
-	ggw.Vertical = &gapWriter{ggw: ggw, gm: left | right, level: level}
+	ggw.Top = &GapWriter{ggw: ggw, gm: top, level: level}
+	ggw.Bottom = &GapWriter{ggw: ggw, gm: bottom, level: level}
+	ggw.Left = &GapWriter{ggw: ggw, gm: left, level: level}
+	ggw.Right = &GapWriter{ggw: ggw, gm: right, level: level}
+	ggw.Horizontal = &GapWriter{ggw: ggw, gm: top | bottom, level: level}
+	ggw.Vertical = &GapWriter{ggw: ggw, gm: left | right, level: level}
 	return ggw
 }
 
@@ -145,6 +145,7 @@ func (af *allGapsFiller) WriteAt(rr []rune) {
 
 type allGapsWriter struct{ ggw *GapsWriter }
 
+// Write given bytes bb to all gaps of associated component.
 func (agg *allGapsWriter) Write(bb []byte) (int, error) {
 	for _, g := range selectGaps(agg.ggw.gg, top|right|bottom|left) {
 		g.set(agg.ggw.level, string(bb))
@@ -152,19 +153,26 @@ func (agg *allGapsWriter) Write(bb []byte) (int, error) {
 	return len(bb), nil
 }
 
-type gapWriter struct {
+// GapWriter lets a client print to a specific gap.  A gap writer is
+// obtained from a component c's gaps API, see [Component.Gaps]:
+//
+//	gw := c.Gaps(1).Top.FG(lines.LightGray).BG(lines.DarkGray)
+//	fmt.Fprint(gw, "second gap-line of the top gap")
+type GapWriter struct {
 	gm    gapMask
 	ggw   *GapsWriter
 	level int
 	sty   *Style
 }
 
-func (w *gapWriter) Write(bb []byte) (int, error) {
-	if len(bb) == 0 {
-		return 0, nil
-	}
+// Write given bytes bb to the gaps given gap-writer w is associated
+// with while ensuring set optional gap style information.
+func (w *GapWriter) Write(bb []byte) (int, error) {
 	write := func(g *gap) {
 		g.set(w.level, string(bb))
+		if w.sty != nil {
+			g.setDefaultStyle(w.level, *w.sty)
+		}
 	}
 	for _, g := range selectGaps(w.ggw.gg, w.gm) {
 		write(g)
@@ -192,7 +200,9 @@ func selectGaps(gg *gaps, gm gapMask) []*gap {
 	return nil
 }
 
-func (g *gapWriter) At(idx int) *gapAtWriter {
+// At sets the column index idx for the next write of return
+// gap-at-writer.
+func (g *GapWriter) At(idx int) *gapAtWriter {
 	return &gapAtWriter{
 		ggw:   g.ggw,
 		gm:    g.gm & (top | right | bottom | left),
@@ -201,55 +211,77 @@ func (g *gapWriter) At(idx int) *gapAtWriter {
 	}
 }
 
-func (g *gapWriter) initStyle(sty Style) {
+func (g *GapWriter) initStyle(sty Style) {
 	for _, gp := range selectGaps(g.ggw.gg, g.gm) {
 		gp.setDefaultStyle(g.level, sty)
 	}
+
 	g.sty = &sty
 }
 
 // AA stets given style attributes aa for selected gap's next write at
 // selected level.
-func (g *gapWriter) AA(aa StyleAttributeMask) *gapWriter {
+func (g *GapWriter) AA(aa StyleAttributeMask) *GapWriter {
 	if g.sty == nil {
 		g.initStyle(g.ggw.gg.sty.WithAA(aa))
 		return g
 	}
+	// gaps should get style attributed also if the client doesn't write
+	// to the gap hence the style-property of the gap line is set ...
 	for _, gp := range selectGaps(g.ggw.gg, g.gm) {
 		gp.withAA(g.level, aa)
 	}
+	// ... as well as the style of the writer, since writing to a Line
+	// resets its style the writer's sty-property provides the
+	// possibility to write styled to the gap Line.
+	sty := g.sty.WithAA(aa)
+	g.sty = &sty
 	return g
 }
 
 // FG stets given color c as foreground color for selected gap's next
 // write at selected level.
-func (g *gapWriter) FG(c Color) *gapWriter {
+func (g *GapWriter) FG(c Color) *GapWriter {
 	if g.sty == nil {
 		g.initStyle(g.ggw.gg.sty.WithFG(c))
 		return g
 	}
+	// gaps should get style attributed also if the client doesn't write
+	// to the gap hence the style-property of the gap line is set ...
 	for _, gp := range selectGaps(g.ggw.gg, g.gm) {
 		gp.withFG(g.level, c)
 	}
+	// ... as well as the style of the writer, since writing to a Line
+	// resets its style the writer's sty-property provides the
+	// possibility to write styled to the gap Line.
+	sty := g.sty.WithFG(c)
+	g.sty = &sty
 	return g
 }
 
 // BG stets given color c as background color for selected gap's next
 // write at selected level.
-func (g *gapWriter) BG(c Color) *gapWriter {
+func (g *GapWriter) BG(c Color) *GapWriter {
 	if g.sty == nil {
 		g.initStyle(g.ggw.gg.sty.WithBG(c))
 		return g
 	}
+	// gaps should get style attributed also if the client doesn't write
+	// to the gap hence the style-property of the gap line is set ...
 	for _, gp := range selectGaps(g.ggw.gg, g.gm) {
 		gp.withBG(g.level, c)
 	}
+	// ... as well as the style of the writer, since writing to a Line
+	// resets its style the writer's sty-property provides the
+	// possibility to write styled to the gap Line.
+	sty := g.sty.WithBG(c)
+	g.sty = &sty
 	return g
 }
 
 // Sty stets given style s for selected gap's next write at selected
 // level, i.e. sets style attributes and colors.
-func (g *gapWriter) Sty(s Style) *gapWriter {
+func (g *GapWriter) Sty(s Style) *GapWriter {
 	g.initStyle(s)
 	return g
 }

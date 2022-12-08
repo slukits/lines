@@ -58,40 +58,32 @@ func (s *_Features) Has_by_default_only_quitable_registered(t *T) {
 	})
 }
 
-func (s *_Features) Ignores_deletion_of_default_quitable_keys(t *T) {
-	s.tt(t, func(ff *Features) {
-		ff.ensureInitialized()
-		exp := defaultFeatures.keysOf(Quitable)
-		got := ff.KeysOf(Quitable)
-		t.True(exp.Equals(got))
-		ff.SetKeysOf(Quitable, false)
-		got = ff.KeysOf(Quitable)
-		t.True(exp.Equals(got))
-		ff.Delete(Quitable)
-		got = ff.KeysOf(Quitable)
-		t.True(exp.Equals(got))
-	})
-}
-
-func (s *_Features) Delete_user_added_quitable_keys(t *T) {
-	s.tt(t, func(ff *Features) {
-		ff.ensureInitialized()
-		exp := defaultFeatures.keysOf(Quitable)
-		fx := FeatureKey{Key: CtrlX, Mod: 0}
-		ff.SetKeysOf(Quitable, false, fx)
-		t.True(ff.KeysOf(Quitable).Equals(append(exp, fx)))
-		ff.Delete(Quitable)
-		t.True(exp.Equals(ff.KeysOf(Quitable)))
-	})
-}
-
-func (s *_Features) Delete_default_quitable_rune(t *T) {
-	s.tt(t, func(ff *Features) {
-		ff.ensureInitialized()
-		ff.SetRunesOf(Quitable, false)
-		t.True(len(ff.RunesOf(Quitable)) == 0)
-	})
-}
+// func (s *_Features) Ignores_deletion_of_default_quitable_keys(t *T) {
+// 	s.tt(t, func(ff *Features) {
+// 		ff.ensureInitialized()
+// 		exp := quitableFeatures.keysOf(Quitable)
+// 		got := ff.KeysOf(Quitable)
+// 		t.True(exp.Equals(got))
+// 		ff.SetKeysOf(Quitable, false)
+// 		got = ff.KeysOf(Quitable)
+// 		t.True(exp.Equals(got))
+// 		ff.Delete(Quitable)
+// 		got = ff.KeysOf(Quitable)
+// 		t.True(exp.Equals(got))
+// 	})
+// }
+//
+// func (s *_Features) Delete_user_added_quitable_keys(t *T) {
+// 	s.tt(t, func(ff *Features) {
+// 		ff.ensureInitialized()
+// 		exp := quitableFeatures.keysOf(Quitable)
+// 		fx := FeatureKey{Key: CtrlX, Mod: 0}
+// 		ff.SetKeysOf(Quitable, false, fx)
+// 		t.True(ff.KeysOf(Quitable).Equals(append(exp, fx)))
+// 		ff.Delete(Quitable)
+// 		t.True(exp.Equals(ff.KeysOf(Quitable)))
+// 	})
+// }
 
 func (s *_Features) Have_set_features(t *T) {
 	s.tt(t, func(ff *Features) {

@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/slukits/lines"
+	"github.com/slukits/lines/examples/demo"
 	"github.com/slukits/lines/examples/frame"
 )
 
@@ -16,14 +17,14 @@ import (
 type context struct {
 	lines.Component
 	lines.Stacking
-	demo
+	demo.Demo
 }
 
 var contextTitle []rune = []rune("context-demo")
 
 // OnInit sets up the context-area component.
 func (c *context) OnInit(e *lines.Env) {
-	c.init(c, e, contextTitle)
+	c.Init(c, e, contextTitle)
 	c.CC = append(c.CC, &contextArea{})
 }
 

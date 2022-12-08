@@ -255,7 +255,7 @@ var tcellToApiKeys = map[tcell.Key]api.Key{
 	tcell.KeyF64:       api.F64,
 }
 
-var apiToTcellMods = map[api.ModifierMask]tcell.ModMask{
+var apiToTcellModifiers = map[api.ModifierMask]tcell.ModMask{
 	api.Shift:        tcell.ModShift,
 	api.Ctrl:         tcell.ModCtrl,
 	api.Alt:          tcell.ModAlt,
@@ -263,12 +263,41 @@ var apiToTcellMods = map[api.ModifierMask]tcell.ModMask{
 	api.ZeroModifier: tcell.ModNone,
 }
 
-var tcellToApiMods = map[tcell.ModMask]api.ModifierMask{
+var apiModifiers = []api.ModifierMask{
+	api.Shift, api.Ctrl, api.Alt, api.Meta, api.ZeroModifier,
+}
+
+func apiModifiersToTcell(mm api.ModifierMask) (tm tcell.ModMask) {
+	for _, m := range apiModifiers {
+		if mm&m == 0 {
+			continue
+		}
+		tm |= apiToTcellModifiers[m]
+	}
+	return tm
+}
+
+var tcellToApiModifiers = map[tcell.ModMask]api.ModifierMask{
 	tcell.ModShift: api.Shift,
 	tcell.ModCtrl:  api.Ctrl,
 	tcell.ModAlt:   api.Alt,
 	tcell.ModMeta:  api.Meta,
 	tcell.ModNone:  api.ZeroModifier,
+}
+
+var tcellModifiers = []tcell.ModMask{
+	tcell.ModShift, tcell.ModCtrl, tcell.ModAlt, tcell.ModMeta,
+	tcell.ModNone,
+}
+
+func tcellModifiersToApi(mm tcell.ModMask) (am api.ModifierMask) {
+	for _, m := range tcellModifiers {
+		if mm&m == 0 {
+			continue
+		}
+		am |= tcellToApiModifiers[m]
+	}
+	return am
 }
 
 type keyEvent struct{ evt *tcell.EventKey }
@@ -277,7 +306,7 @@ func newKeyEvent(k api.Key, m api.ModifierMask) api.KeyEventer {
 	return &keyEvent{evt: tcell.NewEventKey(
 		apiToTcellKeys[k],
 		rune(tcell.KeyRune),
-		apiToTcellMods[m],
+		apiModifiersToTcell(m),
 	)}
 }
 
@@ -286,7 +315,7 @@ func (e *keyEvent) Key() api.Key {
 }
 
 func (e *keyEvent) Mod() api.ModifierMask {
-	return tcellToApiMods[e.evt.Modifiers()]
+	return tcellModifiersToApi(e.evt.Modifiers())
 }
 
 func (e *keyEvent) When() time.Time { return e.evt.When() }
@@ -297,14 +326,14 @@ type runeEvent struct{ evt *tcell.EventKey }
 
 func newRuneEvent(r rune, m api.ModifierMask) api.RuneEventer {
 	return &runeEvent{evt: tcell.NewEventKey(
-		tcell.KeyNUL, r, apiToTcellMods[m],
+		tcell.KeyNUL, r, apiModifiersToTcell(m),
 	)}
 }
 
 func (e *runeEvent) Rune() rune { return e.evt.Rune() }
 
 func (e *runeEvent) Mod() api.ModifierMask {
-	return tcellToApiMods[e.evt.Modifiers()]
+	return tcellModifiersToApi(e.evt.Modifiers())
 }
 
 func (e *runeEvent) When() time.Time { return e.evt.When() }

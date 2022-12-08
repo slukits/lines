@@ -59,6 +59,10 @@ func (g *gap) set(level int, s string) {
 	g.ensureLevel(level).set(s)
 }
 
+func (g *gap) setStyled(level int, s string, sty *Style) {
+	g.ensureLevel(level).setStyled(s, *sty)
+}
+
 func (g *gap) setAt(level, at int, rr []rune) {
 	g.ensureLevel(level).setAt(at, rr)
 }

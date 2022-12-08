@@ -98,6 +98,10 @@ func (tt *Fixture) Display(s string, sty api.Style) {
 
 func (tt *Fixture) PostKey(k api.Key, m api.ModifierMask) {
 	tt.t.Helper()
+	// NOTE UI.Post is used instead of tcell.PostEvent to make
+	// transactional event processing work, i.e. an event post doesn't
+	// return before all triggered sub-events are processed and all
+	// content updates made it to the screen.
 	if err := tt.ui.Post(newKeyEvent(k, m)); err != nil {
 		tt.t.Fatalf("post: key: %v", err)
 	}
@@ -105,6 +109,10 @@ func (tt *Fixture) PostKey(k api.Key, m api.ModifierMask) {
 
 func (tt *Fixture) PostRune(r rune, m api.ModifierMask) {
 	tt.t.Helper()
+	// NOTE UI.Post is used instead of tcell.PostEvent to make
+	// transactional event processing work, i.e. an event post doesn't
+	// return before all triggered sub-events are processed and all
+	// content updates made it to the screen.
 	if err := tt.ui.Post(newRuneEvent(r, m)); err != nil {
 		tt.t.Fatalf("post: rune: %v", err)
 	}
@@ -115,8 +123,8 @@ func newMouseEvent(
 ) api.MouseEventer {
 	return &mouseEvent{evt: tcell.NewEventMouse(
 		x, y,
-		apiToTcellButtons[b],
-		apiToTcellMods[m],
+		apiButtonsToTcell(b),
+		apiModifiersToTcell(m),
 	)}
 }
 
@@ -124,6 +132,10 @@ func (tt *Fixture) PostMouse(
 	x, y int, b api.ButtonMask, m api.ModifierMask,
 ) {
 	tt.t.Helper()
+	// NOTE UI.Post is used instead of tcell.PostEvent to make
+	// transactional event processing work, i.e. an event post doesn't
+	// return before all triggered sub-events are processed and all
+	// content updates made it to the screen.
 	if err := tt.ui.Post(newMouseEvent(x, y, b, m)); err != nil {
 		tt.t.Fatalf("post: mouse: %v", err)
 	}

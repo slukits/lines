@@ -18,11 +18,17 @@ import (
 	"github.com/slukits/lines/internal/api"
 )
 
+type recoverInfo struct {
+	msg   string
+	stack string
+}
+
 type transactional struct {
-	ui      *UI
-	timeout time.Duration
-	count   atomic.Int32
-	waiting chan bool
+	ui        *UI
+	timeout   time.Duration
+	count     atomic.Int32
+	waiting   chan bool
+	inRecover *recoverInfo
 }
 
 func (t *transactional) Post(evt api.Eventer) error {
@@ -41,6 +47,9 @@ func (t *transactional) postAndWait(evt api.Eventer) error {
 			if done {
 				return err
 			}
+			if t.inRecover != nil {
+				panic(fmt.Sprintf("%s\n%s", t.inRecover.msg, t.inRecover.stack))
+			}
 		case <-time.After(t.timeout):
 			return fmt.Errorf("post transactional %T: timeout", evt)
 		}
@@ -49,4 +58,13 @@ func (t *transactional) postAndWait(evt api.Eventer) error {
 
 func (t *transactional) polled() {
 	t.waiting <- t.count.Add(-1) == 0
+}
+
+func (t *transactional) recovering(msg string, stack string) bool {
+	if t == nil {
+		return false
+	}
+	t.inRecover = &recoverInfo{msg: msg, stack: stack}
+	close(t.waiting)
+	return true
 }

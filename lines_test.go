@@ -32,7 +32,7 @@ func (s *_lines) Initializes_initially_given_component(t *T) {
 }
 
 func (s *_lines) Reports_quit_key_events_to_all_quitter(t *T) {
-	for _, k := range defaultFeatures.keysOf(Quitable) {
+	for _, k := range quitableFeatures.keysOf(Quitable) {
 		q1, q2 := false, false
 		tt := s.tt(t, &cmpFX{})
 		tt.Lines.OnQuit(func() { q1 = true })
@@ -201,6 +201,10 @@ func newStacking(cc ...Componenter) *stackedCmpFX {
 	return &stackedCmpFX{Stacking: Stacking{CC: cc}}
 }
 
+func (c *stackedCmpFX) stacked(idx int) *cmpFX {
+	return c.CC[idx].(*cmpFX)
+}
+
 func (c *stackedCmpFX) OnFocusLost(*Env) { c.lostFocusReported = true }
 
 type fcsCmpFX struct {
@@ -263,23 +267,131 @@ func (s *_lines) Ignores_focus_moving_if_modal_layer_is_focused(t *T) {
 	})
 }
 
-type dbg struct{ Suite }
-
-func (s *dbg) Dbg(t *T) {
-	fx := fx(t, &layeredFX{layer: &mdlLayerFX{}})
-	fx.FireResize(3, 3)
-	fx.Root().(*layeredFX).addLayer(fx)
-	fx.Lines.Update(fx.Root(), nil, func(e *Env) {
-		t.Eq(fx.Root().(*layeredFX).layer, e.Focused())
+func (s *_lines) Has_no_cursor_component_if_cursor_removed(t *T) {
+	stacking := newStacking(&cmpFX{}, &cmpFX{})
+	tt := fx(t, stacking)
+	cmp := stacking.CC[1].(*cmpFX)
+	tt.Lines.Update(cmp, nil, func(e *Env) {
+		cmp.SetCursor(0, 0, BlockCursorBlinking)
 	})
-
-	fx.Lines.Focus(fx.Root())
-	fx.Lines.Update(fx.Root(), nil, func(e *Env) {
-		t.Eq(fx.Root().(*layeredFX).layer, e.Focused())
+	t.Eq(cmp, tt.Lines.CursorComponent())
+	tt.Lines.Update(cmp, nil, func(e *Env) {
+		cmp.SetCursor(0, 0, ZeroCursor)
 	})
+	t.Eq(Componenter(nil), tt.Lines.CursorComponent())
+	tt.Lines.Update(cmp, nil, func(e *Env) {
+		cmp.SetCursor(0, 0, BlockCursorBlinking)
+	})
+	t.Eq(cmp, tt.Lines.CursorComponent())
+	tt.Lines.RemoveCursor()
+	t.Eq(Componenter(nil), tt.Lines.CursorComponent())
 }
 
-func TestDBG(t *testing.T) { Run(&dbg{}, t) }
+func (s *_lines) Provides_component_to_accordingly_set_cursor(t *T) {
+	stacking := newStacking(&cmpFX{}, &cmpFX{})
+	tt := fx(t, stacking)
+	cmp := stacking.CC[1].(*cmpFX)
+	tt.Lines.Update(cmp, nil, func(e *Env) {
+		tt.Lines.SetCursor(cmp.Dim().X(), cmp.Dim().Y())
+	})
+	t.Eq(cmp, tt.Lines.CursorComponent())
+}
+
+func (s *_lines) Ignores_setting_cursor_outside_the_screen(t *T) {
+	tt, width, height := fx(t, &cmpFX{}), 0, 0
+	tt.Lines.Update(tt.Root(), nil, func(e *Env) {
+		width, height = e.ScreenSize()
+	})
+	tt.Lines.SetCursor(-1, 0)
+	t.Eq(Componenter(nil), tt.Lines.CursorComponent())
+	tt.Lines.SetCursor(0, -1)
+	t.Eq(Componenter(nil), tt.Lines.CursorComponent())
+	tt.Lines.SetCursor(width, 0)
+	t.Eq(Componenter(nil), tt.Lines.CursorComponent())
+	tt.Lines.SetCursor(0, height)
+	t.Eq(Componenter(nil), tt.Lines.CursorComponent())
+}
+
+func (s *_lines) Removes_cursor_not_in_content_area_on_resize(t *T) {
+	stk, chn := &stackedCmpFX{}, &chnFX{}
+	chn.CC = append(chn.CC, &cmpFX{}, &cmpFX{onInit: func(cf *cmpFX, e *Env) {
+		cf.Dim().SetWidth(32).SetHeight(8)
+	}})
+	stk.CC = append(stk.CC, &cmpFX{}, chn)
+	tt := fx(t, stk)
+	cmp := chn.CC[1].(*cmpFX)
+	tt.Lines.Update(cmp, nil, func(e *Env) {
+		tt.Lines.SetCursor(cmp.Dim().X(), cmp.Dim().Y())
+		_, _, haveCursor := cmp.CursorPosition()
+		t.Not.True(haveCursor)
+	})
+	_, _, haveCursor := tt.Lines.CursorPosition()
+	t.True(haveCursor)
+	tt.FireResize(70, 20)
+	_, _, haveCursor = tt.Lines.CursorPosition()
+	t.Not.True(haveCursor)
+}
+
+func (s *_lines) Adjusts_set_content_area_cursor_on_resize(t *T) {
+	stk, chn := &stackedCmpFX{}, &chnFX{}
+	chn.CC = append(chn.CC, &cmpFX{}, &cmpFX{onInit: func(cf *cmpFX, e *Env) {
+		cf.Dim().SetWidth(32).SetHeight(8)
+	}})
+	stk.CC = append(stk.CC, &cmpFX{}, chn)
+	tt := fx(t, stk)
+	cmp, cx, cy := chn.CC[1].(*cmpFX), 0, 0
+	tt.Lines.Update(cmp, nil, func(e *Env) {
+		cx, cy, _, _ = cmp.ContentArea()
+		tt.Lines.SetCursor(cx+1, cy+1)
+	})
+	testInvariant := func() {
+		x, y, _ := tt.Lines.CursorPosition()
+		t.Eq(cx+1, x)
+		t.Eq(cy+1, y)
+	}
+	testInvariant()
+	tt.FireResize(70, 20)
+	tt.Lines.Update(cmp, nil, func(e *Env) {
+		cx, cy, _, _ = cmp.ContentArea()
+	})
+	testInvariant()
+}
+
+func (s *_lines) Reports_cursor_change_on_resize(t *T) {
+	cmp := &cmpFX{
+		onInit: func(c *cmpFX, e *Env) {
+			c.FF.Add(CellFocusable)
+			c.Dim().SetWidth(10).SetHeight(2)
+			fmt.Fprint(e, "1st\n2nd\n3rd")
+			e.Lines.SetCursor(0, 0)
+		},
+		onCursor: func(c *cmpFX, e *Env, absOnly bool) {
+			switch c.N(onCursor) {
+			case 1:
+				x, y, cursorSet := e.Lines.CursorPosition()
+				t.True(!absOnly && !cursorSet && x == y && x == -1)
+			case 2:
+				x, y, cursorSet := c.CursorPosition()
+				t.True(absOnly && cursorSet && x == y && x == 1)
+			}
+		},
+	}
+	fx := fx(t, cmp, 20*time.Minute)
+	x, y, cursorSet := fx.Lines.CursorPosition()
+	t.True(cursorSet && x == y && x == 0)
+	fx.FireResize(40, 10)
+
+	t.FatalIfNot(t.Eq(1, cmp.N(onCursor)))
+
+	fx.Lines.Update(cmp, nil, func(e *Env) {
+		cmp.SetCursor(1, 1)
+		ln, cl, cursorSet := cmp.CursorPosition()
+		t.True(cursorSet && ln == cl && ln == 1)
+	})
+	fx.FireResize(3, 2)
+
+	t.FatalIfNot(t.Eq(2, cmp.N(onCursor)))
+}
 
 func TestLines(t *testing.T) {
 	t.Parallel()

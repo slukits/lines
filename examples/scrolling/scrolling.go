@@ -49,7 +49,7 @@ type messageBar struct{ lines.Component }
 
 var mm []string = []string{
 	"PgUp/PgDn:" + lines.Filler + "scroll",
-	"up/down/k/j:" + lines.Filler + "focus line",
+	"up/down:" + lines.Filler + "focus line",
 	"click:" + lines.Filler + "focus component",
 }
 
@@ -89,10 +89,6 @@ func (c *scrolling) OnInit(e *lines.Env) {
 	} else {
 		frame(c, []rune("with gaps"), true)
 	}
-}
-
-func (c *scrolling) OnFocus(e *lines.Env) {
-	e.Lines.Focus(c.CC[drcIdx])
 }
 
 type cmpidx int
@@ -175,9 +171,11 @@ type Gapper interface{ Gaps(int) *lines.GapsWriter }
 func (c *direct) OnFocusLost(_ *lines.Env) {
 	if c.gaps {
 		c.Gaps(0).AA(lines.ZeroStyle)
+		c.LL.Focus.Reset()
 		return
 	}
 	c.LL.AA(c.Globals().AA(lines.Default))
+	c.LL.Focus.Reset()
 }
 
 func (c *direct) OnFocus(_ *lines.Env) {
@@ -255,6 +253,8 @@ func newLiner() *liner {
 	return &lr
 }
 
+// Print prints the line with given index idx to given line writer w and
+// returns true if there are lines with a greater index left to write.
 func (l *liner) Print(idx int, w *lines.EnvLineWriter) bool {
 	if len(l.cc) <= idx || idx < 0 {
 		return false
@@ -263,12 +263,19 @@ func (l *liner) Print(idx int, w *lines.EnvLineWriter) bool {
 	return idx+1 < len(l.cc)
 }
 
+// Len returns the total number of content lines a liner implementation
+// can provide to its associated component.
 func (sl liner) Len() int { return len(sl.cc) }
 
+// IsFocusable returns true iff the line with given index idx is
+// focusable.
 func (l *liner) IsFocusable(idx int) bool {
 	return !l.notFocusable[idx]
 }
 
+// Highlighted indicates if focusable lines are highlighted if focused.
+// And in case they are highlighted if they should be trimmed
+// highlighted.
 func (l *liner) Highlighted() (bool, bool) { return true, false }
 
 type linerTrimmed struct {

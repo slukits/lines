@@ -194,6 +194,15 @@ func (c *Component) Gaps(level int) *GapsWriter {
 	return newGapsWriter(level, c.gaps)
 }
 
+// GapsLen returns the numbers of lines/columns a gap at the top, right,
+// bottom and left consumes.  Note a gap must have been written in
+// order to be created.  I.e. if gaps are written at OnLayout and
+// gaps-lengths are queried in OnAfterInit then these lengths might not
+// be what is expected.
+func (c *Component) GapsLen() (top, right, bottom, left int) {
+	return c.gaps.Len()
+}
+
 // Globals provides access to the API for manipulating component c
 // specific globally inherited properties like tab-width.  Note to
 // change such a property globally use the [Lines]-instance ll which
@@ -201,7 +210,40 @@ func (c *Component) Gaps(level int) *GapsWriter {
 // propagates manipulations to all components of the layout.
 func (c *Component) Globals() *globals { return c.gg }
 
-// func (c *Component) component() *Component
+// SetCursor of given component c to given line and column with
+// optionally given cursor style within c's content area.  I.e.
+// line=0, column=0 refers to the first column in the first content-line
+// while gaps and margins are ignored.  Note setting the cursor is only
+// effective after the first layout.  SetCursor is a no-op for stacker
+// and chainer.  [Lines.SetCursor] allows for absolute cursor
+// positioning whereas there the cursor is set to (x,y) coordinates,
+// i.e. it has switched argument order compared to (line,column).
+func (c *Component) SetCursor(
+	line, column int, cs ...CursorStyle,
+) *Component {
+	c.setCursor(line, column, cs...)
+	return c
+}
+
+// CursorPosition returns relative to given component c's content origin
+// the line and column index of the cursor in the content area and true
+// if c has the cursor set; otherwise -1, -1 and false is return.
+func (c *Component) CursorPosition() (line, column int, _ bool) {
+	if c.gg == nil {
+		return -1, -1, false
+	}
+	if c.gg.scr.cursor.Removed() {
+		return -1, -1, false
+	}
+	x, y := c.gg.scr.cursor.Coordinates()
+	cx, cy, cw, ch := c.ContentArea()
+	x -= cx
+	y -= cy
+	if x < 0 || x >= cw || y < 0 || y >= ch {
+		return -1, -1, false
+	}
+	return y, x, true
+}
 
 // component is the actual implementation of a lines-Component.
 type component struct {
@@ -218,10 +260,10 @@ type component struct {
 	// reported event.
 	LL *ComponentLines
 
-	lst   *listeners
-	ff    *features
-	gaps  *gaps
-	dirty bool
+	lst                *listeners
+	ff                 *features
+	gaps               *gaps
+	dirty, cursorMoved bool
 
 	Src *ContentSource
 
@@ -236,9 +278,44 @@ type component struct {
 // a type-switch.
 func (c *component) wrapped() *component { return c }
 
-func (c *component) globals() *globals { return c.gg }
+func (c *component) globals() *globals {
+	if c == nil {
+		return nil
+	}
+	return c.gg
+}
+
+func (c *component) setCursor(
+	line, column int, cs ...CursorStyle,
+) {
+	if _, ok := c.userCmp.layoutComponent().(lyt.Stacker); ok {
+		return
+	}
+	if _, ok := c.userCmp.layoutComponent().(lyt.Chainer); ok {
+		return
+	}
+	if line < 0 || column < 0 {
+		c.gg.setCursor(line, column)
+		if !c.cursorMoved {
+			c.cursorMoved = true
+		}
+		return
+	}
+
+	x, y, w, h := c.ContentArea()
+	if line >= h || column >= w {
+		return
+	}
+	c.gg.setCursor(y+line, x+column, cs...)
+	if !c.cursorMoved {
+		c.cursorMoved = true
+	}
+}
 
 func (c *component) userComponent() Componenter {
+	if c == nil {
+		return nil
+	}
 	return c.userCmp
 }
 
@@ -251,6 +328,14 @@ func (c *component) ensureFeatures() *features {
 		return c.ff
 	}
 	c.ff = defaultFeatures.copy()
+	return c.ff
+}
+
+func (c *component) ensureQuitableFeatures() *features {
+	if c.ff != nil {
+		return c.ff
+	}
+	c.ff = quitableFeatures.copy()
 	return c.ff
 }
 

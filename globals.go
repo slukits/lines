@@ -41,6 +41,7 @@ type globaler interface{ globals() *globals }
 
 // globals represents setup/behavior for a component's lines.
 type globals struct {
+	scr         *screen
 	tabWidth    int
 	ss          map[StyleType]Style
 	updated     globalsUpdates
@@ -64,6 +65,7 @@ func newGlobals(propagation func(func(globaler))) *globals {
 // updated and ssUpdated properties.
 func (gg *globals) clone() *globals {
 	cpy := globals{
+		scr:      gg.scr,
 		tabWidth: gg.tabWidth,
 		ss:       map[StyleType]Style{},
 	}
@@ -71,6 +73,13 @@ func (gg *globals) clone() *globals {
 		cpy.ss[k] = v
 	}
 	return &cpy
+}
+
+// setCursor sets the cursor in a components given line at given column.
+// Note setCursor's arguments are passed through to screen.setCursor
+// whereas column becomes the x- and line the y-coordinate.
+func (gg *globals) setCursor(line, column int, cs ...CursorStyle) {
+	gg.scr.setCursor(column, line, cs...)
 }
 
 func (gg *globals) SetUpdateListener(

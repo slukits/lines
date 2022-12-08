@@ -191,9 +191,9 @@ func (ff *Features) SetRunesOf(
 // except for Quitable.  The two default Quitable bindings ctrl-c and
 // ctrl-d remain.  NOTE use a *Kiosk constructor like [TermKiosk] for a
 // [Lines]-instance to avoid having Quitable set by default.
-func (ff *Features) Delete(f FeatureMask) {
-	ff.ensureInitialized().delete(f)
-}
+// func (ff *Features) Delete(f FeatureMask) {
+// 	ff.ensureInitialized().delete(f)
+// }
 
 // FeatureMask classifies keys/runes/buttons for a components default
 // behavior like focusable, scrollable etc.
@@ -247,23 +247,37 @@ const (
 	lineRightScrollable // TODO: implement
 
 	// nextLineFocusable a component's previous focusable line can
-	// receive the focus. (default down-key and 'j')
+	// receive the focus. (default down-key)
 	PreviousLineFocusable
 
 	// NextLineFocusable a component's next focusable line can receive
-	// the focus. (default up-key and 'k')
+	// the focus. (default up-key)
 	NextLineFocusable
 
 	// LineUnfocusable a component's set line-focus can be removed
 	// (default esc)
 	LineUnfocusable
 
-	// highlightedFocusable highlights a component's focused line.
-	highlightedFocusable
+	// linesHighlightedFocusable highlights a component's focused line.
+	linesHighlightedFocusable
 
 	// LineSelectable a component's focused line can be reported as
 	// selected (default enter)
 	LineSelectable
+
+	// PreviousCellFocusable shows the cursor in a components focused
+	// line while the left arrow key moves the cursor to ("focuses") the
+	// previous rune.
+	PreviousCellFocusable
+
+	LastCellFocusable
+
+	// NextCellFocusable shows the cursor in a components focused
+	// line while the right arrow key moves the cursor to ("focuses") the
+	// previous rune.
+	NextCellFocusable
+
+	FirstCellFocusable
 
 	// maximizable lets the user maximize a component, i.e. all siblings
 	// which are collapsed to either one line if parent is stacking or
@@ -307,13 +321,23 @@ const (
 	LinesFocusable = NextLineFocusable | PreviousLineFocusable |
 		LineUnfocusable
 
-	// HighlightedFocusable makes lines focusable whereas the focused
+	// LinesHighlightedFocusable makes lines focusable whereas the focused
 	// line is highlighted.
-	HighlightedFocusable = LinesFocusable | highlightedFocusable
+	LinesHighlightedFocusable = LinesFocusable | linesHighlightedFocusable
 
 	// LinesSelectable makes a component's lines selectable by combining
 	// HighlightedFocusable and LineSelectable.
-	LinesSelectable = HighlightedFocusable | LineSelectable
+	LinesSelectable = LinesHighlightedFocusable | LineSelectable
+
+	// CellFocusable turns on LinesFocusable for a component c and shows
+	// the cursor whose positioning indicates the "focused cell".
+	CellFocusable = PreviousCellFocusable | NextCellFocusable |
+		LinesFocusable | LastCellFocusable | FirstCellFocusable
+
+	// RuneFocusable turns on LinesHighlightedFocusable for a component
+	// c and shows the cursor whose positioning indicates the "focused
+	// rune".
+	CellHighlightedFocusable = CellFocusable | LinesHighlightedFocusable
 )
 
 // features provides information about keys/runes/buttons which are
@@ -388,6 +412,11 @@ func (ff *features) has(f FeatureMask) bool {
 		return ff.have&f != NoFeature
 	}
 
+	// since we can't know which of ff.have features is combined with
+	// _recursive we need to find exactly f.  Note that recursive
+	// combined features (e.g. LinesFocusable|_recursive) cannot be
+	// found as of now.
+
 	have := false
 
 	cb := func(_f FeatureMask) (stop bool) {
@@ -412,7 +441,7 @@ func (ff *features) has(f FeatureMask) bool {
 	return have
 }
 
-// Registered returns the set of features currently all.
+// all returns the set of currently set features.
 func (ff *features) all() FeatureMask {
 
 	_ff := NoFeature
@@ -744,25 +773,25 @@ func (ff *features) setRunesOf(
 // delete removes all runes, key or button bindings of given feature(s)
 // except for Quitable.  The two default Quitable bindings ctrl-c and
 // ctrl-d remain.
-func (ff *features) delete(f FeatureMask) {
-	_ff := []FeatureMask{}
-	for _, _f := range allFeatures {
-		if _f&f == NoFeature {
-			continue
-		}
-		_ff = append(_ff, _f)
-	}
-	if !ff.modifiable() || len(_ff) == 0 {
-		return
-	}
-
-	for _, f := range _ff {
-		ff.deleteKeysOf(f)
-		ff.deleteButtonsOf(f)
-		ff.deleteRunesOf(f)
-		ff.have &^= f
-	}
-}
+// func (ff *features) delete(f FeatureMask) {
+// 	_ff := []FeatureMask{}
+// 	for _, _f := range allFeatures {
+// 		if _f&f == NoFeature {
+// 			continue
+// 		}
+// 		_ff = append(_ff, _f)
+// 	}
+// 	if !ff.modifiable() || len(_ff) == 0 {
+// 		return
+// 	}
+//
+// 	for _, f := range _ff {
+// 		ff.deleteKeysOf(f)
+// 		ff.deleteButtonsOf(f)
+// 		ff.deleteRunesOf(f)
+// 		ff.have &^= f
+// 	}
+// }
 
 func (ff *features) deleteKeysOf(f FeatureMask) {
 	if f == Quitable {
@@ -785,7 +814,7 @@ func (ff *features) deleteKeysOfButDefaults(f FeatureMask) {
 			if f&_f == NoFeature {
 				continue
 			}
-			if defaultFeatures.keyFeature(k, m)&f != NoFeature {
+			if quitableFeatures.keyFeature(k, m)&f != NoFeature {
 				continue
 			}
 			delete(ff.keys[m], k)
@@ -859,15 +888,16 @@ var allFeatures = []FeatureMask{
 	leftScrollable, rightScrollable,
 	lineLeftScrollable, lineRightScrollable,
 	previousSelectable, nextSelectable,
-	PreviousLineFocusable, NextLineFocusable,
-	LineSelectable, LineUnfocusable, highlightedFocusable,
+	PreviousLineFocusable, NextLineFocusable, PreviousCellFocusable,
+	NextCellFocusable, FirstCellFocusable, LastCellFocusable,
+	LineSelectable, LineUnfocusable, linesHighlightedFocusable,
 	maximizable, editable,
 }
 
-// defaultFeatures are the default runes and keys which are associated
-// with (end-user) features.  NOTE defaultFeatures cannot be
-// modified, a copy of them can!
-var defaultFeatures = &features{
+// quitableFeatures are the default runes and keys of a clients root
+// component.  NOTE quitableFeatures cannot be modified, a copy of them
+// can!
+var quitableFeatures = &features{
 	keys: map[ModifierMask]map[Key]FeatureMask{
 		ZeroModifier: {
 			CtrlC: Quitable,
@@ -882,6 +912,16 @@ var defaultFeatures = &features{
 	},
 	buttons: map[ModifierMask]map[ButtonMask]FeatureMask{},
 	have:    Quitable,
+}
+
+// defaultFeatures is an unmodifiable initialized features instance
+// which may be used to create a new features instance by copy()-ing it.
+var defaultFeatures = &features{
+	keys: map[ModifierMask]map[Key]FeatureMask{},
+	runes: map[ModifierMask]map[rune]FeatureMask{ZeroModifier: {
+		0: NoFeature, // indicates the immutable zero features
+	}},
+	buttons: map[ModifierMask]map[ButtonMask]FeatureMask{},
 }
 
 type bindings struct {
@@ -929,11 +969,23 @@ var defaultBindings = map[FeatureMask]*bindings{
 	},
 	PreviousLineFocusable: {
 		kk: FeatureKeys{{Key: Up, Mod: ZeroModifier}},
-		rr: FeatureRunes{{Rune: 'k', Mod: ZeroModifier}},
+		// rr: FeatureRunes{{Rune: 'k', Mod: ZeroModifier}},
 	},
 	NextLineFocusable: {
 		kk: FeatureKeys{{Key: Down, Mod: ZeroModifier}},
-		rr: FeatureRunes{{Rune: 'j', Mod: ZeroModifier}},
+		// rr: FeatureRunes{{Rune: 'j', Mod: ZeroModifier}},
+	},
+	FirstCellFocusable: {
+		kk: FeatureKeys{{Key: Home, Mod: ZeroModifier}},
+	},
+	PreviousCellFocusable: {
+		kk: FeatureKeys{{Key: Left, Mod: ZeroModifier}},
+	},
+	NextCellFocusable: {
+		kk: FeatureKeys{{Key: Right, Mod: ZeroModifier}},
+	},
+	LastCellFocusable: {
+		kk: FeatureKeys{{Key: End, Mod: ZeroModifier}},
 	},
 	LineSelectable: {
 		kk: FeatureKeys{{Key: Enter, Mod: ZeroModifier}},
@@ -941,7 +993,7 @@ var defaultBindings = map[FeatureMask]*bindings{
 	LineUnfocusable: {
 		kk: FeatureKeys{{Key: Esc, Mod: ZeroModifier}},
 	},
-	highlightedFocusable: {
+	linesHighlightedFocusable: {
 		rr: FeatureRunes{{Rune: rune(0), Mod: ZeroModifier}},
 	},
 }
@@ -952,18 +1004,61 @@ type LineSelecter interface {
 
 	// OnLineSelection is called by Lines if the focused line having
 	// index i of implementing component was selected.
-	OnLineSelection(_ *Env, i int)
+	OnLineSelection(_ *Env, cIdx, sIdx int)
 }
 
 // LineFocuser is implemented by a component who wants to be informed when
 // one of its lines receives the focus.
 type LineFocuser interface {
 
-	// OnLineFocus is called by Lines if the line with given index i of
-	// implementing component receives the focus.
-	OnLineFocus(_ *Env, i int)
+	// OnLineFocus is called by Lines if the line with given content
+	// line index cIdx and given screen line index sIdx receives the
+	// focus.  Note is a component is associated with a source or there
+	// are more content lines than fitting on the screen cLine and sLine
+	// may differ.
+	OnLineFocus(_ *Env, cIdx, sIdx int)
 }
 
+// LineFocusLooser is implemented by a component who wants to be informed when
+// a focused line looses its focus.
+type LineFocusLooser interface {
+
+	// OnLineFocusLost is called by Lines if the line with given content
+	// line index cIdx and given screen line index sIdx of implementing
+	// component lost the focus.  Note "on line focus lost" is reported
+	// after the focus change has happened, i.e. given screen line sIdx
+	// not necessary displays the content line cIdx.  "on line focus
+	// lost" is reported before "on line focus" is report (if it is
+	// reported).
+	OnLineFocusLost(_ *Env, cIdx, sIdx int)
+}
+
+// LineOverflower implementations are called back when a line receives
+// the focus whose content either overflows to the left or to the right
+// or at both sides.
+type LineOverflower interface {
+
+	// LineOverflows is called by Lines if a components line receives
+	// the focus whose content overflows to the left or to the right or
+	// at both sides.
+	OnLineOverflowing(_ *Env, left, right bool)
+}
+
+// Cursorer is implemented by a component which wants to be notified
+// about cursor movement.
+type Cursorer interface {
+
+	// OnCursor implemented by a component c is called by Lines if the
+	// cursor position has changed; use c.CursorPosition() to retrieve
+	// the current cursor position.  Note if the display resizes Lines
+	// either removes the cursor iff it is not in the content area of a
+	// component; otherwise it keeps the cursor in c's content area
+	// trying to keep it relative to the content areas origin at the
+	// same position.  If the later can be achieved absOnly is true.
+	OnCursor(_ *Env, absOnly bool)
+}
+
+// execute given feature f on given user-component usr.
 func execute(cntx *rprContext, usr Componenter, f FeatureMask) {
 	switch f {
 	case UpScrollable:
@@ -974,50 +1069,129 @@ func execute(cntx *rprContext, usr Componenter, f FeatureMask) {
 		executeLineFocus(cntx, usr, usr.embedded().LL.Focus.Next)
 	case PreviousLineFocusable:
 		executeLineFocus(cntx, usr, usr.embedded().LL.Focus.Previous)
+	case FirstCellFocusable:
+		executeCellFocus(cntx, usr, usr.embedded().LL.Focus.FirstCell)
+	case PreviousCellFocusable:
+		executeCellFocus(cntx, usr, usr.embedded().LL.Focus.PreviousCell)
+	case NextCellFocusable:
+		executeCellFocus(cntx, usr, usr.embedded().LL.Focus.NextCell)
+	case LastCellFocusable:
+		executeCellFocus(cntx, usr, usr.embedded().LL.Focus.LastCell)
 	case LineUnfocusable:
-		executeLineFocus(cntx, usr, usr.embedded().LL.Focus.Reset)
+		executeResetLineFocus(cntx, usr)
 	case LineSelectable:
 		reportSelectedLine(cntx, usr)
 	}
 }
 
 func executeLineFocus(
-	cntx *rprContext, usr Componenter, f func(bool) int,
+	cntx *rprContext, usr Componenter, f func(bool) (int, int),
 ) {
-	current := usr.embedded().LL.Focus.Current()
+	cIdx, sIdx := usr.embedded().LL.Focus.Current(),
+		usr.embedded().LL.Focus.Screen()
+	_, column, _ := usr.embedded().CursorPosition()
+	// TODO: figure out what that does especially in the context that
+	// a set zero-rune feature indicates that a feature set is not
+	// modifiable.
 	rf := usr.embedded().ff.runeFeature(rune(0), ZeroModifier)
-	highlighted := rf&highlightedFocusable == highlightedFocusable
-	if current == f(highlighted) {
+	highlighted := rf&linesHighlightedFocusable == linesHighlightedFocusable
+	ln, cl := f(highlighted)
+	if cIdx == ln {
+		if cl != column {
+			reportCursorChange(cntx, usr)
+		}
 		return
 	}
-	reportLineFocus(cntx, usr)
+	reportLineFocus(cntx, usr, cIdx, sIdx)
+	if cl == column && column == -1 {
+		return
+	}
+	reportCursorChange(cntx, usr)
 }
 
-func lfCurry(lf LineFocuser, idx int) func(*Env) {
-	return func(e *Env) { lf.OnLineFocus(e, idx) }
+func executeResetLineFocus(cntx *rprContext, usr Componenter) {
+	usr.embedded().LL.Focus.Reset()
 }
 
-func reportLineFocus(cntx *rprContext, usr Componenter) {
+func executeCellFocus(
+	cntx *rprContext, usr Componenter, f func() (int, int, bool),
+) {
+	_, _, movedCursor := f()
+	if movedCursor && reportCursorChange(cntx, usr) {
+		usr.enable()
+	}
+	reportLineOverflow(cntx, usr, usr.embedded().LL.Focus.Screen())
+}
+
+func reportCursorChange(cntx *rprContext, usr Componenter) bool {
+	c, ok := usr.(Cursorer)
+	if !ok {
+		return false
+	}
+	callback(usr, cntx, func(c Cursorer) func(e *Env) {
+		return func(e *Env) { c.OnCursor(e, false) }
+	}(c))
+	return true
+}
+
+func lfCurry(cb func(*Env, int, int), cLine, sLine int) func(*Env) {
+	return func(e *Env) { cb(e, cLine, sLine) }
+}
+
+func ofCurry(of LineOverflower, left, right bool) func(*Env) {
+	return func(e *Env) { of.OnLineOverflowing(e, left, right) }
+}
+
+func reportLineFocus(cntx *rprContext, usr Componenter, cIdx, sIdx int) {
+	fl, ok := usr.(LineFocusLooser)
+	if cIdx >= 0 && ok {
+		callback(usr, cntx, lfCurry(fl.OnLineFocusLost, cIdx, sIdx))
+		usr.enable()
+	}
+	cmp := usr.embedded()
+	sIdx = cmp.LL.Focus.Screen()
+	cIdx = cmp.LL.Focus.Current()
+	if cIdx < 0 {
+		return
+	}
 	lf, ok := usr.(LineFocuser)
+	if ok {
+		callback(usr, cntx, lfCurry(lf.OnLineFocus, cIdx, sIdx))
+		usr.enable()
+	}
+	reportLineOverflow(cntx, usr, sIdx)
+}
+
+func reportLineOverflow(cntx *rprContext, usr Componenter, sIdx int) {
+	if sIdx < 0 {
+		return
+	}
+	of, ok := usr.(LineOverflower)
 	if !ok {
 		return
 	}
-	callback(usr, cntx, lfCurry(
-		lf, usr.embedded().LL.Focus.Current()))
+	cmp := usr.embedded()
+	_, _, width, _ := cmp.ContentArea()
+	l, r, changed := cmp.LL.By(sIdx).isOverflowing(width)
+	if !l && !r || !changed {
+		return
+	}
+	callback(usr, cntx, ofCurry(of, l, r))
 }
 
-func lsCurry(ls LineSelecter, idx int) func(*Env) {
-	return func(e *Env) { ls.OnLineSelection(e, idx) }
+func lsCurry(ls LineSelecter, cIdx, sIdx int) func(*Env) {
+	return func(e *Env) { ls.OnLineSelection(e, cIdx, sIdx) }
 }
 
 func reportSelectedLine(cntx *rprContext, usr Componenter) {
-	if usr.embedded().LL.Focus.Current() < 0 {
+	cIdx, sIdx := usr.embedded().LL.Focus.Current(),
+		usr.embedded().LL.Focus.Screen()
+	if cIdx < 0 {
 		return
 	}
 	ls, ok := usr.(LineSelecter)
 	if !ok {
 		return
 	}
-	callback(usr, cntx, lsCurry(
-		ls, usr.embedded().LL.Focus.Current()))
+	callback(usr, cntx, lsCurry(ls, cIdx, sIdx))
 }

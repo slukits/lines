@@ -27,6 +27,23 @@ var apiToTcellButtons = map[api.ButtonMask]tcell.ButtonMask{
 	api.ZeroButton: tcell.ButtonNone,
 }
 
+var apiButtons = []api.ButtonMask{
+	api.Button1, api.Button2, api.Button3, api.Button4,
+	api.Button5, api.Button6, api.Button7, api.Button8,
+	api.WheelUp, api.WheelDown, api.WheelLeft,
+	api.WheelRight, api.ZeroButton,
+}
+
+func apiButtonsToTcell(bb api.ButtonMask) (tb tcell.ButtonMask) {
+	for _, b := range apiButtons {
+		if bb&b == 0 {
+			continue
+		}
+		tb |= apiToTcellButtons[b]
+	}
+	return tb
+}
+
 var tcellToApiButtons = map[tcell.ButtonMask]api.ButtonMask{
 	tcell.Button1:    api.Button1,
 	tcell.Button2:    api.Button2,
@@ -43,6 +60,23 @@ var tcellToApiButtons = map[tcell.ButtonMask]api.ButtonMask{
 	tcell.ButtonNone: api.ZeroButton,
 }
 
+var tcellButtons = []tcell.ButtonMask{
+	tcell.Button1, tcell.Button2, tcell.Button3, tcell.Button4,
+	tcell.Button5, tcell.Button6, tcell.Button7, tcell.Button8,
+	tcell.WheelUp, tcell.WheelDown, tcell.WheelLeft,
+	tcell.WheelRight, tcell.ButtonNone,
+}
+
+func tcellButtonsToApi(bb tcell.ButtonMask) (ab api.ButtonMask) {
+	for _, b := range tcellButtons {
+		if bb&b == 0 {
+			continue
+		}
+		ab |= tcellToApiButtons[b]
+	}
+	return ab
+}
+
 // mouseEvent wraps a tcell mouse event to adapt it to the
 // api.MouseEventer interface.
 type mouseEvent struct{ evt *tcell.EventMouse }
@@ -50,11 +84,11 @@ type mouseEvent struct{ evt *tcell.EventMouse }
 func (e *mouseEvent) Pos() (int, int) { return e.evt.Position() }
 
 func (e *mouseEvent) Button() api.ButtonMask {
-	return tcellToApiButtons[e.evt.Buttons()]
+	return tcellButtonsToApi(e.evt.Buttons())
 }
 
 func (e *mouseEvent) Mod() api.ModifierMask {
-	return tcellToApiMods[e.evt.Modifiers()]
+	return tcellModifiersToApi(e.evt.Modifiers())
 }
 
 func (e *mouseEvent) When() time.Time { return e.evt.When() }

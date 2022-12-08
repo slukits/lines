@@ -36,11 +36,59 @@ type Chainer interface {
 	ForChained(func(Componenter) (stop bool))
 }
 
+type cursor [3]int
+
+// X returns set x coordinate of given cursor c's position which is -1
+// if the cursor is not shown.
+func (c cursor) X() int { return c[0] }
+
+// Y returns set y coordinate of given cursor c's position which is -1
+// if the cursor is not shown.
+func (c cursor) Y() int { return c[1] }
+
+// Style returns given cursor c's style which is the ZeroCursor if c is
+// not shown.
+func (c *cursor) Style() CursorStyle { return CursorStyle((*c)[2]) }
+
+// Resets sets given cursor c's x and y coordinate to -1 and its style
+// to ZeroCursor.
+func (c *cursor) Reset() *cursor {
+	(*c)[0], (*c)[1], (*c)[2] = -1, -1, int(ZeroCursor)
+	return c
+}
+
+// Removed returns true if given cursor c's x coordinate is set to -1
+func (c cursor) Removed() bool { return c[0] == -1 }
+
+// Coordinates returns set x and y coordinates which are -1 if given
+// cursor c is not shown.
+func (c *cursor) Coordinates() (x, y int) {
+	x, y = (*c)[0], (*c)[1]
+	return
+}
+
+// set sets given cursor c's position given coordinates x and y as well
+// as its cursor style given cursor style cs if later is not the
+// ZeroCursor.  Note if x or y is negative c is reset otherwise x and y
+// are set while cs is only set if not the ZeroCursor.
+func (c *cursor) set(x, y int, cs CursorStyle) *cursor {
+	if x < 0 || y < 0 {
+		c.Reset()
+		return c
+	}
+	(*c)[0], (*c)[1] = x, y
+	if cs != ZeroCursor {
+		(*c)[2] = int(cs)
+	}
+	return c
+}
+
 type screen struct {
 	lyt     *lyt.Manager
 	backend api.Displayer
 	focus   layoutComponenter
 	mouseIn layoutComponenter
+	cursor  *cursor
 }
 
 func newScreen(backend api.UIer, cmp Componenter, gg *globals) *screen {
@@ -48,10 +96,12 @@ func newScreen(backend api.UIer, cmp Componenter, gg *globals) *screen {
 	if cmp == nil {
 		cmp = &Component{}
 	}
+	gg.scr = scr
 	lc := cmp.initialize(cmp, backend, gg.clone())
-	lc.wrapped().ensureFeatures()
+	lc.wrapped().ensureQuitableFeatures()
 	scr.lyt = &lyt.Manager{Root: lc}
 	scr.focus = lc
+	scr.cursor = (&cursor{}).Reset()
 	return scr
 }
 
@@ -69,14 +119,78 @@ func (s *screen) root() *component {
 	return s.lyt.Root.(layoutComponenter).wrapped()
 }
 
-func (s *screen) setWidth(w int) *screen {
-	s.lyt.Width = w
-	return s
+func (s *screen) setSize(w, h int, ll *Lines) func() {
+	s.lyt.Width, s.lyt.Height = w, h
+	x, y := s.cursor.Coordinates()
+	if x == -1 || y == -1 {
+		return nil
+	}
+	lc := s.cursorComponent()
+	s.setCursor(-1, -1, ZeroCursor)
+	if lc == nil {
+		return nil
+	}
+	if !lyt.NewRect(lc.wrapped().ContentArea()).Has(x, y) {
+		usr := lc.userComponent()
+		if c, ok := usr.(Cursorer); ok {
+			usr.enable()
+			callback(lc.userComponent(), &rprContext{ll: ll, scr: s}, func(c Cursorer) func(e *Env) {
+				return func(e *Env) { c.OnCursor(e, false) }
+			}(c))
+		}
+		return nil
+	}
+	cx, cy, _, _ := lc.wrapped().ContentArea()
+	return func(ll *Lines, lc layoutComponenter, x, y int) func() {
+		return func() {
+			if !s.lyt.Has(lc, nil) || lc.Dim().IsOffScreen() {
+				return
+			}
+			// check if the content area got smaller, i.e. doesn't
+			// include the cursor any more.
+			_, _, cw, ch := lc.wrapped().ContentArea()
+			absOnly := true
+			if x >= cw {
+				x = cw - 1
+				absOnly = false
+			}
+			if y >= ch {
+				y = ch - 1
+				absOnly = false
+			}
+			lc.wrapped().setCursor(y, x)
+			usr := lc.userComponent()
+			if c, ok := usr.(Cursorer); ok {
+				usr.enable()
+				callback(
+					lc.userComponent(),
+					&rprContext{ll: ll, scr: s},
+					func(c Cursorer) func(e *Env) {
+						return func(e *Env) { c.OnCursor(e, absOnly) }
+					}(c))
+			}
+			s.softSync(ll)
+		}
+	}(ll, lc, x-cx, y-cy)
 }
 
-func (s *screen) setHeight(h int) *screen {
-	s.lyt.Height = h
-	return s
+// setCursor calls the backend to set the cursor at given coordinates
+// (x,y) having optionally given style cs[0].  Note screen keeps a local
+// copy of the current cursor state to determine the component having
+// the cursor set (which must not necessarily be the focused component).
+func (s *screen) setCursor(x, y int, cs ...CursorStyle) {
+	s.cursor.set(s.backend.SetCursor(x, y, cs...))
+}
+
+func (s *screen) cursorComponent() layoutComponenter {
+	if s.cursor.Removed() {
+		return nil
+	}
+	path, err := s.lyt.LocateAt(s.cursor.Coordinates())
+	if err != nil || len(path) == 0 {
+		return nil
+	}
+	return path[len(path)-1].(layoutComponenter)
 }
 
 // forBaseComponents calls back for the components of the base layer.
@@ -182,15 +296,6 @@ func (s *screen) softSync(ll *Lines) {
 }
 
 type components []*component
-
-func (cc components) has(c *component) bool {
-	for _, _c := range cc {
-		if _c == c {
-			return true
-		}
-	}
-	return false
-}
 
 type layereder interface {
 	Layered() layoutComponenter

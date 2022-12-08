@@ -60,6 +60,11 @@ func (c *component) Len() int {
 // IsDirty is true if given component c is flagged dirty or one of its
 // lines or gaps.
 func (c *component) IsDirty() bool {
+	return c.dirty || c.cursorMoved || c.ll.IsDirty() ||
+		c.gaps.isDirty() || c.Src.IsDirty() || c.haveDirtyNested()
+}
+
+func (c *component) isDirtyButCursorMoved() bool {
 	return c.dirty || c.ll.IsDirty() || c.gaps.isDirty() ||
 		c.Src.IsDirty() || c.haveDirtyNested()
 }
@@ -81,6 +86,9 @@ func (c *component) haveDirtyNested() (dirty bool) {
 // component is automatically flagged dirty if its layout changed, if
 // one of its global properties changed etc.
 func (c *component) SetDirty() {
+	if c.dirty {
+		return
+	}
 	c.dirty = true
 	c.forNested(func(n *component) (stop bool) {
 		n.SetDirty()
@@ -141,6 +149,12 @@ func (c *component) hardSync(rw runeWriter) {
 
 // sync writes receiving components lines to the screen.
 func (c *component) sync(rw runeWriter) {
+	if c.cursorMoved {
+		c.cursorMoved = false
+		if !c.isDirtyButCursorMoved() {
+			return
+		}
+	}
 	if c.dim.IsOffScreen() {
 		if !c.dirty {
 			c.dirty = true

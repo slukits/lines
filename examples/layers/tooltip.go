@@ -8,11 +8,12 @@ import (
 	"fmt"
 
 	"github.com/slukits/lines"
+	"github.com/slukits/lines/examples/demo"
 )
 
 type toolTip struct {
 	lines.Component
-	demo
+	demo.Demo
 
 	// currentLine keeps track of the line having its tool-tip shown
 	currentLine int
@@ -22,7 +23,7 @@ var toolTipTitle []rune = []rune("tool-tip-demo")
 
 // OnInit prints the content lines to the tool-tip demo component.
 func (c *toolTip) OnInit(e *lines.Env) {
-	c.init(c, e, toolTipTitle)
+	c.Init(c, e, toolTipTitle)
 	line := func(i int) string {
 		i++
 		switch i {
@@ -32,7 +33,7 @@ func (c *toolTip) OnInit(e *lines.Env) {
 			return fmt.Sprintf("%dth", i)
 		}
 	}
-	for i := 0; i < c.height()-2; i++ {
+	for i := 0; i < c.Height()-2; i++ {
 		fmt.Fprintf(e.LL(i), "hover %s line for tip", line(i))
 	}
 	c.currentLine = 0

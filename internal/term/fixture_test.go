@@ -6,12 +6,13 @@ package term
 
 import (
 	"testing"
+	"time"
 
 	. "github.com/slukits/gounit"
 	"github.com/slukits/lines/internal/api"
 )
 
-type _testing struct{ Suite }
+type _fixture struct{ Suite }
 
 const fx = `                
    upper left   
@@ -22,7 +23,7 @@ const exp = `upper left
         width
   bottom     `
 
-func (s *_testing) Reports_string_representation_of_screen(t *T) {
+func (s *_fixture) Reports_string_representation_of_screen(t *T) {
 	ui, tt := LstFixture(t.GoT(), nil, 0)
 	tt.PostResize(16, 5)
 
@@ -31,7 +32,7 @@ func (s *_testing) Reports_string_representation_of_screen(t *T) {
 	t.Eq(fx, tt.Screen().String())
 }
 
-func (s *_testing) Reports_trimmed_string_representation_of_screen(t *T) {
+func (s *_fixture) Reports_trimmed_string_representation_of_screen(t *T) {
 	ui, tt := LstFixture(t.GoT(), nil, 0)
 
 	tt.Display(fx, ui.NewStyle())
@@ -39,7 +40,7 @@ func (s *_testing) Reports_trimmed_string_representation_of_screen(t *T) {
 	t.Eq(exp, tt.Screen().Trimmed().String())
 }
 
-func (s *_testing) Reports_string_of_given_screen_area(t *T) {
+func (s *_fixture) Reports_string_of_given_screen_area(t *T) {
 	ui, tt := LstFixture(t.GoT(), nil, 0)
 
 	tt.Display(fx, ui.NewStyle())
@@ -47,7 +48,7 @@ func (s *_testing) Reports_string_of_given_screen_area(t *T) {
 	t.Eq(exp, tt.ScreenArea(3, 1, 13, 3).String())
 }
 
-func (s *_testing) Reports_cells_of_screen(t *T) {
+func (s *_fixture) Reports_cells_of_screen(t *T) {
 	ui, tt := LstFixture(t.GoT(), nil, 0)
 	tt.PostResize(16, 5)
 
@@ -56,7 +57,7 @@ func (s *_testing) Reports_cells_of_screen(t *T) {
 	t.Eq(fx, tt.Cells().String())
 }
 
-func (s *_testing) Reports_trimmed_cells_of_screen(t *T) {
+func (s *_fixture) Reports_trimmed_cells_of_screen(t *T) {
 	ui, tt := LstFixture(t.GoT(), nil, 0)
 
 	tt.Display(fx, ui.NewStyle())
@@ -64,7 +65,7 @@ func (s *_testing) Reports_trimmed_cells_of_screen(t *T) {
 	t.Eq(exp, tt.Cells().Trimmed().String())
 }
 
-func (s *_testing) Reports_cells_of_screen_area(t *T) {
+func (s *_fixture) Reports_cells_of_screen_area(t *T) {
 	ui, tt := LstFixture(t.GoT(), nil, 0)
 
 	tt.Display(fx, ui.NewStyle())
@@ -73,7 +74,7 @@ func (s *_testing) Reports_cells_of_screen_area(t *T) {
 	t.Eq(exp, str)
 }
 
-func (s *_testing) Reports_style_of_cell(t *T) {
+func (s *_fixture) Reports_style_of_cell(t *T) {
 	ui, tt := LstFixture(t.GoT(), nil, 0)
 
 	tt.Display(fx, ui.NewStyle().
@@ -88,7 +89,7 @@ func (s *_testing) Reports_style_of_cell(t *T) {
 	}
 }
 
-func (s *_testing) Returns_from_evt_post_after_sub_posts_processed(t *T) {
+func (s *_fixture) Returns_from_evt_post_after_sub_posts_processed(t *T) {
 	var ui *UI
 	runeReported := false
 	ui, tt := LstFixture(t.GoT(), func(evt api.Eventer) {
@@ -105,7 +106,7 @@ func (s *_testing) Returns_from_evt_post_after_sub_posts_processed(t *T) {
 	t.True(runeReported)
 }
 
-func (s *_testing) Reports_mouse_click(t *T) {
+func (s *_fixture) Reports_mouse_click(t *T) {
 	var clickReported api.ButtonMask
 	_, tt := LstFixture(t.GoT(), func(evt api.Eventer) {
 		switch evt := evt.(type) {
@@ -118,7 +119,24 @@ func (s *_testing) Reports_mouse_click(t *T) {
 	t.Eq(api.Button3, clickReported)
 }
 
-func (s *_testing) Reports_mouse_move(t *T) {
+type dbg struct{ Suite }
+
+func (s *dbg) Dbg(t *T) {
+	var clickReported api.ButtonMask
+	_, tt := LstFixture(t.GoT(), func(evt api.Eventer) {
+		switch evt := evt.(type) {
+		case *api.MouseClick:
+			clickReported = evt.Button()
+		}
+	}, 20*time.Minute)
+
+	tt.PostClick(0, 0, api.Button3, 0)
+	t.Eq(api.Button3, clickReported)
+}
+
+func TestDBG(t *testing.T) { Run(&dbg{}, t) }
+
+func (s *_fixture) Reports_mouse_move(t *T) {
 	expX, expY, expOX, expOY := 10, 5, 0, 0
 	gotX, gotY, gotOX, gotOY := 0, 0, 0, 0
 	_, tt := LstFixture(t.GoT(), func(evt api.Eventer) {
@@ -134,7 +152,7 @@ func (s *_testing) Reports_mouse_move(t *T) {
 	t.True(expOX == gotOX && expOY == gotOY)
 }
 
-func (s *_testing) Reports_drag_and_drop(t *T) {
+func (s *_fixture) Reports_drag_and_drop(t *T) {
 	expX, expY, expDX, expDY := 5, 2, 10, 5
 	gotX, gotY, gotDX, gotDY := 0, 0, 0, 0
 	_, tt := LstFixture(t.GoT(), func(evt api.Eventer) {
@@ -152,7 +170,7 @@ func (s *_testing) Reports_drag_and_drop(t *T) {
 	t.True(expDX == gotDX && expDY == gotDY)
 }
 
-func TestTesting(t *testing.T) {
+func TestFixture(t *testing.T) {
 	t.Parallel()
-	Run(&_testing{}, t)
+	Run(&_fixture{}, t)
 }

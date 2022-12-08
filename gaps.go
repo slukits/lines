@@ -35,6 +35,14 @@ func (gg *gaps) isDirty() bool {
 		gg.bottomRight.isDirty() || gg.bottomLeft.isDirty()
 }
 
+func (gg *gaps) Len() (top, right, bottom, left int) {
+	if gg == nil {
+		return 0, 0, 0, 0
+	}
+	return len(gg.top.ll), len(gg.right.ll), len(gg.bottom.ll),
+		len(gg.left.ll)
+}
+
 func (gg *gaps) forStyler(cb func(styler)) {
 	for _, s := range []styler{&gg.top, &gg.right, &gg.bottom, &gg.left,
 		&gg.topLeft, &gg.topRight, &gg.bottomRight, &gg.bottomLeft} {

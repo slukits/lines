@@ -36,7 +36,8 @@ following event interfaces with their reported event are defined:
   - [Dropper]: OnDrop(*Env, ButtonMask, int, int): button release after
     mouse-move with pressed button
   - [Modaler]: OnOutOfBoundClick(*Env) bool: for modal layers
-  - [OutOfBoundMover]: OnOutOfBoundMove(*env) bool: for modal layers
+  - [OutOfBoundMover]: OnOutOfBoundMove(*Env) bool: for modal layers
+  - [LineSelecter]: OnLineSelection(*Env, int): [LineSelectable]
 */
 type Eventer = api.Eventer
 
@@ -154,13 +155,7 @@ type Componenter interface {
 // Quitable feature, i.e. the application can't be quit by the user by
 // default.
 func TermKiosk(cmp Componenter) *Lines {
-	defaultFeatures = &features{
-		keys: map[ModifierMask]map[Key]FeatureMask{},
-		runes: map[ModifierMask]map[rune]FeatureMask{ZeroModifier: {
-			0: NoFeature, // indicates the immutable default features
-		}},
-		buttons: map[ModifierMask]map[ButtonMask]FeatureMask{},
-	}
+	quitableFeatures = defaultFeatures
 	return Term(cmp)
 }
 
@@ -228,20 +223,23 @@ func (u *UpdateEvent) When() time.Time { return u.when }
 
 func (u *UpdateEvent) Source() interface{} { return u }
 
-func (l *Lines) listen(evt api.Eventer) {
+func (ll *Lines) listen(evt api.Eventer) {
 	switch evt := evt.(type) {
 	case resizeEventer:
 		width, height := evt.Size()
-		l.scr.setWidth(width).setHeight(height)
-		reportInit(l, l.scr)
-		l.scr.hardSync(l)
+		postSync := ll.scr.setSize(width, height, ll)
+		reportInit(ll, ll.scr)
+		ll.scr.hardSync(ll)
+		if postSync != nil {
+			postSync()
+		}
 	default:
-		if quit := report(evt, l, l.scr); quit {
-			l.backend.Quit()
+		if quit := report(evt, ll, ll.scr); quit {
+			ll.backend.Quit()
 			return
 		}
-		reportInit(l, l.scr)
-		l.scr.softSync(l)
+		reportInit(ll, ll.scr)
+		ll.scr.softSync(ll)
 	}
 }
 
@@ -252,11 +250,52 @@ func (l *Lines) listen(evt api.Eventer) {
 // fails if the event-loop is full returned error will wrap tcell's
 // *PostEvent* error.  MoveFocus is an no-op if Componenter is nil, is
 // not part of the layout, is off-screen or is already focused.
-func (c *Lines) Focus(cmp Componenter) error {
-	return c.backend.Post(&moveFocusEvent{
+func (ll *Lines) Focus(cmp Componenter) error {
+	return ll.backend.Post(&moveFocusEvent{
 		when: time.Now(),
 		cmp:  cmp,
 	})
+}
+
+// CursorComponent returns the component where currently the cursor is
+// set or nil if the cursor is not set.
+func (ll *Lines) CursorComponent() Componenter {
+	cc := ll.scr.cursorComponent()
+	if cc == nil {
+		return nil
+	}
+	return cc.userComponent()
+}
+
+// CursorPosition returns given lines ll instance's cursor screen
+// position (x,y) and true in case the cursor is set; otherwise -1, -1
+// and false is returned.
+func (ll *Lines) CursorPosition() (x, y int, _ bool) {
+	if ll.scr.cursor.Removed() {
+		return -1, -1, false
+	}
+	x, y = ll.scr.cursor.Coordinates()
+	return x, y, true
+}
+
+// RemoveCursor removes the cursor from the screen.
+func (ll *Lines) RemoveCursor() {
+	if lc := ll.scr.cursorComponent(); lc != nil {
+		lc.wrapped().setCursor(-1, -1, ZeroCursor)
+		if ll.scr.cursor.Removed() {
+			return
+		}
+	}
+	ll.scr.setCursor(-1, -1, ZeroCursor)
+}
+
+// SetCursor sets the cursor to given coordinates (x,y) on the screen
+// having optionally given cursor style cs[0].  The call is ignored
+// respectively a currently set cursor is removed iff x and y are
+// outside the screen area or if they are inside the screen area but
+// cs[0] is the zero cursor style.
+func (ll *Lines) SetCursor(x, y int, cs ...CursorStyle) {
+	ll.scr.setCursor(x, y, cs...)
 }
 
 // moveFocusEvent is posted by calling MoveFocus for a programmatically

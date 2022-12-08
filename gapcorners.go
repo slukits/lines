@@ -14,10 +14,12 @@ type cornerWriter struct {
 }
 
 func (g *cornerWriter) Write(bb []byte) (int, error) {
+	var rr []rune
 	if len(bb) == 0 {
-		return 0, nil
+		rr = []rune(" ")
+	} else {
+		rr = []rune(string(bb))
 	}
-	rr := []rune(string(bb))
 	switch g.cm & allCorners {
 	case topLeft:
 		g.gg.topLeft.set(g.level, rr[0], g.sty)
@@ -141,9 +143,10 @@ func (c *corner) set(level int, r rune, s *Style) {
 	}
 	cr := c.ensureLevel(level)
 	cr.r = r
-	if s != nil {
-		cr.sty = s
-	}
+	cr.sty = s
+	// if s != nil {
+	// 	cr.sty = s
+	// }
 }
 
 func (c *corner) sync(x, y, width, height int, w runeWriter, sty Style) {

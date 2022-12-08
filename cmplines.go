@@ -90,8 +90,9 @@ func (cll *ComponentLines) By(idx int) *Line {
 
 func newComponentLines(c *Component) *ComponentLines {
 	return &ComponentLines{
-		c:     c,
-		Focus: &LineFocus{c: c, current: -1, hlType: Highlighted},
+		c: c,
+		Focus: &LineFocus{c: c, current: -1, cursor: -1,
+			hlType: Highlighted},
 	}
 }
 

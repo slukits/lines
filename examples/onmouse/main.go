@@ -58,10 +58,11 @@ func (c *events) OnInit(e *lines.Env) {
 }
 
 func (c *events) OnMouse(e *lines.Env, b lines.ButtonMask, x, y int) {
+	m := e.Evt.(lines.MouseEventer).Mod()
 	if c.last.IsZero() {
 		e.Lines.Update(
 			c.reporter,
-			fmt.Sprintf("%d: (%d,%d), 0ms", b, x, y),
+			fmt.Sprintf("%d(%d): (%d,%d), 0ms", b, m, x, y),
 			nil,
 		)
 		c.last = e.Evt.When()
@@ -69,8 +70,8 @@ func (c *events) OnMouse(e *lines.Env, b lines.ButtonMask, x, y int) {
 	}
 	e.Lines.Update(
 		c.reporter,
-		fmt.Sprintf("%d: (%d,%d), %v",
-			b, x, y, e.Evt.When().Sub(c.last)),
+		fmt.Sprintf("%d(%d): (%d,%d), %v",
+			b, m, x, y, e.Evt.When().Sub(c.last)),
 		nil,
 	)
 	c.last = e.Evt.When()

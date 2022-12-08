@@ -261,6 +261,7 @@ func (m *Manager) layedOutRoot() Dimer {
 		return m.Root
 	}
 	m.width, m.height = m.Width, m.Height
+	m.Root.Dim().resetClippingsAndMargins()
 	if m.Root.Dim().width == 0 {
 		m.Root.Dim().fillsWidth = 1
 	}
@@ -487,6 +488,9 @@ func (m *Manager) ForDimer(
 	return newLayers(m, oo)
 }
 
+// Has returns true if given manager m has given dimer dr nested in
+// given dimer in otherwise false.  If in is nil it defaults to m's root
+// dimer.
 func (m *Manager) Has(dr, in Dimer) bool {
 	if in == nil {
 		in = m.Root

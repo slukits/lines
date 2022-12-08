@@ -12,24 +12,27 @@ package lines
 type Liner interface {
 
 	// Print prints the line with given index idx to given line writer w
-	// and returns true if there are lines with a greater index left to
-	// write.
+	// and returns true if there are lines with a greater index than
+	// idx.
 	Print(idx int, w *EnvLineWriter) bool
 }
 
-// ScrollableLiner implementations trigger the scrolling feature of
-// associated component, i.e. a content source with a scrollable liner
-// makes its associated component automatically scrolling.
+// ScrollableLiner implementations are [Liner] implementations
+// triggering the scrolling feature of associated component, i.e. a
+// content source with a scrollable liner makes its associated component
+// automatically scrolling.
 type ScrollableLiner interface {
+	Liner
 
 	// Len returns the total number of content lines a liner
 	// implementation can provide to its associated component.
 	Len() int
 }
 
-// FocusableLiner implementations trigger the lines-focusable feature of
-// associated component, i.e. a content source with a focusable liner
-// makes its associated component automatically lines-focusable.
+// FocusableLiner implementations are [ScrollableLiner] implementations
+// triggering the lines-focusable feature of associated component, i.e.
+// a content source with a focusable liner makes its associated
+// component automatically lines-focusable.
 type FocusableLiner interface {
 	ScrollableLiner
 
@@ -102,8 +105,8 @@ func (cs *ContentSource) initialize(c *component) {
 	}
 	if fl, ok := cs.Liner.(FocusableLiner); ok {
 		if hl, tr := fl.Highlighted(); hl {
-			if !c.ff.has(HighlightedFocusable) {
-				c.ff.add(HighlightedFocusable, false)
+			if !c.ff.has(LinesHighlightedFocusable) {
+				c.ff.add(LinesHighlightedFocusable, false)
 			}
 			if tr {
 				c.LL.Focus.Trimmed()

@@ -6,12 +6,13 @@ package main
 
 import (
 	"github.com/slukits/lines"
+	"github.com/slukits/lines/examples/demo"
 )
 
 type stacked struct {
 	lines.Component
 	lines.Chaining
-	demo
+	demo.Demo
 	pos   *lines.LayerPos
 	first bool
 }
@@ -21,8 +22,8 @@ var stackedTitle []rune = []rune("stacked-demo")
 // OnInit creates the dummy off-screen components which are then
 // layered with the stacking layers.
 func (c *stacked) OnInit(e *lines.Env) {
-	c.init(c, e, stackedTitle)
-	c.CC = append(c.CC, &layerd{}, &layerd{}, &layerd{}, &layerd{})
+	c.Init(c, e, stackedTitle)
+	c.CC = append(c.CC, &layered{}, &layered{}, &layered{}, &layered{})
 	c.first = true
 }
 
@@ -59,8 +60,8 @@ func (c *stacked) addLayer(e *lines.Env, idx int, x, y int) {
 	case 3:
 		pos, color = lines.NewLayerPos(x+7, y+4, 9, 3), lines.Green
 	}
-	c.CC[idx].(*layerd).pos = pos
-	c.CC[idx].(*layerd).Layered(
+	c.CC[idx].(*layered).pos = pos
+	c.CC[idx].(*layered).Layered(
 		e, &lyr{color: color, focus: c.focus(idx)}, pos)
 }
 
@@ -69,22 +70,22 @@ func (c *stacked) addLayer(e *lines.Env, idx int, x, y int) {
 func (c *stacked) reposition(e *lines.Env) {
 	x, y, _, _ := c.ContentArea()
 	for i := 0; i < 4; i++ {
-		lrd := c.CC[i].(*layerd)
+		lrd := c.CC[i].(*layered)
 		switch i {
 		case 0:
-			e.Lines.Update(lrd, nil, func(i int, lrd *layerd) func(*lines.Env) {
+			e.Lines.Update(lrd, nil, func(i int, lrd *layered) func(*lines.Env) {
 				return func(_ *lines.Env) { lrd.pos.MoveTo(x+7, y) }
 			}(i, lrd))
 		case 1:
-			e.Lines.Update(lrd, nil, func(i int, lrd *layerd) func(*lines.Env) {
+			e.Lines.Update(lrd, nil, func(i int, lrd *layered) func(*lines.Env) {
 				return func(_ *lines.Env) { lrd.pos.MoveTo(x+1, y+2) }
 			}(i, lrd))
 		case 2:
-			e.Lines.Update(lrd, nil, func(i int, lrd *layerd) func(*lines.Env) {
+			e.Lines.Update(lrd, nil, func(i int, lrd *layered) func(*lines.Env) {
 				return func(_ *lines.Env) { lrd.pos.MoveTo(x+13, y+2) }
 			}(i, lrd))
 		case 3:
-			e.Lines.Update(lrd, nil, func(i int, lrd *layerd) func(*lines.Env) {
+			e.Lines.Update(lrd, nil, func(i int, lrd *layered) func(*lines.Env) {
 				return func(_ *lines.Env) { lrd.pos.MoveTo(x+7, y+4) }
 			}(i, lrd))
 		}
@@ -96,7 +97,7 @@ func (c *stacked) reposition(e *lines.Env) {
 func (c *stacked) focus(idx int) func() {
 	return func() {
 		for i := 0; i < 4; i++ {
-			lrd := c.CC[i].(*layerd)
+			lrd := c.CC[i].(*layered)
 			if i == idx {
 				lrd.pos.SetZ(10)
 				continue
@@ -106,13 +107,13 @@ func (c *stacked) focus(idx int) func() {
 	}
 }
 
-type layerd struct {
+type layered struct {
 	lines.Component
 	pos *lines.LayerPos
 }
 
 // OnInit sets the layerd-dummy off-screen.
-func (c *layerd) OnInit(e *lines.Env) {
+func (c *layered) OnInit(e *lines.Env) {
 	c.Dim().SetWidth(0)
 }
 

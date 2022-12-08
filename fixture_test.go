@@ -11,9 +11,9 @@ import (
 	. "github.com/slukits/gounit"
 )
 
-type _Testing struct{ Suite }
+type _Fixture struct{ Suite }
 
-func (s *_Testing) SetUp(t *T) { t.Parallel() }
+func (s *_Fixture) SetUp(t *T) { t.Parallel() }
 
 type clickFX struct {
 	Component
@@ -37,17 +37,17 @@ func (c *clickFX) OnContext(_ *Env, rx, ry int) {
 	c.rx, c.ry = rx, ry
 }
 
-func (s *_Testing) tt(t *T, cmp Componenter) *Fixture {
+func (s *_Fixture) tt(t *T, cmp Componenter) *Fixture {
 	return TermFixture(t.GoT(), 0, cmp)
 }
 
-func (s *_Testing) Component_click_is_reported_to_component(t *T) {
+func (s *_Fixture) Component_click_is_reported_to_component(t *T) {
 	tt := s.tt(t, &clickFX{})
 	tt.FireComponentClick(tt.Root(), 0, 0)
 	t.True(tt.Root().(*clickFX).clicked)
 }
 
-func (s *_Testing) Component_coordinates_are_reported_on_click(t *T) {
+func (s *_Fixture) Component_coordinates_are_reported_on_click(t *T) {
 	fx := &clickFX{}
 	tt := s.tt(t, fx)
 	x, y := fx.width/2, fx.height/2
@@ -56,7 +56,7 @@ func (s *_Testing) Component_coordinates_are_reported_on_click(t *T) {
 	t.Eq(y, fx.ry)
 }
 
-func (s *_Testing) Ignores_component_click_if_coordinates_outside(t *T) {
+func (s *_Fixture) Ignores_component_click_if_coordinates_outside(t *T) {
 	fx := &clickFX{}
 	tt := s.tt(t, fx)
 
@@ -77,7 +77,7 @@ func (s *_Testing) Ignores_component_click_if_coordinates_outside(t *T) {
 	t.Not.True(fx.clicked)
 }
 
-func (s *_Testing) Context_is_reported_to_component(t *T) {
+func (s *_Fixture) Context_is_reported_to_component(t *T) {
 	fx := &clickFX{}
 	tt := s.tt(t, fx)
 
@@ -86,7 +86,7 @@ func (s *_Testing) Context_is_reported_to_component(t *T) {
 	t.True(fx.context)
 }
 
-func (s *_Testing) Component_coordinates_are_reported_on_context(t *T) {
+func (s *_Fixture) Component_coordinates_are_reported_on_context(t *T) {
 	fx := &clickFX{}
 	tt := s.tt(t, fx)
 
@@ -97,7 +97,7 @@ func (s *_Testing) Component_coordinates_are_reported_on_context(t *T) {
 	t.Eq(y, fx.ry)
 }
 
-func (s *_Testing) Ignores_component_context_if_coordinates_outside(
+func (s *_Fixture) Ignores_component_context_if_coordinates_outside(
 	t *T,
 ) {
 	fx := &clickFX{}
@@ -120,7 +120,7 @@ func (s *_Testing) Ignores_component_context_if_coordinates_outside(
 	t.Not.True(fx.context)
 }
 
-func (s *_Testing) Report_screen_portion_of_component(t *T) {
+func (s *_Fixture) Report_screen_portion_of_component(t *T) {
 	// TODO: add at least a second component :)))
 	exp := "123456\n223456\n323456\n423456\n523456\n623456"
 	fx := &icmpFX{init: func(c *icmpFX, e *Env) {
@@ -139,7 +139,7 @@ func (s *_Testing) Report_screen_portion_of_component(t *T) {
 // 	t.TODO()
 // }
 
-func TestTesting(t *testing.T) {
+func TestFixture(t *testing.T) {
 	t.Parallel()
-	Run(&_Testing{}, t)
+	Run(&_Fixture{}, t)
 }

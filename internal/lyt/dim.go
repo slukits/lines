@@ -364,6 +364,11 @@ func (d *Dim) Margin() (top, right, bottom, left int) {
 	return d.mrgTop, d.mrgRight, d.mrgBottom, d.mrgLeft
 }
 
+func (d *Dim) resetClippingsAndMargins() {
+	d.clipHeight, d.clipWidth = 0, 0
+	d.mrgTop, d.mrgRight, d.mrgBottom, d.mrgLeft = 0, 0, 0, 0
+}
+
 // IsOffScreen returns true if a Dimer's width and hight is fully
 // clipped.
 func (d *Dim) IsOffScreen() bool {

@@ -10,12 +10,14 @@ package term
 
 import (
 	"fmt"
+	"runtime/debug"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/slukits/lines/internal/api"
+	"github.com/slukits/lines/internal/term/internal"
 )
 
 type UI struct {
@@ -57,7 +59,6 @@ func New(listener func(api.Eventer)) *UI {
 		panic(fmt.Sprintf(
 			"lines: term: new: can't obtain screen: %v", err))
 	}
-
 	return initUI(lib, listener)
 }
 
@@ -68,7 +69,10 @@ func initUI(lib tcell.Screen, l func(api.Eventer)) *UI {
 		panic(fmt.Sprintf(
 			"lines: term: new: can't obtain screen: %v", err))
 	}
-	lib.EnableMouse()
+	lib, haveGPM := internal.WarpGPMSupport(lib)
+	if !haveGPM {
+		lib.EnableMouse()
+	}
 	lib.EnablePaste()
 	ui := &UI{
 		lib:            lib,
@@ -141,6 +145,19 @@ func (e *quitEvent) When() time.Time     { return e.when }
 func (e *quitEvent) Source() interface{} { return e }
 
 func (u *UI) poll() {
+	defer func() {
+		r := recover()
+		if r == nil {
+			return
+		}
+		if ts, ok := u.transactional.Load().(*transactional); ok {
+			msg, stack := fmt.Sprintf("%v", r), string(debug.Stack())
+			if ts.recovering(msg, stack) {
+				return
+			}
+		}
+		panic(r)
+	}()
 	for {
 		evt := u.lib.PollEvent()
 		if evt == nil {
@@ -195,8 +212,8 @@ func (u *UI) poll() {
 }
 
 func (u *UI) handleTransactional() {
-	if u.transactional.Load() != nil {
-		u.transactional.Load().(*transactional).polled()
+	if ts, ok := u.transactional.Load().(*transactional); ok {
+		ts.polled()
 	}
 }
 
@@ -239,15 +256,47 @@ func (u *UI) Post(evt api.Eventer) error {
 	return u.transactional.Load().(*transactional).Post(evt)
 }
 
+// Display sets at given screen coordinates (x,y) given rune r with
+// given style s.
 func (u *UI) Display(x, y int, r rune, s api.Style) {
 	u.lib.SetContent(x, y, r, nil, u.styler(s))
 }
 
+// Redraw blank all cells and draw the screen content.
 func (u *UI) Redraw() { u.lib.Sync() }
 
+// Update changed cells of the screen.
 func (u *UI) Update() { u.lib.Show() }
 
 // NewStyle returns a new style corresponding to tcell's default style.
 func (u *UI) NewStyle() api.Style {
 	return u.defaultStyle
+}
+
+// SetCursor sets the cursor to given coordinates (x,y) having
+// optionally given style cs[0] provided (x,y) is on the screen and if
+// so that cs[0] is not the ZeroCursor.  Are later conditions not met
+// the cursor is removed from the screen.
+func (u *UI) SetCursor(x, y int, cs ...api.CursorStyle) (
+	sx int, sy int, scs api.CursorStyle,
+) {
+	w, h := u.Size()
+	if x < 0 || x >= w || y < 0 || y >= h {
+		u.lib.HideCursor()
+		return -1, -1, api.ZeroCursor
+	}
+	_cs := api.ZeroCursor
+	if len(cs) > 0 {
+		if cs[0] == api.ZeroCursor {
+			u.lib.HideCursor()
+			return -1, -1, api.ZeroCursor
+		}
+		_cs = cs[0]
+	}
+
+	if _cs != api.ZeroCursor {
+		u.lib.SetCursorStyle(apiToTcellCursorStyles[_cs])
+	}
+	u.lib.ShowCursor(x, y)
+	return x, y, _cs
 }

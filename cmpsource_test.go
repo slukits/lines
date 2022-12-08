@@ -318,12 +318,12 @@ type srcFcsFX struct {
 
 func (c *srcFcsFX) OnInit(e *Env) { c.FF.Add(LinesFocusable) }
 
-func (c *srcFcsFX) OnLineFocus(e *Env, idx int) {
+func (c *srcFcsFX) OnLineFocus(e *Env, cIdx, sIdx int) {
 	c.lfN++
 	if c.onLf == nil {
 		return
 	}
-	c.onLf(c, e, idx)
+	c.onLf(c, e, cIdx)
 }
 
 // focusLinerFX implements FocusableLiner.
@@ -365,7 +365,7 @@ func (s *ASourcedComponent) Focuses_first_focusable_line(t *T) {
 		cmp.Src = &ContentSource{Liner: liner}
 	}))
 
-	tt.FireRune('j')
+	tt.FireKey(Down)
 
 	t.Eq(1, cmp.lfN)
 }
@@ -391,7 +391,7 @@ func (s *ASourcedComponent) Focuses_next_focusable_line(t *T) {
 		cmp.Src = &ContentSource{Liner: liner}
 	}))
 
-	tt.FireRune('j')
+	tt.FireKey(Down)
 	tt.FireKey(Down)
 
 	t.Eq(2, cmp.lfN)
@@ -400,35 +400,33 @@ func (s *ASourcedComponent) Focuses_next_focusable_line(t *T) {
 func (s *ASourcedComponent) Resets_focus_if_next_not_focusable(t *T) {
 	cmp := &srcFcsFX{
 		onLf: func(c *srcFcsFX, _ *Env, _ int) {
-			switch c.lfN % 2 {
-			case 0:
-				t.Eq(-1, c.LL.Focus.Current())
-			case 1:
-				t.Eq(0, c.LL.Focus.Current())
-			}
+			t.Eq(0, c.LL.Focus.Current())
 		}}
-	tt := xcmpfx(t, cmp)
-	tt.FireResize(3, 2)
-	t.FatalOn(tt.Lines.Update(cmp, nil, func(e *Env) {
+	fx := fx(t, cmp)
+	fx.FireResize(3, 2)
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
 		liner := &focusLinerFX{}
 		liner.cc = []string{"1st"}
 		cmp.Src = &ContentSource{Liner: liner}
 	}))
 
-	tt.FireRune('j')
-	tt.FireRune('j')
+	fx.FireKey(Down)
+	fx.FireKey(Down)
 
-	t.FatalOn(tt.Lines.Update(cmp, nil, func(e *Env) {
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
 		t.Eq(-1, cmp.LL.Focus.Current())
 		cmp.Src.Liner.(*focusLinerFX).cc = []string{"1st", "2nd", "3rd"}
 		cmp.Src.Liner.(*focusLinerFX).notFocusable = map[int]bool{
 			1: true, 2: true}
 	}))
 
-	tt.FireKey(Down)
-	tt.FireKey(Down)
+	fx.FireKey(Down)
+	fx.FireKey(Down)
 
-	t.Eq(4, cmp.lfN)
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+		t.Eq(-1, cmp.LL.Focus.Current())
+	}))
+	t.Eq(2, cmp.lfN)
 }
 
 func (s *ASourcedComponent) Focuses_previous_focusable_line(t *T) {
@@ -441,13 +439,11 @@ func (s *ASourcedComponent) Focuses_previous_focusable_line(t *T) {
 				t.Eq(7, c.LL.Focus.Current())
 			case 3:
 				t.Eq(3, c.LL.Focus.Current())
-			case 4:
-				t.Eq(-1, c.LL.Focus.Current())
 			}
 		}}
-	tt := xcmpfx(t, cmp)
-	tt.FireResize(3, 2)
-	t.FatalOn(tt.Lines.Update(cmp, nil, func(e *Env) {
+	fx := fx(t, cmp)
+	fx.FireResize(3, 2)
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
 		liner := &focusLinerFX{}
 		liner.cc = []string{
 			"1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th"}
@@ -456,13 +452,16 @@ func (s *ASourcedComponent) Focuses_previous_focusable_line(t *T) {
 		cmp.Src = &ContentSource{Liner: liner}
 	}))
 
-	tt.FireRune('j')
-	tt.FireKey(Down)
+	fx.FireKey(Down)
+	fx.FireKey(Down)
 
-	tt.FireRune('k')
-	tt.FireKey(Up)
+	fx.FireKey(Up)
+	fx.FireKey(Up)
 
-	t.Eq(4, cmp.lfN)
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+		t.Eq(-1, cmp.LL.Focus.Current())
+	}))
+	t.Eq(3, cmp.lfN)
 }
 
 func (s *ASourcedComponent) Triggers_reset_on_unfocusable_feature(t *T) {
@@ -483,10 +482,10 @@ func (s *ASourcedComponent) Triggers_reset_on_unfocusable_feature(t *T) {
 		cmp.Src = &ContentSource{Liner: liner}
 	}))
 
-	tt.FireRune('j')
+	tt.FireKey(Down)
 	tt.FireKey(Esc)
 
-	t.Eq(2, cmp.lfN)
+	t.Eq(1, cmp.lfN)
 }
 
 func (s *ASourcedComponent) Scrolls_inside_its_gaps(t *T) {
@@ -626,7 +625,7 @@ func (s *ASourcedComponent) Inverts_bg_fg_of_focused_if_highlighted(
 	tt := xcmpfx(t, cmp)
 	tt.FireResize(3, 2)
 	t.FatalOn(tt.Lines.Update(cmp, nil, func(e *Env) {
-		cmp.FF.Add(HighlightedFocusable)
+		cmp.FF.Add(LinesHighlightedFocusable)
 		liner := &focusLinerFX{}
 		liner.cc = []string{"1st", "2nd"}
 		liner.notFocusable = map[int]bool{0: true}
@@ -674,12 +673,12 @@ func (c *srcLsFX) OnInit(e *Env) {
 	c.Src = &ContentSource{Liner: liner}
 }
 
-func (c *srcLsFX) OnLineSelection(e *Env, idx int) {
+func (c *srcLsFX) OnLineSelection(e *Env, cIdx, sIdx int) {
 	c.lsN++
 	if c.onLS == nil {
 		return
 	}
-	c.onLS(c, e, idx)
+	c.onLS(c, e, cIdx)
 }
 
 func (s *ASourcedComponent) Gets_its_selected_lines_reported(t *T) {
@@ -696,8 +695,8 @@ func (s *ASourcedComponent) Gets_its_selected_lines_reported(t *T) {
 	tt := xcmpfx(t, cmp)
 	tt.FireResize(3, 2)
 
-	tt.FireRune('j')
-	tt.FireRune('j')
+	tt.FireKey(Down)
+	tt.FireKey(Down)
 	tt.FireKey(Enter)
 
 	t.Eq(2, cmp.lfN)

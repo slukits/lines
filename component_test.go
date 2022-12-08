@@ -13,8 +13,6 @@ import (
 	. "github.com/slukits/gounit"
 )
 
-type cmpFX struct{ Component }
-
 type AComponent struct{ Suite }
 
 func (s *AComponent) SetUp(t *T) { t.Parallel() }
@@ -402,6 +400,46 @@ func (s *AComponent) Updates_tab_expansions_on_tab_width_change(t *T) {
 
 	t.True(strings.HasPrefix(tt.Screen()[0], expTB+"1st"))
 	t.True(strings.HasPrefix(tt.Screen()[1], expTB+"2nd"))
+}
+
+func (s *AComponent) Is_lines_cursor_component_on_set_cursor(t *T) {
+	stacking := newStacking(&cmpFX{}, &cmpFX{})
+	tt := fx(t, stacking)
+	cmp := stacking.CC[1].(*cmpFX)
+	tt.Lines.Update(cmp, nil, func(e *Env) {
+		cmp.SetCursor(0, 0, BlockCursorBlinking)
+	})
+	t.Eq(cmp, tt.Lines.CursorComponent())
+}
+
+func (s *AComponent) Ignores_setting_cursor_outside_content(t *T) {
+	stacking := newStacking(&cmpFX{}, &cmpFX{})
+	tt := fx(t, stacking)
+	cmp := stacking.CC[1].(*cmpFX)
+	tt.Lines.Update(cmp, nil, func(e *Env) {
+		_, _, w, _ := cmp.ContentArea()
+		cmp.SetCursor(0, w, BlockCursorBlinking)
+	})
+	t.Eq(Componenter(nil), tt.Lines.CursorComponent())
+	tt.Lines.Update(cmp, nil, func(e *Env) {
+		_, _, _, h := cmp.ContentArea()
+		cmp.SetCursor(h, 0, BlockCursorBlinking)
+	})
+	t.Eq(Componenter(nil), tt.Lines.CursorComponent())
+}
+
+func (s *AComponent) Stacking_or_chaining_ignores_cursor_sets(t *T) {
+	stacking := newStacking(&cmpFX{})
+	tt := fx(t, stacking)
+	tt.Lines.Update(stacking, nil, func(e *Env) {
+		stacking.SetCursor(0, 0)
+	})
+	t.Eq(Componenter(nil), tt.Lines.CursorComponent())
+	chaining := &chnFX{Chaining: Chaining{CC: []Componenter{&cmpFX{}}}}
+	tt.Lines.Update(chaining, nil, func(e *Env) {
+		chaining.SetCursor(0, 0)
+	})
+	t.Eq(Componenter(nil), tt.Lines.CursorComponent())
 }
 
 func TestComponent(t *testing.T) {

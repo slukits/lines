@@ -35,7 +35,7 @@ type msg struct{ lines.Component }
 func (c *msg) OnInit(e *lines.Env) {
 	c.Dim().SetHeight(2)
 	fmt.Fprint(
-		e.BG(lines.Green).FG(lines.Blue),
+		e.BG(lines.Green).FG(lines.Blue).AA(lines.Bold),
 		msgWaiting,
 	)
 }
@@ -75,7 +75,7 @@ func (c *lineFocus) OnInit(e *lines.Env) {
 	}
 }
 
-func (c *lineFocus) OnLineFocus(e *lines.Env, idx int) {
+func (c *lineFocus) OnLineFocus(e *lines.Env, cIdx, sIdx int) {
 	if c.LL.Focus.Current() < 0 {
 		if err := e.Lines.Update(c.msg, msgNothing, nil); err != nil {
 			panic(err)

@@ -371,20 +371,43 @@ func (s *_gaps) Have_set_vertical_style(t *T) {
 
 func (s *_gaps) Have_set_horizontal_style(t *T) {
 	tt, cmp := s.fx(t, func(c *icmpFX, e *Env) {
-		c.Dim().SetWidth(3).SetHeight(3)
+		c.Dim().SetWidth(5).SetHeight(5)
 	})
 	tt.Lines.Update(cmp, nil, func(e *Env) {
-		cmp.Gaps(0).Horizontal.AA(Reverse).FG(Blue).BG(Yellow)
+		cmp.Gaps(1).Horizontal.AA(Reverse).FG(Blue).BG(Yellow)
 	})
 
-	testStyle := func(c api.TestCell) {
-		t.True(c.Style.AA() == Reverse && c.Style.FG() == Blue &&
-			c.Style.BG() == Yellow)
+	testStyle := func(cc ...api.TestCell) {
+		for _, c := range cc {
+			t.True(c.Style.AA() == Reverse && c.Style.FG() == Blue &&
+				c.Style.BG() == Yellow)
+		}
 	}
 
+	/*
+	*****
+	* x * 1,2
+	*x x*
+	* x * 3,2
+	*****
+	 */
 	cc := tt.CellsOf(cmp)
-	testStyle(cc[0][1])
-	testStyle(cc[2][1])
+	testStyle(cc[1][2], cc[3][2])
+}
+
+func (s *_gaps) Have_set_writer_style_in_full_gap_line(t *T) {
+	tt, cmp := s.fx(t, func(c *icmpFX, e *Env) {
+		c.Dim().SetWidth(9).SetHeight(1)
+	})
+	t.FatalOn(tt.Lines.Update(cmp, nil, func(e *Env) {
+		fmt.Fprint(cmp.Gaps(0).Top.AA(Bold).FG(Yellow).BG(Blue), "top")
+	}))
+	cc := tt.CellsOf(cmp)[0]
+	t.Eq(" top     ", cc)
+	exp := (Style{}).WithAA(Bold).WithFG(Yellow).WithBG(Blue)
+	for _, c := range cc[1 : len(cc)-1] {
+		t.True(c.Style.Equals(exp))
+	}
 }
 
 func (s *_gaps) Have_set_at_writer_style(t *T) {

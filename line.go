@@ -34,15 +34,48 @@ const (
 // flags and styles.  A [Component]'s Line instance is obtained through
 // its LL property (see [ComponentLines.By]).
 type Line struct {
-	ff     LineFlags
-	rr     []rune
-	ss     styleRanges
+	// ff a lines state and format flags like *dirty or *Highlighted*.
+	// ff is reset if reset() is called.
+	ff LineFlags
+	// rr is a lines content and reset by a call of reset().
+	rr []rune
+	// ss styles the runes of a line and reset by a call of reset().
+	ss styleRanges
+	// fillAt indicates line filling runes and reset by a call of
+	// reset().
 	fillAt []int
+	// start is the first rune index of the displayed line content rr.
+	// start is reset if reset() or resetLineFocus() is called.
+	start int
+	// ofRight stores a line's overflow at the right side since it was
+	// asked for overflowing (see isOverflowing) the last time.  ofRight
+	// is reset if reset() or resetLineFocus() is called.
+	ofRight bool
+	// ofRight stores a line's overflow at the left side since it was
+	// asked for overflowing (see isOverflowing) the last time.  ofLeft
+	// is reset if reset() or resetLineFocus() is called.
+	ofLeft bool
+}
+
+func (l *Line) Len() int {
+	return len(l.rr)
+}
+
+func (l *Line) isOverflowing(width int) (left, right, changed bool) {
+	left = l.start > 0
+	right = len(l.rr)-l.start > width
+	if left == l.ofLeft && right == l.ofRight {
+		return left, right, false
+	}
+	l.ofLeft, l.ofRight = left, right
+	return left, right, true
 }
 
 func (l *Line) reset(ff LineFlags, s *Style) *Line {
 	l.ff = ff
 	l.rr = nil
+	l.start = 0
+	l.ofRight, l.ofLeft = false, false
 	if s != nil {
 		l.ss = newStyleRanges(*s)
 	} else {
@@ -101,6 +134,43 @@ func cleanForFlagging(ff LineFlags) LineFlags {
 		ff &^= Highlighted
 	}
 	return ff
+}
+
+// incrementStart moves overflowing content one rune to the left for the
+// use case that the cursor is in a component's last content column and
+// the user goes to the right.  incrementStart is a no-op if there are
+// no overflowing runes.
+func (l *Line) incrementStart(width int) {
+	if len(l.rr) == 0 || len(l.rr[l.start:]) <= width {
+		return
+	}
+	l.start++
+	l.setDirty()
+}
+
+func (l *Line) decrementStart() {
+	if l.start == 0 {
+		return
+	}
+	l.start--
+	l.setDirty()
+}
+
+func (l *Line) moveStartToEnd(width int) {
+	if len(l.rr) == 0 || len(l.rr[l.start:]) < width {
+		return
+	}
+	l.start = len(l.rr) - width
+	l.setDirty()
+}
+
+func (l *Line) resetLineFocus() {
+	l.ofLeft, l.ofRight = false, false
+	if l.start == 0 {
+		return
+	}
+	l.start = 0
+	l.setDirty()
 }
 
 // setDirty sets the dirty flag if not set.
@@ -368,7 +438,14 @@ func (l *Line) displayOverflowing(
 	if l.ff&(Highlighted|TrimmedHighlighted) != 0 {
 		ss = l.highlighted(rr, ss, g)
 	}
-	return rr[:width], ss
+	ll := len(rr[l.start:])
+	if ll > width {
+		return rr[l.start : l.start+width], ss
+	}
+	if ll < width { // shouldn't happen
+		return l.pad(rr[l.start:], width), ss
+	}
+	return rr[l.start:], ss
 }
 
 // expandFillerAt expands runes marked as fillers by an equal amount in
@@ -578,5 +655,8 @@ func (l *Line) padTo(p int) {
 // width.
 func (l *Line) pad(rr []rune, width int) []rune {
 	c := width - len(rr)
+	if c < 0 {
+		return rr
+	}
 	return append(rr, []rune(strings.Repeat(" ", c))...)
 }

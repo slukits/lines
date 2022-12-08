@@ -110,6 +110,19 @@ type Displayer interface {
 	// is the number of single width runes fitting in a line and the
 	// height is the number of lines fitting on the screen.
 	Size() (int, int)
+
+	// SetCursor positions the screen/window cursor at given coordinates
+	// x and y having optionally given cursor style cs and returns the
+	// actually set cursor position with actually set cursor style:
+	//  - if x and y are outside the screen or they are inside and given
+	//    cursor style is the ZeroCursor the -1, -1, ZeroCursor is
+	//    returned.
+	//  - if x and y are inside the screen and no cursor style is given
+	//    x and y and ZeroCursor is return indicating that the cursor
+	//    style has not changed.
+	//  - if x and y are inside the screen and a non-zero cursor style
+	//    is given the arguments are returned as received.
+	SetCursor(x, y int, cs ...CursorStyle) (int, int, CursorStyle)
 }
 
 // EventProcessor provides user input events and programmatically posted
