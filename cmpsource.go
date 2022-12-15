@@ -46,6 +46,17 @@ type FocusableLiner interface {
 	Highlighted() (highlighted, trimmed bool)
 }
 
+// EditLiner implementations are [FocusableLiner] implementations
+// turning the editable feature of associated component on.
+type EditLiner interface {
+	FocusableLiner
+
+	// OnEdit implementation gets edits of a component's screen cell
+	// reported.  Given line writer allows to print to edited line while
+	// given Edit-instance provides the information about the edit.
+	OnEdit(w *EnvLineWriter, e *Edit) bool
+}
+
 // A ContentSource instance may be assigned to a [Component]'s Src
 // property whose [Liner] is then used by the [Component] to print its
 // content. E.g. if MyLiner is a Liner implementation and c a Component:
