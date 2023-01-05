@@ -1003,7 +1003,8 @@ var defaultBindings = map[FeatureMask]*bindings{
 type LineSelecter interface {
 
 	// OnLineSelection is called by Lines if the focused line having
-	// index i of implementing component was selected.
+	// contet-index cIdx and screen-index sIdx of implementing component
+	// was selected.
 	OnLineSelection(_ *Env, cIdx, sIdx int)
 }
 
