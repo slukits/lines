@@ -56,6 +56,9 @@ type Component struct {
 	// Scroll provides a component's API for scrolling.
 	Scroll *Scroller
 
+	// Edit provides a component's API to control editing its content.
+	Edit *Editor
+
 	// bcknd to post Update and Focus events
 	bcknd api.UIer
 
@@ -178,6 +181,21 @@ func (c *Component) layoutComponent() layoutComponenter {
 	return c.layoutCmp
 }
 
+// isNesting returns true if the component is stacking or chaining other
+// components.
+func (c *Component) isNesting() bool {
+	if !c.isInitialized() {
+		return false
+	}
+	switch c.layoutCmp.(type) {
+	case *stackingWrapper:
+		return true
+	case *chainingWrapper:
+		return true
+	}
+	return false
+}
+
 func (c *Component) embedded() *Component { return c }
 
 // Gaps returns a gaps writer at given leven allowing to do framing,
@@ -229,20 +247,7 @@ func (c *Component) SetCursor(
 // the line and column index of the cursor in the content area and true
 // if c has the cursor set; otherwise -1, -1 and false is return.
 func (c *Component) CursorPosition() (line, column int, _ bool) {
-	if c.gg == nil {
-		return -1, -1, false
-	}
-	if c.gg.scr.cursor.Removed() {
-		return -1, -1, false
-	}
-	x, y := c.gg.scr.cursor.Coordinates()
-	cx, cy, cw, ch := c.ContentArea()
-	x -= cx
-	y -= cy
-	if x < 0 || x >= cw || y < 0 || y >= ch {
-		return -1, -1, false
-	}
-	return y, x, true
+	return c.cursorPosition()
 }
 
 // component is the actual implementation of a lines-Component.
@@ -283,6 +288,26 @@ func (c *component) globals() *globals {
 		return nil
 	}
 	return c.gg
+}
+
+// cursorPosition returns relative to given component c's content origin
+// the line and column index of the cursor in the content area and true
+// if c has the cursor set; otherwise -1, -1 and false is return.
+func (c *component) cursorPosition() (line, column int, _ bool) {
+	if c.gg == nil {
+		return -1, -1, false
+	}
+	if c.gg.scr.cursor.Removed() {
+		return -1, -1, false
+	}
+	x, y := c.gg.scr.cursor.Coordinates()
+	cx, cy, cw, ch := c.ContentArea()
+	x -= cx
+	y -= cy
+	if x < 0 || x >= cw || y < 0 || y >= ch {
+		return -1, -1, false
+	}
+	return y, x, true
 }
 
 func (c *component) setCursor(

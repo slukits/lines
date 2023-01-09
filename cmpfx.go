@@ -15,6 +15,8 @@ const (
 	onLineSelection
 	onLineOverflowing
 	onCursor
+	onRune
+	onEdit
 )
 
 // TODO: refactor make this component replace all fixture component
@@ -22,11 +24,13 @@ const (
 type cmpFX struct {
 	Component
 	onInit            func(*cmpFX, *Env)
-	onLineFocus       func(*cmpFX, *Env, int)
+	onLineFocus       func(_ *cmpFX, _ *Env, cIdx, sIdx int)
 	onLineFocusLost   func(_ *cmpFX, _ *Env, cIdx, sIdx int)
-	onLineSelection   func(*cmpFX, *Env, int)
+	onLineSelection   func(_ *cmpFX, _ *Env, cIdx, sIdx int)
 	onLineOverflowing func(_ *cmpFX, _ *Env, left, right bool)
 	onCursor          func(_ *cmpFX, _ *Env, absOnly bool)
+	onRune            func(*cmpFX, *Env, rune, ModifierMask)
+	onEdit            func(*cmpFX, *Env, *Edit) bool
 	cc                map[counter]int
 }
 
@@ -47,12 +51,20 @@ func (c *cmpFX) OnInit(e *Env) {
 	c.onInit(c, e)
 }
 
+func (c *cmpFX) OnRune(e *Env, r rune, mm ModifierMask) {
+	c.increment(onRune)
+	if c.onRune == nil {
+		return
+	}
+	c.onRune(c, e, r, mm)
+}
+
 func (c *cmpFX) OnLineFocus(e *Env, cIdx, sIdx int) {
 	c.increment(onLineFocus)
 	if c.onLineFocus == nil {
 		return
 	}
-	c.onLineFocus(c, e, cIdx)
+	c.onLineFocus(c, e, cIdx, sIdx)
 }
 
 func (c *cmpFX) OnLineFocusLost(e *Env, cIdx, sIdx int) {
@@ -63,12 +75,12 @@ func (c *cmpFX) OnLineFocusLost(e *Env, cIdx, sIdx int) {
 	c.onLineFocusLost(c, e, cIdx, sIdx)
 }
 
-func (c *cmpFX) OnLineSelection(e *Env, i int) {
+func (c *cmpFX) OnLineSelection(e *Env, cIdx, sIdx int) {
 	c.increment(onLineSelection)
 	if c.onLineSelection == nil {
 		return
 	}
-	c.onLineSelection(c, e, i)
+	c.onLineSelection(c, e, cIdx, sIdx)
 }
 
 func (c *cmpFX) OnLineOverflowing(e *Env, left, right bool) {
@@ -85,4 +97,12 @@ func (c *cmpFX) OnCursor(e *Env, absOnly bool) {
 		return
 	}
 	c.onCursor(c, e, absOnly)
+}
+
+func (c *cmpFX) OnEdit(e *Env, edt *Edit) bool {
+	c.increment(onEdit)
+	if c.onEdit == nil {
+		return true
+	}
+	return c.onEdit(c, e, edt)
 }

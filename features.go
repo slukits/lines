@@ -92,6 +92,13 @@ func (ff *Features) ensureInitialized() *features {
 // Add adds the default key, rune and button bindings of given
 // feature(s) for associated component.
 func (ff *Features) Add(f FeatureMask) {
+	if f&editable == editable && !ff.c.isNesting() && ff.c.Edit == nil {
+		_, _, hasCursor := ff.c.CursorPosition()
+		ff.c.Edit = &Editor{c: ff.c, suspended: !hasCursor}
+		if hasCursor {
+			ff.c.LL.Focus.eolAfterLastRune = true
+		}
+	}
 	ff.ensureInitialized().add(f, false)
 }
 
@@ -338,6 +345,11 @@ const (
 	// c and shows the cursor whose positioning indicates the "focused
 	// rune".
 	CellHighlightedFocusable = CellFocusable | LinesHighlightedFocusable
+
+	Editable = Focusable | CellFocusable | Scrollable | editable
+
+	HighlightedEditable = Focusable | CellHighlightedFocusable |
+		Scrollable | editable
 )
 
 // features provides information about keys/runes/buttons which are
@@ -409,7 +421,7 @@ func (ff *features) copy() *features {
 
 func (ff *features) has(f FeatureMask) bool {
 	if f&_recursive == NoFeature {
-		return ff.have&f != NoFeature
+		return ff.have&f == f
 	}
 
 	// since we can't know which of ff.have features is combined with
@@ -508,6 +520,9 @@ func (ff *features) add(f FeatureMask, recursive bool) {
 
 	for _, f := range _ff {
 		df := defaultBindings[f]
+		if df == nil {
+			continue
+		}
 		if recursive {
 			f |= _recursive
 		}
@@ -517,14 +532,12 @@ func (ff *features) add(f FeatureMask, recursive bool) {
 			}
 			ff.keys[k.Mod][k.Key] = f
 		}
-
 		for _, b := range df.bb {
 			if ff.buttons[b.Mod] == nil {
 				ff.buttons[b.Mod] = map[ButtonMask]FeatureMask{}
 			}
 			ff.buttons[b.Mod][b.Button] = f
 		}
-
 		for _, r := range df.rr {
 			if ff.runes[r.Mod] == nil {
 				ff.runes[r.Mod] = map[rune]FeatureMask{}
@@ -1102,6 +1115,14 @@ func executeLineFocus(
 		}
 		return
 	}
+	if cIdx < 0 && usr.embedded().Edit != nil {
+		usr.embedded().Edit.Resume()
+		if usr.embedded().Edit.IsReplacing() {
+			usr.embedded().LL.Focus.EolAtLastRune()
+		} else {
+			usr.embedded().LL.Focus.EolAfterLastRune()
+		}
+	}
 	reportLineFocus(cntx, usr, cIdx, sIdx)
 	if cl == column && column == -1 {
 		return
@@ -1110,7 +1131,17 @@ func executeLineFocus(
 }
 
 func executeResetLineFocus(cntx *rprContext, usr Componenter) {
+	cIdx, sIdx := usr.embedded().LL.Focus.Current(),
+		usr.embedded().LL.Focus.Screen()
+	_, _, haveCursor := usr.embedded().CursorPosition()
 	usr.embedded().LL.Focus.Reset()
+	if haveCursor {
+		reportCursorChange(cntx, usr)
+	}
+	reportLineFocus(cntx, usr, cIdx, sIdx)
+	if usr.embedded().Edit != nil {
+		usr.embedded().Edit.Suspend()
+	}
 }
 
 func executeCellFocus(

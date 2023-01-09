@@ -51,9 +51,11 @@ type FocusableLiner interface {
 type EditLiner interface {
 	FocusableLiner
 
-	// OnEdit implementation gets edits of a component's screen cell
-	// reported.  Given line writer allows to print to edited line while
-	// given Edit-instance provides the information about the edit.
+	// OnEdit implementation gets edit requests of a component's screen
+	// cell reported and returns true iff the edit request should be
+	// carried out.  Given line writer allows to print to edited line
+	// while given Edit-instance provides the information about the
+	// edit.
 	OnEdit(w *EnvLineWriter, e *Edit) bool
 }
 
@@ -63,7 +65,10 @@ type EditLiner interface {
 //
 //	c.Src = &lines.ContentSource{Liner: &MyLiner{}}
 //
-// now c uses provided Liner instance to print its content.
+// now c uses provided Liner instance to print its content.  NOTE
+// according to a ContentSource's Liner implementation the setting of
+// corresponding features is triggered.  E.g. is a Liner implementation
+// a ScrollableLiner the component has the feature Scrollable set.
 type ContentSource struct {
 
 	// Liner provides a components content
@@ -74,7 +79,7 @@ type ContentSource struct {
 	clean bool
 
 	// init indicates if initializations have to be done which are
-	// derived from the concrete liner implementation.
+	// derived evaluation of given liner implementation.
 	init bool
 
 	first int
@@ -109,6 +114,22 @@ func (cs *ContentSource) cleanup(c *component) {
 
 func (cs *ContentSource) initialize(c *component) {
 	c.ensureFeatures()
+	if el, ok := cs.Liner.(EditLiner); ok {
+		if hl, tr := el.Highlighted(); hl {
+			if !c.ff.has(HighlightedEditable) {
+				c.ff.add(HighlightedEditable, false)
+			}
+			if tr {
+				c.LL.Focus.Trimmed()
+			}
+			return
+		} else {
+			if !c.ff.has(Editable) {
+				c.ff.add(Editable, false)
+			}
+		}
+		return
+	}
 	if _, ok := cs.Liner.(ScrollableLiner); ok {
 		if !c.ff.has(Scrollable) {
 			c.ff.add(Scrollable, false)

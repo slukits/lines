@@ -10,7 +10,7 @@ import (
 	. "github.com/slukits/gounit"
 )
 
-var allFX = func() FeatureMask {
+var allFMFX = func() FeatureMask {
 	ff := NoFeature
 	for _, f := range allFeatures {
 		ff |= f
