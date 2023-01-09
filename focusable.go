@@ -20,6 +20,11 @@ type LineFocus struct {
 	// if the whole line should be highlighted or if highlighting should
 	// be trimmed to non-blank content.
 	hlType LineFlags
+
+	// eolAfterLastRune indicates that the last position of the cursor
+	// in a given line is after the last rune which is needed for
+	// editable components to append to a line.
+	eolAfterLastRune bool
 }
 
 // Current returns the content line-index of the currently focused line.
@@ -38,6 +43,39 @@ func (s *LineFocus) Trimmed() {
 		return
 	}
 	s.hlType = TrimmedHighlighted
+}
+
+// EolAfterLastRune enables the cursor to go one rune over the last
+// content rune of a line.
+func (s *LineFocus) EolAfterLastRune() *LineFocus {
+	s.eolAfterLastRune = true
+	return s
+}
+
+// EolAtLastRune restricts a line's most right cursor position to the
+// lines last content rune.
+func (s *LineFocus) EolAtLastRune() *LineFocus {
+	s.eolAfterLastRune = false
+	return s
+}
+
+// Eol returns true iff the cursor is at the most right position of the
+// current line's content.
+func (f *LineFocus) Eol() bool {
+	// grab screen-line and screen-cell indices
+	slIdx, scIdx, hasCursor := f.c.wrapped().cursorPosition()
+	if !hasCursor {
+		return false
+	}
+	return f.isEol(f.line(slIdx), scIdx)
+}
+
+func (f *LineFocus) isEol(line *Line, columnIdx int) bool {
+	availableContent := len(line.rr) - line.start
+	if !f.eolAfterLastRune {
+		return columnIdx+1 == availableContent
+	}
+	return columnIdx == availableContent
 }
 
 // Next focuses the next focusable line at the currently focused line's
@@ -101,21 +139,29 @@ func (s *LineFocus) nextFromSource(fl FocusableLiner) int {
 // line and returns the later's screen line index with the cell index of
 // the cursor position and a boolean value indicating if the cursor was
 // moved.
-func (s *LineFocus) NextCell() (ln, cl int, moved bool) {
-	ln, cl, _ = s.c.CursorPosition()
-	if s.current < 0 || cl < 0 {
+func (s *LineFocus) NextCell() (slIdx, scIdx int, moved bool) {
+	slIdx, scIdx, haveCursorPos := s.c.CursorPosition()
+	if s.current < 0 || !haveCursorPos {
 		return -1, -1, false
 	}
-	l := s.line(s.idx())
-	if cl+1 == l.Len() {
-		return ln, cl, false
+	if slIdx != s.idx() {
+		panic("lines: line-focus: last cell: cursor-line is not " +
+			"focused line")
 	}
-	_, _, cw, _ := s.c.ContentArea()
-	if cl+1 < cw {
-		return s.c.SetCursor(s.idx(), cl+1).CursorPosition()
+	line := s.line(slIdx)
+	if s.isEol(line, scIdx) {
+		return slIdx, scIdx, false
 	}
-	l.incrementStart(cw)
-	return ln, cl, false
+	_, _, screenWidth, _ := s.c.ContentArea()
+	if scIdx+1 < screenWidth {
+		s.c.setCursor(slIdx, scIdx+1)
+		return slIdx, scIdx + 1, true
+	}
+	if s.eolAfterLastRune {
+		screenWidth--
+	}
+	line.incrementStart(screenWidth)
+	return slIdx, scIdx, false
 }
 
 // LastCell moves the cursor of currently focused component line to the
@@ -124,25 +170,38 @@ func (s *LineFocus) NextCell() (ln, cl int, moved bool) {
 // in the component's last screen column.  Last cell returns the
 // currently focused line, the currently focused cell and if the cursor
 // was moved.
-func (s *LineFocus) LastCell() (ln, cl int, moved bool) {
-	_, cl, _ = s.c.CursorPosition()
-	if s.current < 0 || cl < 0 {
+func (s *LineFocus) LastCell() (slIdx, scIdx int, moved bool) {
+	slIdx, scIdx, _ = s.c.CursorPosition()
+	if s.current < 0 || scIdx < 0 {
 		return -1, -1, false
 	}
-	_, _, cw, _ := s.c.ContentArea()
-	l := s.line(s.idx())
-	if cw-1 != cl && l.Len()-1 != cl {
-		// neither in the last component cell nor at content end
-		moved = true
+	if slIdx != s.idx() {
+		panic("lines: line-focus: last cell: cursor-line is not " +
+			"focused line")
 	}
-	if l.Len() < cw {
-		ln, cl, _ := s.c.SetCursor(s.idx(), l.Len()-1).
-			CursorPosition()
-		return ln, cl, moved
+	line := s.line(slIdx)
+	if s.isEol(line, scIdx) {
+		return slIdx, scIdx, false
 	}
-	ln, cl, _ = s.c.SetCursor(s.idx(), cw-1).CursorPosition()
-	l.moveStartToEnd(cw)
-	return ln, cl, moved
+	_, _, screenWidth, _ := s.c.ContentArea()
+	if s.eolAfterLastRune {
+		screenWidth--
+	}
+	if line.Len() < screenWidth {
+		scIdx = line.Len()
+		if !s.eolAfterLastRune {
+			scIdx--
+		}
+		s.c.setCursor(slIdx, scIdx)
+		return slIdx, scIdx, true
+	}
+	scIdx = screenWidth
+	if !s.eolAfterLastRune {
+		scIdx--
+	}
+	slIdx, scIdx, _ = s.c.SetCursor(slIdx, scIdx).CursorPosition()
+	line.moveStartToEnd(screenWidth)
+	return slIdx, scIdx, true
 }
 
 // Previous focuses the first focusable line previous to
@@ -150,24 +209,24 @@ func (s *LineFocus) LastCell() (ln, cl int, moved bool) {
 // position which defaults to -1 for an unset cursor.  If highlighted is
 // true the highlight of the current line is removed while the previous
 // line is highlighted.
-func (s *LineFocus) Previous(highlighted bool) (ln int, cl int) {
+func (s *LineFocus) Previous(highlighted bool) (slIdx int, cl int) {
 	if s.current >= 0 {
 		s.line(s.idx()).resetLineFocus()
 	}
-	ln = s.findPrevious()
-	if ln == s.current {
+	slIdx = s.findPrevious()
+	if slIdx == s.current {
 		s.Reset()
 		s.c.Scroll.ToTop()
 		return s.current, cl
 	}
 
 	_, column, _ := s.c.CursorPosition()
-	s.focus(ln, highlighted)
+	s.focus(slIdx, highlighted)
 	cl = s.adjustLineEndCursor(column, PreviousCellFocusable)
 	if cl >= 0 {
 		s.c.SetCursor(s.idx(), cl)
 	}
-	return ln, cl
+	return slIdx, cl
 }
 
 func (s *LineFocus) findPrevious() int {
@@ -211,7 +270,7 @@ func (s *LineFocus) adjustLineEndCursor(
 // FirstCell moves the cursor of the currently focused component line to
 // its first screen column and its content to the right that the first
 // content rune is in the first column.
-func (s *LineFocus) FirstCell() (ln, cl int, moved bool) {
+func (s *LineFocus) FirstCell() (slIdx, cl int, moved bool) {
 	_, cl, _ = s.c.CursorPosition()
 	if s.current < 0 || cl < 0 {
 		return -1, -1, false
@@ -219,9 +278,9 @@ func (s *LineFocus) FirstCell() (ln, cl int, moved bool) {
 	if cl != 0 {
 		moved = true
 	}
-	ln, cl, _ = s.c.SetCursor(s.idx(), 0).CursorPosition()
+	slIdx, cl, _ = s.c.SetCursor(s.idx(), 0).CursorPosition()
 	s.line(s.idx()).resetLineFocus()
-	return ln, cl, moved
+	return slIdx, cl, moved
 }
 
 func (s *LineFocus) previousFromSource(fl FocusableLiner) int {
@@ -243,8 +302,8 @@ func (s *LineFocus) previousFromSource(fl FocusableLiner) int {
 // cell index and a boolean indicating if the cursor was moved.  Last
 // cell returns the currently focused line, the currently focused cell
 // and if the cursor was moved.
-func (s *LineFocus) PreviousCell() (ln, cl int, moved bool) {
-	ln, cl, _ = s.c.CursorPosition()
+func (s *LineFocus) PreviousCell() (slIdx, cl int, moved bool) {
+	slIdx, cl, _ = s.c.CursorPosition()
 	if s.current < 0 || cl < 0 {
 		return -1, -1, false
 	}
@@ -252,7 +311,7 @@ func (s *LineFocus) PreviousCell() (ln, cl int, moved bool) {
 		return s.c.SetCursor(s.idx(), cl-1).CursorPosition()
 	}
 	s.line(s.idx()).decrementStart()
-	return ln, cl, false
+	return slIdx, cl, false
 }
 
 func (s *LineFocus) focus(idx int, highlighted bool) {

@@ -1009,6 +1009,9 @@ var defaultBindings = map[FeatureMask]*bindings{
 	linesHighlightedFocusable: {
 		rr: FeatureRunes{{Rune: rune(0), Mod: ZeroModifier}},
 	},
+	editable: {
+		kk: FeatureKeys{{Key: Insert, Mod: ZeroModifier}},
+	},
 }
 
 // LineSelecter is implemented by a component who wants to be informed
@@ -1094,13 +1097,15 @@ func execute(cntx *rprContext, usr Componenter, f FeatureMask) {
 		executeResetLineFocus(cntx, usr)
 	case LineSelectable:
 		reportSelectedLine(cntx, usr)
+	case editable:
+		editorInsert(cntx, usr)
 	}
 }
 
 func executeLineFocus(
 	cntx *rprContext, usr Componenter, f func(bool) (int, int),
 ) {
-	cIdx, sIdx := usr.embedded().LL.Focus.Current(),
+	clIdx, slIdx := usr.embedded().LL.Focus.Current(),
 		usr.embedded().LL.Focus.Screen()
 	_, column, _ := usr.embedded().CursorPosition()
 	// TODO: figure out what that does especially in the context that
@@ -1109,21 +1114,13 @@ func executeLineFocus(
 	rf := usr.embedded().ff.runeFeature(rune(0), ZeroModifier)
 	highlighted := rf&linesHighlightedFocusable == linesHighlightedFocusable
 	ln, cl := f(highlighted)
-	if cIdx == ln {
+	if clIdx == ln {
 		if cl != column {
 			reportCursorChange(cntx, usr)
 		}
 		return
 	}
-	if cIdx < 0 && usr.embedded().Edit != nil {
-		usr.embedded().Edit.Resume()
-		if usr.embedded().Edit.IsReplacing() {
-			usr.embedded().LL.Focus.EolAtLastRune()
-		} else {
-			usr.embedded().LL.Focus.EolAfterLastRune()
-		}
-	}
-	reportLineFocus(cntx, usr, cIdx, sIdx)
+	reportLineFocus(cntx, usr, clIdx, slIdx)
 	if cl == column && column == -1 {
 		return
 	}
@@ -1225,4 +1222,20 @@ func reportSelectedLine(cntx *rprContext, usr Componenter) {
 		return
 	}
 	callback(usr, cntx, lsCurry(ls, cIdx, sIdx))
+}
+
+func editorInsert(cntx *rprContext, usr Componenter) {
+	_, _, hasCursor := usr.layoutComponent().wrapped().cursorPosition()
+	if !hasCursor {
+		executeLineFocus(cntx, usr, func(bool) (int, int) {
+			return 0, 0
+		})
+		usr.embedded().Edit.Resume()
+		return
+	}
+	if usr.embedded().Edit.IsReplacing() {
+		usr.embedded().LL.Focus.EolAtLastRune()
+	} else {
+		usr.embedded().LL.Focus.EolAfterLastRune()
+	}
 }

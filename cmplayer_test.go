@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"strings"
 	"testing"
-	"time"
 
 	. "github.com/slukits/gounit"
 )
@@ -16,17 +15,6 @@ import (
 type Layer struct{ Suite }
 
 func (s *Layer) SetUp(t *T) { t.Parallel() }
-
-func fx(t *T, cmp Componenter, timeout ...time.Duration) *Fixture {
-	d := time.Duration(0)
-	if len(timeout) > 0 {
-		d = timeout[0]
-	}
-	if cmp == nil {
-		cmp = &cmpFX{}
-	}
-	return TermFixture(t.GoT(), d, cmp)
-}
 
 func (s *Layer) Overwrites_base_layer(t *T) {
 	base := "1st\n2nd\n3rd"

@@ -696,7 +696,7 @@ func (s *lineFocusFeat) No_ops_on_cell_focusable_features(t *T) {
 	testCursor(ln, cl, have)
 }
 
-func (s lineFocusFeat) Removes_cursor_if_line_focus_resets(t *T) {
+func (s *lineFocusFeat) Removes_cursor_if_line_focus_resets(t *T) {
 	cmp := &cmpFX{onInit: func(cf *cmpFX, e *Env) {
 		cf.FF.Add(CellFocusable)
 		fmt.Fprint(e, "12345\n12345")
@@ -721,7 +721,7 @@ func (s lineFocusFeat) Removes_cursor_if_line_focus_resets(t *T) {
 	haveCursor(false, 5)
 }
 
-func (s lineFocusFeat) Resets_line_start_on_line_focus_change(t *T) {
+func (s *lineFocusFeat) Resets_line_start_on_line_focus_change(t *T) {
 	cmp := &cmpFX{onInit: func(cf *cmpFX, e *Env) {
 		cf.FF.Add(CellFocusable)
 		fmt.Fprint(e, "12345\n12345")
@@ -737,6 +737,43 @@ func (s lineFocusFeat) Resets_line_start_on_line_focus_change(t *T) {
 	t.Eq("123\n345", tt.ScreenOf(cmp))
 	tt.FireKey(Up)
 	t.Eq("123\n123", tt.ScreenOf(cmp))
+}
+
+func (s *lineFocusFeat) test_cursor_pos(
+	fx *Fixture, t *T, cmp *cmpFX, slIdx, scIdx int,
+) {
+	fx.Lines.Update(cmp, nil, func(e *Env) {
+		slIdx, scIdx, hasCursor := cmp.CursorPosition()
+		t.FatalIfNot(t.True((hasCursor)))
+		t.Eq(slIdx, slIdx)
+		t.Eq(scIdx, scIdx)
+	})
+}
+
+func (s *lineFocusFeat) Sets_cursor_after_last_rune(t *T) {
+	cmp := &cmpFX{onInit: func(cf *cmpFX, e *Env) {
+		cf.FF.Add(CellFocusable)
+		cf.LL.Focus.EolAfterLastRune()
+		fmt.Fprint(e, "12345\n6789\n12345")
+		cf.Dim().SetWidth(3).SetHeight(2)
+	}}
+
+	fx := fx(t, cmp)
+	fx.FireKeys(Down, End, End, Right)
+	t.Eq(fx.ScreenOf(cmp)[0], "45 ")
+	s.test_cursor_pos(fx, t, cmp, 0, 2)
+
+	fx.FireKey(Down)
+	s.test_cursor_pos(fx, t, cmp, 1, 2)
+	fx.FireKey(Right)
+	s.test_cursor_pos(fx, t, cmp, 1, 2)
+	t.Eq(fx.ScreenOf(cmp)[1], "789")
+	fx.FireKey(Right)
+	s.test_cursor_pos(fx, t, cmp, 1, 2)
+	t.Eq(fx.ScreenOf(cmp)[1], "89 ")
+	fx.FireKey(Right)
+	s.test_cursor_pos(fx, t, cmp, 1, 2)
+	t.Eq(fx.ScreenOf(cmp)[1], "89 ")
 }
 
 func TestLineFocus(t *testing.T) {

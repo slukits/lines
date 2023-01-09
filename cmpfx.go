@@ -6,6 +6,12 @@
 
 package lines
 
+import (
+	"time"
+
+	. "github.com/slukits/gounit"
+)
+
 type counter int
 
 const (
@@ -19,7 +25,7 @@ const (
 	onEdit
 )
 
-// TODO: refactor make this component replace all fixture component
+// TODO: refactor make this component replace all component fixtures
 // which are not nesting, i.e. neither stacking nor chaining.
 type cmpFX struct {
 	Component
@@ -32,6 +38,32 @@ type cmpFX struct {
 	onRune            func(*cmpFX, *Env, rune, ModifierMask)
 	onEdit            func(*cmpFX, *Env, *Edit) bool
 	cc                map[counter]int
+}
+
+func fx(t *T, cmp Componenter, timeout ...time.Duration) *Fixture {
+	d := time.Duration(0)
+	if len(timeout) > 0 {
+		d = timeout[0]
+	}
+	if cmp == nil {
+		cmp = &cmpFX{}
+	}
+	return TermFixture(t.GoT(), d, cmp)
+}
+
+func fxFF(
+	t *T, ff FeatureMask, timeout ...time.Duration,
+) (*Fixture, *cmpFX) {
+	d := time.Duration(0)
+	if len(timeout) > 0 {
+		d = timeout[0]
+	}
+	cmp := &cmpFX{
+		onInit: func(c *cmpFX, e *Env) {
+			c.FF.Add(ff)
+		},
+	}
+	return TermFixture(t.GoT(), d, cmp), cmp
 }
 
 func (c *cmpFX) increment(cn counter) {
