@@ -367,7 +367,7 @@ func (s *lineFocusFeat) Scrolls_to_previous_highlighted_line(t *T) {
 func (s *lineFocusFeat) Inverts_bg_fg_of_focused_if_highlighted(t *T) {
 	cmp := &cmpFX{
 		onInit: func(c *cmpFX, e *Env) {
-			c.FF.Add(LinesHighlightedFocusable)
+			c.FF.Add(LinesFocusable | LineFocusHighlightable)
 			fmt.Fprint(e.LL(0), "line 1")
 		},
 		onLineFocus: func(c *cmpFX, e *Env, _, _ int) {
@@ -392,7 +392,7 @@ func (s *lineFocusFeat) Inverts_bg_fg_of_focused_if_highlighted(t *T) {
 func (s *lineFocusFeat) Moves_highlight_to_next_focused_line(t *T) {
 	cmp := &cmpFX{
 		onInit: func(c *cmpFX, e *Env) {
-			c.FF.Add(LinesHighlightedFocusable)
+			c.FF.Add(LinesFocusable | LineFocusHighlightable)
 			fmt.Fprint(e.LL(0), "line 1")
 			fmt.Fprint(e.LL(1), "line 2")
 			c.LL.By(1).Flag(NotFocusable)
@@ -429,7 +429,7 @@ func (s *lineFocusFeat) Trims_highlight_to_non_blanks(t *T) {
 	var dflSty, hiSty Style
 	cmp := &cmpFX{
 		onInit: func(c *cmpFX, e *Env) {
-			c.FF.Add(LinesHighlightedFocusable)
+			c.FF.Add(LinesFocusable | LineFocusHighlightable)
 			c.LL.Focus.Trimmed()
 			fmt.Fprint(e.LL(0), " no_blanks ")
 			dflSty = c.Globals().Style(Default)

@@ -625,7 +625,7 @@ func (s *ASourcedComponent) Inverts_bg_fg_of_focused_if_highlighted(
 	tt := xcmpfx(t, cmp)
 	tt.FireResize(3, 2)
 	t.FatalOn(tt.Lines.Update(cmp, nil, func(e *Env) {
-		cmp.FF.Add(LinesHighlightedFocusable)
+		cmp.FF.Add(LinesFocusable | LineFocusHighlightable)
 		liner := &focusLinerFX{}
 		liner.cc = []string{"1st", "2nd"}
 		liner.notFocusable = map[int]bool{0: true}

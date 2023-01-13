@@ -34,7 +34,7 @@ func (s *_Features) SetUp(t *T) { t.Parallel() }
 func (s *_Features) Panic_outside_event_listener_callback(t *T) {
 	fx := &cmpFFX{test: func(*Features) {}}
 	TermFixture(t.GoT(), 0, fx)
-	t.Panics(func() { fx.FF.Has(Quitable) })
+	t.Panics(func() { fx.FF.Has(Focusable) })
 }
 
 func (s *_Features) tt(t *T, test func(ff *Features)) (
@@ -45,7 +45,7 @@ func (s *_Features) tt(t *T, test func(ff *Features)) (
 	return tt, fx
 }
 
-func (s *_Features) Has_by_default_only_quitable_registered(t *T) {
+func (s *_Features) Has_by_default_no_features_registered(t *T) {
 	s.tt(t, func(ff *Features) {
 		_ff := NoFeature
 		for _, f := range allFeatures {
@@ -54,7 +54,7 @@ func (s *_Features) Has_by_default_only_quitable_registered(t *T) {
 			}
 		}
 		t.Eq(ff.All(), _ff)
-		t.Eq(Quitable, _ff)
+		t.Eq(NoFeature, _ff)
 	})
 }
 
@@ -85,33 +85,46 @@ func (s *_Features) Has_by_default_only_quitable_registered(t *T) {
 // 	})
 // }
 
+func (s *_Features) Are_inherited_from_nesting_features(t *T) {
+	cmp, chn, inner := &stackingFX{}, &chainingFX{}, &cmpFX{}
+	cmp.CC = append(cmp.CC, chn)
+	chn.CC = append(chn.CC, inner)
+	cmp.onInit = func(c *cmpFX, e *Env) {
+		c.FF.Add(Focusable)
+	}
+	fx := fx(t, cmp)
+	fx.Lines.Update(inner, nil, func(e *Env) {
+		t.True(inner.FF.Has(Focusable))
+	})
+}
+
 func (s *_Features) Have_set_features(t *T) {
 	s.tt(t, func(ff *Features) {
 		ff.Add(Focusable)
-		ff.Add(selectable)
 		t.True(ff.Has(Focusable))
-		t.True(ff.Has(selectable))
-		t.True(ff.Has(previousSelectable))
-		t.True(ff.Has(nextSelectable))
+		ff.Add(Scrollable)
+		t.True(ff.Has(Scrollable))
+		t.True(ff.Has(UpScrollable))
+		t.True(ff.Has(DownScrollable))
 	})
 }
 
 func (s *_Features) Sets_defaults_bindings_of_feature(t *T) {
 	s.tt(t, func(ff *Features) {
 		ff.Add(Focusable)
-		ff.Add(selectable)
+		ff.Add(Scrollable)
 		t.True(defaultBindings[Focusable].bb.Equals(
 			ff.ButtonsOf(Focusable)))
-		t.True(defaultBindings[nextSelectable].kk.Equals(
-			ff.KeysOf(nextSelectable)))
-		t.True(defaultBindings[previousSelectable].kk.Equals(
-			ff.KeysOf(previousSelectable)))
+		t.True(defaultBindings[UpScrollable].kk.Equals(
+			ff.KeysOf(UpScrollable)))
+		t.True(defaultBindings[DownScrollable].kk.Equals(
+			ff.KeysOf(DownScrollable)))
 	})
 }
 
 func (s *_Features) Have_set_runes(t *T) {
 	s.tt(t, func(ff *Features) {
-		ff.SetRunesOf(Focusable, false,
+		ff.SetRunesOf(Focusable,
 			FeatureRunes{{Rune: 'n'}, {Rune: 'm', Mod: Alt}}...)
 		t.True(ff.RunesOf(Focusable).Equals(
 			FeatureRunes{{Rune: 'n'}, {Rune: 'm', Mod: Alt}}))
@@ -120,11 +133,11 @@ func (s *_Features) Have_set_runes(t *T) {
 
 func (s *_Features) Replaces_rune_bindings_with_set_runes(t *T) {
 	s.tt(t, func(ff *Features) {
-		ff.SetRunesOf(Focusable, false,
+		ff.SetRunesOf(Focusable,
 			FeatureRunes{{Rune: 'n'}, {Rune: 'm', Mod: Alt}}...)
 		t.True(ff.RunesOf(Focusable).Equals(FeatureRunes{
 			{Rune: 'n'}, {Rune: 'm'}}))
-		ff.SetRunesOf(Focusable, false, FeatureRune{Rune: 'x'})
+		ff.SetRunesOf(Focusable, FeatureRune{Rune: 'x'})
 		t.True(ff.RunesOf(Focusable).Equals(
 			FeatureRunes{{Rune: 'x'}}))
 	})
@@ -133,7 +146,7 @@ func (s *_Features) Replaces_rune_bindings_with_set_runes(t *T) {
 func (s *_Features) Have_set_keys(t *T) {
 	kk := FeatureKeys{{Key: Backspace}, {Key: TAB, Mod: Alt}}
 	s.tt(t, func(ff *Features) {
-		ff.SetKeysOf(Focusable, false, kk...)
+		ff.SetKeysOf(Focusable, kk...)
 		t.True(ff.KeysOf(Focusable).Equals(kk))
 	})
 }
@@ -142,9 +155,9 @@ func (s *_Features) Replaces_key_bindings_with_set_keys(t *T) {
 	kk := FeatureKeys{{Key: Backspace}, {Key: TAB, Mod: Alt}}
 	exp := FeatureKeys{{Key: Backtab, Mod: Alt}}
 	s.tt(t, func(ff *Features) {
-		ff.SetKeysOf(Focusable, false, kk...)
+		ff.SetKeysOf(Focusable, kk...)
 		t.True(ff.KeysOf(Focusable).Equals(kk))
-		ff.SetKeysOf(Focusable, false, exp...)
+		ff.SetKeysOf(Focusable, exp...)
 		t.True(ff.KeysOf(Focusable).Equals(exp))
 	})
 }
@@ -153,7 +166,7 @@ func (s *_Features) Have_set_buttons(t *T) {
 	bb := FeatureButtons{
 		{Button: Primary}, {Button: Middle, Mod: Shift}}
 	s.tt(t, func(ff *Features) {
-		ff.SetButtonsOf(Focusable, false, bb...)
+		ff.SetButtonsOf(Focusable, bb...)
 		t.True(ff.ButtonsOf(Focusable).Equals(bb))
 	})
 }
@@ -163,68 +176,68 @@ func (s *_Features) Replaces_button_bindings_with_set_buttons(t *T) {
 		{Button: Primary}, {Button: Middle, Mod: Shift}}
 	exp := FeatureButtons{{Button: Secondary, Mod: Alt}}
 	s.tt(t, func(ff *Features) {
-		ff.SetButtonsOf(Focusable, false, bb...)
+		ff.SetButtonsOf(Focusable, bb...)
 		t.True(ff.ButtonsOf(Focusable).Equals(bb))
-		ff.SetButtonsOf(Focusable, false, exp...)
+		ff.SetButtonsOf(Focusable, exp...)
 		t.True(ff.ButtonsOf(Focusable).Equals(exp))
 	})
 }
 
-func (s *_Features) Have_recursively_defined_features(t *T) {
-	bttFX := FeatureButtons{{Button: Secondary, Mod: Alt}}
-	s.tt(t, func(ff *Features) {
-		ff.SetButtonsOf(Focusable, true, bttFX...)
-		t.True(ff.Has(Focusable | _recursive))
-	})
-}
-
-func (s *_Features) Reports_rune_bindings_of_recursive_feature(t *T) {
-	exp := FeatureRunes{{Rune: 'f'}}
-	s.tt(t, func(ff *Features) {
-		ff.SetRunesOf(Focusable, true, exp...)
-		t.True(ff.RunesOf(Focusable | _recursive).Equals(exp))
-		t.True(ff.RunesOf(Focusable).Equals(exp))
-	})
-}
-
-func (s *_Features) Reports_key_bindings_of_recursive_feature(t *T) {
-	exp := FeatureKeys{{Key: Backtab, Mod: Alt}}
-	s.tt(t, func(ff *Features) {
-		ff.SetKeysOf(Focusable, true, exp...)
-		t.True(ff.KeysOf(Focusable | _recursive).Equals(exp))
-		t.True(ff.KeysOf(Focusable).Equals(exp))
-	})
-}
-
-func (s *_Features) Reports_button_bindings_of_recursive_feature(t *T) {
-	exp := FeatureButtons{{Button: Secondary, Mod: Alt}}
-	s.tt(t, func(ff *Features) {
-		ff.SetButtonsOf(Focusable, true, exp...)
-		t.True(ff.ButtonsOf(Focusable | _recursive).Equals(exp))
-		t.True(ff.ButtonsOf(Focusable).Equals(exp))
-	})
-}
+// func (s *_Features) Have_recursively_defined_features(t *T) {
+// 	bttFX := FeatureButtons{{Button: Secondary, Mod: Alt}}
+// 	s.tt(t, func(ff *Features) {
+// 		ff.SetButtonsOf(Focusable, true, bttFX...)
+// 		t.True(ff.Has(Focusable | _recursive))
+// 	})
+// }
+//
+// func (s *_Features) Reports_rune_bindings_of_recursive_feature(t *T) {
+// 	exp := FeatureRunes{{Rune: 'f'}}
+// 	s.tt(t, func(ff *Features) {
+// 		ff.SetRunesOf(Focusable, true, exp...)
+// 		t.True(ff.RunesOf(Focusable | _recursive).Equals(exp))
+// 		t.True(ff.RunesOf(Focusable).Equals(exp))
+// 	})
+// }
+//
+// func (s *_Features) Reports_key_bindings_of_recursive_feature(t *T) {
+// 	exp := FeatureKeys{{Key: Backtab, Mod: Alt}}
+// 	s.tt(t, func(ff *Features) {
+// 		ff.SetKeysOf(Focusable, true, exp...)
+// 		t.True(ff.KeysOf(Focusable | _recursive).Equals(exp))
+// 		t.True(ff.KeysOf(Focusable).Equals(exp))
+// 	})
+// }
+//
+// func (s *_Features) Reports_button_bindings_of_recursive_feature(t *T) {
+// 	exp := FeatureButtons{{Button: Secondary, Mod: Alt}}
+// 	s.tt(t, func(ff *Features) {
+// 		ff.SetButtonsOf(Focusable, true, exp...)
+// 		t.True(ff.ButtonsOf(Focusable | _recursive).Equals(exp))
+// 		t.True(ff.ButtonsOf(Focusable).Equals(exp))
+// 	})
+// }
 
 func (s *_Features) Ignores_setting_runes_for_comprised_features(t *T) {
 	s.tt(t, func(ff *Features) {
-		ff.SetRunesOf(selectable, false, FeatureRunes{{Rune: 's'}}...)
-		t.Not.True(ff.Has(selectable))
+		ff.SetRunesOf(Scrollable, FeatureRunes{{Rune: 's'}}...)
+		t.Not.True(ff.Has(Scrollable))
 	})
 }
 
 func (s *_Features) Ignores_setting_keys_for_comprised_features(t *T) {
 	keyFX := FeatureKeys{{Key: Backtab, Mod: Alt}}
 	s.tt(t, func(ff *Features) {
-		ff.SetKeysOf(selectable, false, keyFX...)
-		t.Not.True(ff.Has(selectable))
+		ff.SetKeysOf(Scrollable, keyFX...)
+		t.Not.True(ff.Has(Scrollable))
 	})
 }
 
 func (s *_Features) Ignores_setting_buttons_for_comprised_features(t *T) {
 	bttFX := FeatureButtons{{Button: Secondary, Mod: Alt}}
 	s.tt(t, func(ff *Features) {
-		ff.SetButtonsOf(selectable, false, bttFX...)
-		t.Not.True(ff.Has(selectable))
+		ff.SetButtonsOf(Scrollable, bttFX...)
+		t.Not.True(ff.Has(Scrollable))
 	})
 }
 

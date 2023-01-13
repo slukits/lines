@@ -7,15 +7,20 @@
 package lines
 
 import (
+	"fmt"
 	"time"
 
-	. "github.com/slukits/gounit"
+	"github.com/slukits/gounit"
 )
 
 type counter int
 
 const (
 	onInit counter = iota
+	onLayout
+	onUpdate
+	onFocus
+	onFocusLost
 	onLineFocus
 	onLineFocusLost
 	onLineSelection
@@ -23,6 +28,10 @@ const (
 	onCursor
 	onRune
 	onEdit
+	onOutOfBoundClick
+	onOutOfBoundMove
+	onMouseN
+	onKeyN
 )
 
 // TODO: refactor make this component replace all component fixtures
@@ -30,6 +39,10 @@ const (
 type cmpFX struct {
 	Component
 	onInit            func(*cmpFX, *Env)
+	onLayout          func(*cmpFX, *Env)
+	onUpdate          func(*cmpFX, *Env, interface{})
+	onFocus           func(*cmpFX, *Env)
+	onFocusLost       func(*cmpFX, *Env)
 	onLineFocus       func(_ *cmpFX, _ *Env, cIdx, sIdx int)
 	onLineFocusLost   func(_ *cmpFX, _ *Env, cIdx, sIdx int)
 	onLineSelection   func(_ *cmpFX, _ *Env, cIdx, sIdx int)
@@ -37,10 +50,15 @@ type cmpFX struct {
 	onCursor          func(_ *cmpFX, _ *Env, absOnly bool)
 	onRune            func(*cmpFX, *Env, rune, ModifierMask)
 	onEdit            func(*cmpFX, *Env, *Edit) bool
+	onMouse           func(*cmpFX, *Env, ButtonMask, int, int)
+	onKey             func(*cmpFX, *Env, Key, ModifierMask)
 	cc                map[counter]int
+	tt                map[counter]time.Time
 }
 
-func fx(t *T, cmp Componenter, timeout ...time.Duration) *Fixture {
+func fx(
+	t *gounit.T, cmp Componenter, timeout ...time.Duration,
+) *Fixture {
 	d := time.Duration(0)
 	if len(timeout) > 0 {
 		d = timeout[0]
@@ -51,8 +69,19 @@ func fx(t *T, cmp Componenter, timeout ...time.Duration) *Fixture {
 	return TermFixture(t.GoT(), d, cmp)
 }
 
+func fxCmp(
+	t *gounit.T, timeout ...time.Duration,
+) (*Fixture, *cmpFX) {
+	d := time.Duration(0)
+	if len(timeout) > 0 {
+		d = timeout[0]
+	}
+	cmp := &cmpFX{}
+	return TermFixture(t.GoT(), d, cmp), cmp
+}
+
 func fxFF(
-	t *T, ff FeatureMask, timeout ...time.Duration,
+	t *gounit.T, ff FeatureMask, timeout ...time.Duration,
 ) (*Fixture, *cmpFX) {
 	d := time.Duration(0)
 	if len(timeout) > 0 {
@@ -70,10 +99,16 @@ func (c *cmpFX) increment(cn counter) {
 	if c.cc == nil {
 		c.cc = map[counter]int{}
 	}
+	if c.tt == nil {
+		c.tt = map[counter]time.Time{}
+	}
 	c.cc[cn]++
+	c.tt[cn] = time.Now()
 }
 
 func (c *cmpFX) N(cn counter) int { return c.cc[cn] }
+
+func (c *cmpFX) T(cn counter) time.Time { return c.tt[cn] }
 
 func (c *cmpFX) OnInit(e *Env) {
 	c.increment(onInit)
@@ -81,6 +116,39 @@ func (c *cmpFX) OnInit(e *Env) {
 		return
 	}
 	c.onInit(c, e)
+}
+
+func (c *cmpFX) OnLayout(e *Env) bool {
+	c.increment(onLayout)
+	if c.onLayout == nil {
+		return false
+	}
+	c.onLayout(c, e)
+	return false
+}
+
+func (c *cmpFX) OnUpdate(e *Env, data interface{}) {
+	c.increment(onUpdate)
+	if c.onUpdate == nil {
+		return
+	}
+	c.onUpdate(c, e, data)
+}
+
+func (c *cmpFX) OnFocus(e *Env) {
+	c.increment(onFocus)
+	if c.onFocus == nil {
+		return
+	}
+	c.onFocus(c, e)
+}
+
+func (c *cmpFX) OnFocusLost(e *Env) {
+	c.increment(onFocusLost)
+	if c.onFocusLost == nil {
+		return
+	}
+	c.onFocusLost(c, e)
 }
 
 func (c *cmpFX) OnRune(e *Env, r rune, mm ModifierMask) {
@@ -137,4 +205,63 @@ func (c *cmpFX) OnEdit(e *Env, edt *Edit) bool {
 		return true
 	}
 	return c.onEdit(c, e, edt)
+}
+
+func (c *cmpFX) OnMouse(e *Env, bm ButtonMask, x, y int) {
+	c.increment(onMouseN)
+	if c.onMouse == nil {
+		return
+	}
+	c.onMouse(c, e, bm, x, y)
+}
+
+func (c *cmpFX) OnKey(e *Env, k Key, mm ModifierMask) {
+	c.increment(onKeyN)
+	if c.onKey == nil {
+		return
+	}
+	c.onKey(c, e, k, mm)
+}
+
+type stackingFX struct {
+	cmpFX
+	Stacking
+}
+
+type chainingFX struct {
+	cmpFX
+	Chaining
+}
+
+type modalLayerFX struct {
+	cmpFX
+	onOutOfBoundClick func(*modalLayerFX, *Env)
+	onOutOfBoundMove  func(*modalLayerFX, *Env)
+}
+
+func (l *modalLayerFX) OnOutOfBoundClick(e *Env) bool {
+	l.increment(onOutOfBoundClick)
+	if l.onOutOfBoundClick != nil {
+		l.onOutOfBoundClick(l, e)
+	}
+	return false
+}
+
+func (l *modalLayerFX) OnOutOfBoundMove(e *Env) bool {
+	l.increment(onOutOfBoundMove)
+	if l.onOutOfBoundMove != nil {
+		l.onOutOfBoundMove(l, e)
+	}
+	return false
+}
+
+type framingFX struct {
+	cmpFX
+	filler rune
+}
+
+func (c *framingFX) OnInit(e *Env) {
+	Print(c.Gaps(0).Filling(), c.filler)
+	fmt.Fprint(c.Gaps(0).Corners, string(c.filler))
+	c.cmpFX.OnInit(e)
 }

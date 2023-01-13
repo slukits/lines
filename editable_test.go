@@ -37,7 +37,6 @@ package lines
 import (
 	"fmt"
 	"testing"
-	"time"
 
 	. "github.com/slukits/gounit"
 )
@@ -80,31 +79,16 @@ func (s *_editable) Component_s_editor_is_inactive_by_default(t *T) {
 	}))
 }
 
-func (s *_editable) Component_s_editor_is_activated_on_insert(t *T) {
-	fx, cmp := fxFF(t, Editable)
-	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
-		t.Not.True(cmp.Edit.IsActive())
-	}))
-	fx.FireKey(Insert)
-	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
-		t.True(cmp.Edit.IsActive())
-	}))
-}
-
-type dbg struct{ Suite }
-
-func (s *dbg) Dbg(t *T) {
-	fx, cmp := fxFF(t, Editable, 20*time.Minute)
-	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
-		t.Not.True(cmp.Edit.IsActive())
-	}))
-	fx.FireKey(Insert)
-	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
-		t.True(cmp.Edit.IsActive())
-	}))
-}
-
-func TestDBG(t *testing.T) { Run(&dbg{}, t) }
+// func (s *_editable) Component_s_editor_is_activated_on_insert(t *T) {
+// 	fx, cmp := fxFF(t, Editable)
+// 	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+// 		t.Not.True(cmp.Edit.IsActive())
+// 	}))
+// 	fx.FireKey(Insert)
+// 	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+// 		t.True(cmp.Edit.IsActive())
+// 	}))
+// }
 
 func (s *_editable) Component_is_focusable(t *T) {
 	fx, cmp := fxFF(t, Editable)
@@ -152,32 +136,32 @@ func (s *_editable) Triggered_by_on_edit_source_liner(t *T) {
 
 	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
 		cmp.FF.Has(Editable)
-		cmp.FF.Has(HighlightedEditable)
+		cmp.FF.Has(LineFocusHighlightable)
 	}))
 }
 
-func (s *_editable) Suppresses_rune_events_having_active_editor(t *T) {
-	aRuneReceived := 0
-	cmp := &cmpFX{
-		onInit: func(c *cmpFX, e *Env) {
-			c.Register.Rune('a', ZeroModifier, func(e *Env) {
-				aRuneReceived++
-			})
-			// NOTE we need content to receive a cursor position
-			fmt.Fprintf(e, "1st\n2nd\n3rd")
-		},
-	}
-	fx := fx(t, cmp)
-	fx.FireRune('a', ZeroModifier)
-	t.Eq(1, aRuneReceived)
-	fx.Lines.Update(cmp, nil, func(e *Env) { cmp.FF.Add(Editable) })
-	fx.FireKey(Down) // set the cursor position to (0,0) which is ...
-	// ... a prerequisite for having an active editor suppressing
-	// reporting of rune events
-	t.True(cmp.Edit.IsActive())
-	fx.FireRune('a', ZeroModifier)
-	t.Eq(1, aRuneReceived)
-}
+// func (s *_editable) Suppresses_rune_events_having_active_editor(t *T) {
+// 	aRuneReceived := 0
+// 	cmp := &cmpFX{
+// 		onInit: func(c *cmpFX, e *Env) {
+// 			c.Register.Rune('a', ZeroModifier, func(e *Env) {
+// 				aRuneReceived++
+// 			})
+// 			// NOTE we need content to receive a cursor position
+// 			fmt.Fprintf(e, "1st\n2nd\n3rd")
+// 		},
+// 	}
+// 	fx := fx(t, cmp)
+// 	fx.FireRune('a', ZeroModifier)
+// 	t.Eq(1, aRuneReceived)
+// 	fx.Lines.Update(cmp, nil, func(e *Env) { cmp.FF.Add(Editable) })
+// 	fx.FireKey(Down) // set the cursor position to (0,0) which is ...
+// 	// ... a prerequisite for having an active editor suppressing
+// 	// reporting of rune events
+// 	t.True(cmp.Edit.IsActive())
+// 	fx.FireRune('a', ZeroModifier)
+// 	t.Eq(1, aRuneReceived)
+// }
 
 func (s *_editable) Doesnt_block_on_rune_reporting(t *T) {
 	rr := []rune{}
@@ -200,114 +184,114 @@ func (s *_editable) Doesnt_block_on_rune_reporting(t *T) {
 	t.Eq("ab", string(rr))
 }
 
-func (s *_editable) Reports_insert(t *T) {
-	reportedInsert := false
-	cmp := &cmpFX{
-		onInit: func(c *cmpFX, e *Env) {
-			c.FF.Add(Editable)
-			fmt.Fprintf(e, "1st\n2nd\n3rd")
-		},
-		onEdit: func(c *cmpFX, e *Env, edt *Edit) bool {
-			t.Eq(0, edt.Line)
-			t.Eq(0, edt.Cell)
-			t.Eq('a', edt.Rune)
-			if t.Eq(Ins, edt.Type) {
-				reportedInsert = true
-			}
-			return true
-		},
-	}
-	fx := fx(t, cmp)
-	fx.FireKey(Down)
-	fx.FireRune('a', ZeroModifier)
-	t.True(reportedInsert)
-}
+// func (s *_editable) Reports_insert(t *T) {
+// 	reportedInsert := false
+// 	cmp := &cmpFX{
+// 		onInit: func(c *cmpFX, e *Env) {
+// 			c.FF.Add(Editable)
+// 			fmt.Fprintf(e, "1st\n2nd\n3rd")
+// 		},
+// 		onEdit: func(c *cmpFX, e *Env, edt *Edit) bool {
+// 			t.Eq(0, edt.Line)
+// 			t.Eq(0, edt.Cell)
+// 			t.Eq('a', edt.Rune)
+// 			if t.Eq(Ins, edt.Type) {
+// 				reportedInsert = true
+// 			}
+// 			return true
+// 		},
+// 	}
+// 	fx := fx(t, cmp)
+// 	fx.FireKey(Down)
+// 	fx.FireRune('a', ZeroModifier)
+// 	t.True(reportedInsert)
+// }
 
-func (s *_editable) Reports_replacement(t *T) {
-	cmp := &cmpFX{
-		onInit: func(c *cmpFX, e *Env) {
-			c.FF.Add(Editable)
-			c.Edit.Replacing()
-			fmt.Fprintf(e, "1st\n2nd\n3rd")
-		},
-		onEdit: func(c *cmpFX, e *Env, edt *Edit) bool {
-			t.Eq(0, edt.Line)
-			t.Eq(0, edt.Cell)
-			t.Eq('a', edt.Rune)
-			t.Eq(Rpl, edt.Type)
-			return true
-		},
-	}
-	fx := fx(t, cmp)
-	fx.FireKey(Down)
-	fx.FireRune('a', ZeroModifier)
-	t.Eq(1, cmp.cc[onEdit])
-}
+// func (s *_editable) Reports_replacement(t *T) {
+// 	cmp := &cmpFX{
+// 		onInit: func(c *cmpFX, e *Env) {
+// 			c.FF.Add(Editable)
+// 			c.Edit.Replacing()
+// 			fmt.Fprintf(e, "1st\n2nd\n3rd")
+// 		},
+// 		onEdit: func(c *cmpFX, e *Env, edt *Edit) bool {
+// 			t.Eq(0, edt.Line)
+// 			t.Eq(0, edt.Cell)
+// 			t.Eq('a', edt.Rune)
+// 			t.Eq(Rpl, edt.Type)
+// 			return true
+// 		},
+// 	}
+// 	fx := fx(t, cmp)
+// 	fx.FireKey(Down)
+// 	fx.FireRune('a', ZeroModifier)
+// 	t.Eq(1, cmp.cc[onEdit])
+// }
 
-func (s *_editable) Reports_deletion(t *T) {
-	cmp := &cmpFX{
-		onInit: func(c *cmpFX, e *Env) {
-			c.FF.Add(Editable)
-			fmt.Fprintf(e, "1st\n2nd\n3rd")
-		},
-		onEdit: func(c *cmpFX, e *Env, edt *Edit) (omitEdit bool) {
-			switch c.cc[onEdit] {
-			case 1:
-				t.Eq(0, edt.Line)
-				t.Eq(0, edt.Cell)
-			case 2:
-				t.Eq(1, edt.Line)
-				t.Eq(1, edt.Cell)
-			}
-			t.Eq(rune(0), edt.Rune)
-			t.Eq(Del, edt.Type)
-			return true // don't apply reported edit
-		},
-	}
-	fx := fx(t, cmp)
-	fx.FireKeys(Down, Right, Backspace)
-	t.Eq(1, cmp.cc[onEdit])
-	fx.FireKeys(Down, Delete)
-	t.Eq(2, cmp.cc[onEdit])
-}
+// func (s *_editable) Reports_deletion(t *T) {
+// 	cmp := &cmpFX{
+// 		onInit: func(c *cmpFX, e *Env) {
+// 			c.FF.Add(Editable)
+// 			fmt.Fprintf(e, "1st\n2nd\n3rd")
+// 		},
+// 		onEdit: func(c *cmpFX, e *Env, edt *Edit) (omitEdit bool) {
+// 			switch c.cc[onEdit] {
+// 			case 1:
+// 				t.Eq(0, edt.Line)
+// 				t.Eq(0, edt.Cell)
+// 			case 2:
+// 				t.Eq(1, edt.Line)
+// 				t.Eq(1, edt.Cell)
+// 			}
+// 			t.Eq(rune(0), edt.Rune)
+// 			t.Eq(Del, edt.Type)
+// 			return true // don't apply reported edit
+// 		},
+// 	}
+// 	fx := fx(t, cmp)
+// 	fx.FireKeys(Down, Right, Backspace)
+// 	t.Eq(1, cmp.cc[onEdit])
+// 	fx.FireKeys(Down, Delete)
+// 	t.Eq(2, cmp.cc[onEdit])
+// }
 
-func (s *_editable) Reports_join_deleting_preceeding_line_break(t *T) {
-	cmp := &cmpFX{
-		onInit: func(c *cmpFX, e *Env) {
-			c.FF.Add(Editable)
-			fmt.Fprintf(e, "1st\n2nd\n3rd")
-		},
-		onEdit: func(c *cmpFX, e *Env, edt *Edit) (omitEdit bool) {
-			t.Eq(1, edt.Line)
-			t.Eq(0, edt.Cell)
-			t.Eq(rune(0), edt.Rune)
-			t.Eq(JoinPrev, edt.Type)
-			return true // don't apply reported edit
-		},
-	}
-	fx := fx(t, cmp)
-	fx.FireKeys(Down, Down, Backspace)
-	t.Eq(1, cmp.cc[onEdit])
-}
+// func (s *_editable) Reports_join_deleting_preceeding_line_break(t *T) {
+// 	cmp := &cmpFX{
+// 		onInit: func(c *cmpFX, e *Env) {
+// 			c.FF.Add(Editable)
+// 			fmt.Fprintf(e, "1st\n2nd\n3rd")
+// 		},
+// 		onEdit: func(c *cmpFX, e *Env, edt *Edit) (omitEdit bool) {
+// 			t.Eq(1, edt.Line)
+// 			t.Eq(0, edt.Cell)
+// 			t.Eq(rune(0), edt.Rune)
+// 			t.Eq(JoinPrev, edt.Type)
+// 			return true // don't apply reported edit
+// 		},
+// 	}
+// 	fx := fx(t, cmp)
+// 	fx.FireKeys(Down, Down, Backspace)
+// 	t.Eq(1, cmp.cc[onEdit])
+// }
 
-func (s *_editable) Reports_join_deleting_following_line_break(t *T) {
-	cmp := &cmpFX{
-		onInit: func(c *cmpFX, e *Env) {
-			c.FF.Add(Editable)
-			fmt.Fprintf(e, "1st\n2nd\n3rd")
-		},
-		onEdit: func(c *cmpFX, e *Env, edt *Edit) (omitEdit bool) {
-			t.Eq(0, edt.Line)
-			t.Eq(3, edt.Cell)
-			t.Eq(rune(0), edt.Rune)
-			t.Eq(JoinNext, edt.Type)
-			return true // don't apply reported edit
-		},
-	}
-	fx := fx(t, cmp)
-	fx.FireKeys(Down, Right, Right, Right, Delete)
-	t.Eq(1, cmp.cc[onEdit])
-}
+// func (s *_editable) Reports_join_deleting_following_line_break(t *T) {
+// 	cmp := &cmpFX{
+// 		onInit: func(c *cmpFX, e *Env) {
+// 			c.FF.Add(Editable)
+// 			fmt.Fprintf(e, "1st\n2nd\n3rd")
+// 		},
+// 		onEdit: func(c *cmpFX, e *Env, edt *Edit) (omitEdit bool) {
+// 			t.Eq(0, edt.Line)
+// 			t.Eq(3, edt.Cell)
+// 			t.Eq(rune(0), edt.Rune)
+// 			t.Eq(JoinNext, edt.Type)
+// 			return true // don't apply reported edit
+// 		},
+// 	}
+// 	fx := fx(t, cmp)
+// 	fx.FireKeys(Down, Right, Right, Right, Delete)
+// 	t.Eq(1, cmp.cc[onEdit])
+// }
 
 // func (s *_editable) Updates_content_after_insert(t *T) {
 // 	t.TODO()

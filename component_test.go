@@ -18,8 +18,7 @@ type AComponent struct{ Suite }
 func (s *AComponent) SetUp(t *T) { t.Parallel() }
 
 func (s *AComponent) Access_panics_outside_event_processing(t *T) {
-	cmp := &cmpFX{}
-	TermFixture(t.GoT(), 0, cmp)
+	_, cmp := fxCmp(t)
 	t.Panics(func() { cmp.Dim().SetHeight(20) })
 }
 
@@ -42,18 +41,17 @@ func xcmpfx(t *T, cmp Componenter, d ...time.Duration) *Fixture {
 }
 
 func (s *AComponent) Creates_needed_lines_on_write(t *T) {
-	tt, _ := cmpfx(t)
-	t.FatalOn(tt.Lines.Update(tt.Root(), nil, func(e *Env) {
-		fx := tt.Root().(*cmpFX)
-		t.Eq(0, fx.Len())
+	fx, cmp := fxCmp(t)
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+		t.Eq(0, cmp.Len())
 		fmt.Fprint(e, "first\nsecond\nthird")
-		t.Eq(3, fx.Len())
+		t.Eq(3, cmp.Len())
 	}))
 }
 
 func (s *AComponent) Doesnt_change_line_count_on_line_overwrite(t *T) {
-	tt, cmp := cmpfx(t)
-	t.FatalOn(tt.Lines.Update(cmp, nil, func(e *Env) {
+	fx, cmp := fxCmp(t)
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
 		cmp.LL.Mod(Overwriting)
 		fmt.Fprint(e, "two\nlines")
 		t.Eq(2, cmp.Len())
@@ -62,12 +60,12 @@ func (s *AComponent) Doesnt_change_line_count_on_line_overwrite(t *T) {
 	}))
 
 	// but second line is empty now
-	t.Eq("one line", tt.Screen().Trimmed().String())
+	t.Eq("one line", fx.Screen().Trimmed().String())
 }
 
 func (s *AComponent) Has_a_line_more_after_appending_an_line(t *T) {
-	tt, cmp := cmpfx(t)
-	t.FatalOn(tt.Lines.Update(cmp, nil, func(e *Env) {
+	fx, cmp := fxCmp(t)
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
 		cmp.LL.Mod(Appending)
 		fmt.Fprint(e, "two\nlines")
 		fmt.Fprint(e, "one line")
@@ -76,8 +74,8 @@ func (s *AComponent) Has_a_line_more_after_appending_an_line(t *T) {
 }
 
 func (s *AComponent) Has_a_line_more_after_writing_to_tailing(t *T) {
-	tt, cmp := cmpfx(t)
-	t.FatalOn(tt.Lines.Update(cmp, nil, func(e *Env) {
+	fx, cmp := fxCmp(t)
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
 		cmp.LL.Mod(Tailing)
 		fmt.Fprint(e, "two\nlines")
 		fmt.Fprint(e, "one line")
@@ -86,164 +84,158 @@ func (s *AComponent) Has_a_line_more_after_writing_to_tailing(t *T) {
 }
 
 func (s *AComponent) Shows_last_line_clipped_above_if_tailing(t *T) {
-	tt, cmp := cmpfx(t)
-	tt.FireResize(20, 2)
-	t.FatalOn(tt.Lines.Update(cmp, nil, func(e *Env) {
+	fx, cmp := fxCmp(t)
+	fx.FireResize(20, 2)
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
 		cmp.LL.Mod(Tailing)
 		fmt.Fprint(e, "three\nlines\nat last")
 	}))
-	t.Eq("lines  \nat last", tt.Screen().Trimmed().String())
+	t.Eq("lines  \nat last", fx.Screen().Trimmed().String())
 }
 
 func (s *AComponent) Blanks_a_reset_line(t *T) {
-	tt, cmp := cmpfx(t)
-	tt.FireResize(20, 2)
-	t.FatalOn(tt.Lines.Update(cmp, nil, func(e *Env) {
+	fx, cmp := fxCmp(t)
+	fx.FireResize(20, 2)
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
 		fmt.Fprint(e, "first\nsecond")
 	}))
-	t.Eq("first \nsecond", tt.Screen().Trimmed().String())
+	t.Eq("first \nsecond", fx.Screen().Trimmed().String())
 
-	t.FatalOn(tt.Lines.Update(cmp, nil, func(e *Env) {
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
 		cmp.Reset(-2) // no-op, coverage
 		cmp.Reset(0)
 	}))
 
-	t.Eq("second", tt.Screen().Trimmed().String())
-}
-
-func (s *AComponent) fxCmp(t *T) (*Fixture, *cmpFX) {
-	cmp := &cmpFX{}
-	tt := TermFixture(t.GoT(), 0, cmp)
-	return tt, cmp
+	t.Eq("second", fx.Screen().Trimmed().String())
 }
 
 func (s *AComponent) Truncates_lines_to_screen_area_on_reset_all(t *T) {
-	tt, fx := s.fxCmp(t)
-	tt.FireResize(20, 2)
-	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
+	fx, cmp := fxCmp(t)
+	fx.FireResize(20, 2)
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
 		fmt.Fprint(e, "first\nsecond\nthird\nforth")
-		t.Eq(4, fx.Len())
+		t.Eq(4, cmp.Len())
 	}))
-	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
-		fx.Reset(All)
-		t.Eq(2, fx.Len())
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+		cmp.Reset(All)
+		t.Eq(2, cmp.Len())
 	}))
 }
 
 func (s *AComponent) Scrolls_by_one_line_if_height_is_one(t *T) {
-	tt, fx := s.fxCmp(t)
-	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
-		fx.Dim().SetHeight(1)
+	fx, cmp := fxCmp(t)
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+		cmp.Dim().SetHeight(1)
 		fmt.Fprint(e, "first\nsecond")
 	}))
-	t.Eq("first", tt.Screen().Trimmed())
+	t.Eq("first", fx.Screen().Trimmed())
 
-	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
-		fx.Scroll.Down()
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+		cmp.Scroll.Down()
 	}))
-	t.Eq("second", tt.Screen().Trimmed())
-	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
-		fx.Scroll.Down()
+	t.Eq("second", fx.Screen().Trimmed())
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+		cmp.Scroll.Down()
 	}))
-	t.Eq("second", tt.Screen().Trimmed())
+	t.Eq("second", fx.Screen().Trimmed())
 
-	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
-		fx.Scroll.Up()
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+		cmp.Scroll.Up()
 	}))
-	t.Eq("first", tt.Screen().Trimmed())
-	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
-		fx.Scroll.Up()
+	t.Eq("first", fx.Screen().Trimmed())
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+		cmp.Scroll.Up()
 	}))
-	t.Eq("first", tt.Screen().Trimmed())
+	t.Eq("first", fx.Screen().Trimmed())
 }
 
 func (s *AComponent) Scrolls_to_last_line_if_last_displayed(t *T) {
-	tt, fx := s.fxCmp(t)
-	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
-		fx.Dim().SetHeight(3)
+	fx, cmp := fxCmp(t)
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+		cmp.Dim().SetHeight(3)
 		fmt.Fprint(e, "first\nsecond\nthird\nforth")
 	}))
-	t.Eq("first \nsecond\nthird ", tt.Screen().Trimmed())
+	t.Eq("first \nsecond\nthird ", fx.Screen().Trimmed())
 
-	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
-		fx.Scroll.Down()
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+		cmp.Scroll.Down()
 	}))
-	t.Eq("second\nthird \nforth ", tt.Screen().Trimmed())
+	t.Eq("second\nthird \nforth ", fx.Screen().Trimmed())
 }
 
 func (s *AComponent) Scrolls_to_first_line_if_first_displayed(t *T) {
-	tt, fx := s.fxCmp(t)
-	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
-		fx.Dim().SetHeight(3)
+	fx, cmp := fxCmp(t)
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+		cmp.Dim().SetHeight(3)
 		fmt.Fprint(e, "first\nsecond\nthird\nforth")
 	}))
-	t.Eq("first \nsecond\nthird ", tt.Screen().Trimmed().String())
-	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
-		fx.Scroll.Down()
+	t.Eq("first \nsecond\nthird ", fx.Screen().Trimmed().String())
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+		cmp.Scroll.Down()
 	}))
-	t.Eq("second\nthird \nforth ", tt.Screen().Trimmed().String())
+	t.Eq("second\nthird \nforth ", fx.Screen().Trimmed().String())
 
-	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
-		fx.Scroll.Up()
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+		cmp.Scroll.Up()
 	}))
-	t.Eq("first \nsecond\nthird ", tt.Screen().Trimmed().String())
+	t.Eq("first \nsecond\nthird ", fx.Screen().Trimmed().String())
 }
 
 func (s *AComponent) Scrolls_down_by_90_percent_height(t *T) {
-	tt, fx := s.fxCmp(t)
-	tt.FireResize(20, 30)
-	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
-		fx.Dim().SetHeight(5)
+	fx, cmp := fxCmp(t)
+	fx.FireResize(20, 30)
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+		cmp.Dim().SetHeight(5)
 		ll := make([]string, 60)
 		for i := 0; i < 60; i++ {
 			ll[i] = fmt.Sprintf("line %d", i+1)
 		}
 		fmt.Fprint(e, strings.Join(ll, "\n"))
-		t.Eq(60, fx.Len())
+		t.Eq(60, cmp.Len())
 	}))
 
 	exp := []string{}
 	for i := 0; i < 5; i++ {
 		exp = append(exp, fmt.Sprintf("line %d", i+5))
 	}
-	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
-		fx.Scroll.Down()
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+		cmp.Scroll.Down()
 	}))
-	t.Eq(strings.Join(exp, "\n"), tt.Screen().Trimmed().String())
+	t.Eq(strings.Join(exp, "\n"), fx.Screen().Trimmed().String())
 
-	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
-		fx.Dim().SetHeight(15)
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+		cmp.Dim().SetHeight(15)
 	}))
 
 	exp = []string{}
 	for i := 0; i < 15; i++ { // first is still at fifth line
 		exp = append(exp, fmt.Sprintf("line %d", i+19))
 	}
-	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
-		fx.Scroll.Down()
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+		cmp.Scroll.Down()
 	}))
-	t.Eq(strings.Join(exp, "\n"), tt.Screen().Trimmed().String())
+	t.Eq(strings.Join(exp, "\n"), fx.Screen().Trimmed().String())
 
-	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
-		fx.Scroll.ToTop()
-		t.True(fx.Scroll.IsAtTop())
-		fx.Dim().SetHeight(30)
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+		cmp.Scroll.ToTop()
+		t.True(cmp.Scroll.IsAtTop())
+		cmp.Dim().SetHeight(30)
 	}))
 	exp = []string{}
 	for i := 0; i < 30; i++ { // first is still at fifth line
 		exp = append(exp, fmt.Sprintf("line %d", i+28))
 	}
-	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
-		fx.Scroll.Down()
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+		cmp.Scroll.Down()
 	}))
-	t.Eq(strings.Join(exp, "\n"), tt.Screen().Trimmed().String())
+	t.Eq(strings.Join(exp, "\n"), fx.Screen().Trimmed().String())
 }
 
 func (s *AComponent) Scrolls_up_by_90_percent_height(t *T) {
-	tt, fx := s.fxCmp(t)
-	tt.FireResize(20, 30)
-	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
-		fx.Dim().SetHeight(5)
+	fx, cmp := fxCmp(t)
+	fx.FireResize(20, 30)
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+		cmp.Dim().SetHeight(5)
 		ll := make([]string, 60)
 		for i := 0; i < 60; i++ {
 			if i+1 < 10 {
@@ -253,41 +245,41 @@ func (s *AComponent) Scrolls_up_by_90_percent_height(t *T) {
 			ll[i] = fmt.Sprintf("line %d", i+1)
 		}
 		fmt.Fprint(e, strings.Join(ll, "\n"))
-		t.Eq(60, fx.Len())
-		fx.Scroll.ToBottom()
+		t.Eq(60, cmp.Len())
+		cmp.Scroll.ToBottom()
 	}))
 
 	exp := []string{}
 	for i := 0; i < 5; i++ {
 		exp = append(exp, fmt.Sprintf("line %d", i+56))
 	}
-	t.Eq(strings.Join(exp, "\n"), tt.Screen().Trimmed().String())
+	t.Eq(strings.Join(exp, "\n"), fx.Screen().Trimmed().String())
 	exp = []string{}
 	for i := 0; i < 5; i++ {
 		exp = append(exp, fmt.Sprintf("line %d", i+52))
 	}
-	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
-		fx.Scroll.Up()
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+		cmp.Scroll.Up()
 	}))
-	t.Eq(strings.Join(exp, "\n"), tt.Screen().Trimmed().String())
+	t.Eq(strings.Join(exp, "\n"), fx.Screen().Trimmed().String())
 
-	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
-		fx.Dim().SetHeight(15)
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+		cmp.Dim().SetHeight(15)
 	}))
 
 	exp = []string{}
 	for i := 0; i < 15; i++ {
 		exp = append(exp, fmt.Sprintf("line %d", i+32))
 	}
-	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
-		fx.Scroll.Up()
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+		cmp.Scroll.Up()
 	}))
-	t.Eq(strings.Join(exp, "\n"), tt.Screen().Trimmed().String())
+	t.Eq(strings.Join(exp, "\n"), fx.Screen().Trimmed().String())
 
-	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
-		fx.Dim().SetHeight(30)
-		fx.Scroll.ToBottom()
-		t.True(fx.Scroll.IsAtBottom())
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+		cmp.Dim().SetHeight(30)
+		cmp.Scroll.ToBottom()
+		t.True(cmp.Scroll.IsAtBottom())
 	}))
 	exp = []string{}
 	for i := 0; i < 30; i++ {
@@ -297,149 +289,112 @@ func (s *AComponent) Scrolls_up_by_90_percent_height(t *T) {
 		}
 		exp = append(exp, fmt.Sprintf("line %d", i+4))
 	}
-	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
-		fx.Scroll.Up()
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+		cmp.Scroll.Up()
 	}))
-	t.Eq(strings.Join(exp, "\n"), tt.Screen().Trimmed().String())
+	t.Eq(strings.Join(exp, "\n"), fx.Screen().Trimmed().String())
 }
 
 func (s *AComponent) Scrolls_to_top_on_reset_all(t *T) {
-	tt, fx := s.fxCmp(t)
-	tt.FireResize(20, 2)
-	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
+	fx, cmp := fxCmp(t)
+	fx.FireResize(20, 2)
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
 		fmt.Fprint(e, "first\nsecond\nthird\nforth")
-		fx.Scroll.ToBottom()
-		t.Not.True(fx.Scroll.IsAtTop())
+		cmp.Scroll.ToBottom()
+		t.Not.True(cmp.Scroll.IsAtTop())
 	}))
-	t.FatalOn(tt.Lines.Update(fx, nil, func(e *Env) {
-		fx.Reset(All)
-		t.True(fx.Scroll.IsAtTop())
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+		cmp.Reset(All)
+		t.True(cmp.Scroll.IsAtTop())
 	}))
-}
-
-type uiCmpFX struct {
-	Component
-	init func(c *uiCmpFX, e *Env)
-}
-
-func (c *uiCmpFX) OnInit(e *Env) {
-	if c.init == nil {
-		return
-	}
-	c.init(c, e)
-}
-
-func (c *uiCmpFX) OnUpdate(e *Env) {
-	data := e.Evt.(*UpdateEvent).Data.(map[int]string)
-	for idx, content := range data {
-		fmt.Fprint(e.LL(idx), content)
-	}
-	for i := 0; i < c.Len(); i++ {
-		if _, ok := data[i]; ok {
-			continue
-		}
-		c.Reset(i)
-	}
-}
-
-type fillerFX struct{ Component }
-
-type rplStackFX struct {
-	Component
-	Stacking
-	long  string
-	short string
-}
-
-func (c *rplStackFX) OnInit(_ *Env) {
-	c.CC = []Componenter{&fillerFX{}, &icmpFX{
-		init: func(ic *icmpFX, e *Env) {
-			ic.Dim().SetHeight(1)
-			fmt.Fprint(e, c.long)
-		}}}
-}
-
-func (c *rplStackFX) OnUpdate(e *Env, data interface{}) {
-	c.CC[1] = data.(Componenter)
 }
 
 func (s *AComponent) Is_replaceable(t *T) {
-	fx := &rplStackFX{
-		long:  "a rather long long long line",
-		short: "a short line",
+	cmp, long := &stackingFX{}, "a rather long long long line"
+	cmp.CC = append(cmp.CC, &cmpFX{}, &cmpFX{
+		onInit: func(c *cmpFX, e *Env) {
+			c.Dim().SetHeight(1)
+			fmt.Fprint(e, long)
+		}},
+	)
+	cmp.onUpdate = func(_ *cmpFX, _ *Env, data interface{}) {
+		cmp.CC[1] = data.(Componenter)
 	}
-	tt := xcmpfx(t, fx)
-	t.Eq(fx.long, tt.ScreenOf(fx).Trimmed().String())
+	tt := xcmpfx(t, cmp)
+	t.Eq(long, tt.ScreenOf(cmp).Trimmed().String())
 
-	t.FatalOn(tt.Lines.Update(fx, &icmpFX{
-		init: func(ic *icmpFX, e *Env) {
-			ic.Dim().SetHeight(1)
-			fmt.Fprint(e, fx.short)
+	t.FatalOn(tt.Lines.Update(cmp, &cmpFX{
+		onInit: func(c *cmpFX, e *Env) {
+			c.Dim().SetHeight(1)
+			fmt.Fprint(e, "short line")
 		}}, nil))
-
-	str := tt.ScreenOf(fx).Trimmed().String()
-	t.Eq(fx.short, str)
+	str := tt.ScreenOf(cmp).Trimmed().String()
+	t.Eq("short line", str)
 }
 
 func (s *AComponent) Updates_tab_expansions_on_tab_width_change(t *T) {
-	tt, cmp := cmpfx(t)
-	tt.FireResize(11, 2)
+	fx, cmp := fxCmp(t)
+	fx.FireResize(11, 2)
 
 	tb, exp, expTB := "", 8, strings.Repeat(" ", 8)
-	tt.Lines.Update(cmp, nil, func(e *Env) {
+	fx.Lines.Update(cmp, nil, func(e *Env) {
 		tb = strings.Repeat(" ", cmp.Globals().TabWidth())
 		fmt.Fprint(e, "\t1st\n\t2nd")
 	})
 	t.Not.Eq(tb, expTB)
-	t.True(strings.HasPrefix(tt.Screen()[0], tb+"1st"))
-	t.True(strings.HasPrefix(tt.Screen()[1], tb+"2nd"))
+	t.True(strings.HasPrefix(fx.Screen()[0], tb+"1st"))
+	t.True(strings.HasPrefix(fx.Screen()[1], tb+"2nd"))
 
-	tt.Lines.Update(cmp, nil, func(e *Env) {
+	fx.Lines.Update(cmp, nil, func(e *Env) {
 		cmp.Globals().SetTabWidth(exp)
 	})
 
-	t.True(strings.HasPrefix(tt.Screen()[0], expTB+"1st"))
-	t.True(strings.HasPrefix(tt.Screen()[1], expTB+"2nd"))
+	t.True(strings.HasPrefix(fx.Screen()[0], expTB+"1st"))
+	t.True(strings.HasPrefix(fx.Screen()[1], expTB+"2nd"))
 }
 
 func (s *AComponent) Is_lines_cursor_component_on_set_cursor(t *T) {
-	stacking := newStacking(&cmpFX{}, &cmpFX{})
-	tt := fx(t, stacking)
+	stacking := &stackingFX{}
+	stacking.CC = append(stacking.CC, &cmpFX{}, &cmpFX{})
+	fx := fx(t, stacking)
 	cmp := stacking.CC[1].(*cmpFX)
-	tt.Lines.Update(cmp, nil, func(e *Env) {
+	fx.Lines.Update(cmp, nil, func(e *Env) {
 		cmp.SetCursor(0, 0, BlockCursorBlinking)
 	})
-	t.Eq(cmp, tt.Lines.CursorComponent())
+	t.Eq(cmp, fx.Lines.CursorComponent())
 }
 
 func (s *AComponent) Ignores_setting_cursor_outside_content(t *T) {
-	stacking := newStacking(&cmpFX{}, &cmpFX{})
-	tt := fx(t, stacking)
+	stacking := &stackingFX{}
+	stacking.CC = append(stacking.CC, &cmpFX{}, &cmpFX{})
+	fx := fx(t, stacking)
 	cmp := stacking.CC[1].(*cmpFX)
-	tt.Lines.Update(cmp, nil, func(e *Env) {
+	fx.Lines.Update(cmp, nil, func(e *Env) {
 		_, _, w, _ := cmp.ContentArea()
 		cmp.SetCursor(0, w, BlockCursorBlinking)
 	})
-	t.Eq(Componenter(nil), tt.Lines.CursorComponent())
-	tt.Lines.Update(cmp, nil, func(e *Env) {
+	t.Eq(Componenter(nil), fx.Lines.CursorComponent())
+	fx.Lines.Update(cmp, nil, func(e *Env) {
 		_, _, _, h := cmp.ContentArea()
 		cmp.SetCursor(h, 0, BlockCursorBlinking)
 	})
-	t.Eq(Componenter(nil), tt.Lines.CursorComponent())
+	t.Eq(Componenter(nil), fx.Lines.CursorComponent())
 }
 
 func (s *AComponent) Stacking_or_chaining_ignores_cursor_sets(t *T) {
-	stacking := newStacking(&cmpFX{})
-	tt := fx(t, stacking)
-	tt.Lines.Update(stacking, nil, func(e *Env) {
+	stacking := &stackingFX{}
+	stacking.CC = append(stacking.CC, &cmpFX{}, &cmpFX{})
+	fx := fx(t, stacking)
+	fx.Lines.Update(stacking, nil, func(e *Env) {
 		stacking.SetCursor(0, 0)
 	})
-	t.Eq(Componenter(nil), tt.Lines.CursorComponent())
-	chaining := &chnFX{Chaining: Chaining{CC: []Componenter{&cmpFX{}}}}
-	tt.Lines.Update(chaining, nil, func(e *Env) {
+	t.Eq(Componenter(nil), fx.Lines.CursorComponent())
+	chaining := &chainingFX{}
+	chaining.CC = append(chaining.CC, &cmpFX{})
+	fx.Lines.Update(chaining, nil, func(e *Env) {
 		chaining.SetCursor(0, 0)
 	})
-	t.Eq(Componenter(nil), tt.Lines.CursorComponent())
+	t.Eq(Componenter(nil), fx.Lines.CursorComponent())
 }
 
 func TestComponent(t *testing.T) {
