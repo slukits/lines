@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/slukits/lines"
-	"github.com/slukits/lines/examples/frame"
+	"github.com/slukits/lines/examples/demo"
 )
 
 type titleFrame struct{ title []rune }
@@ -27,7 +27,7 @@ func (f *titleFrame) frame(g gapper, e *lines.Env) {
 type app struct {
 	lines.Component
 	lines.Stacking
-	frame.Titled
+	demo.Titled
 }
 
 var appTitle []rune = []rune("gaps demo")
@@ -70,7 +70,7 @@ func (c *simple) OnInit(e *lines.Env) {
 type ttlTopCentered struct {
 	lines.Component
 	lines.Stacking
-	frame.Titled
+	demo.Titled
 }
 
 func (c *ttlTopCentered) OnInit(e *lines.Env) {
