@@ -54,6 +54,7 @@ type cmpFX struct {
 	onKey             func(*cmpFX, *Env, Key, ModifierMask)
 	cc                map[counter]int
 	tt                map[counter]time.Time
+	gaps              bool
 }
 
 func fx(
@@ -89,7 +90,7 @@ func fxFF(
 	}
 	cmp := &cmpFX{
 		onInit: func(c *cmpFX, e *Env) {
-			c.FF.Add(ff)
+			c.FF.Set(ff)
 		},
 	}
 	return TermFixture(t.GoT(), d, cmp), cmp
@@ -112,6 +113,10 @@ func (c *cmpFX) T(cn counter) time.Time { return c.tt[cn] }
 
 func (c *cmpFX) OnInit(e *Env) {
 	c.increment(onInit)
+	if c.gaps {
+		Print(c.Gaps(0).Filling(), '•')
+		fmt.Fprint(c.Gaps(0).Corners, "•")
+	}
 	if c.onInit == nil {
 		return
 	}
@@ -263,5 +268,97 @@ type framingFX struct {
 func (c *framingFX) OnInit(e *Env) {
 	Print(c.Gaps(0).Filling(), c.filler)
 	fmt.Fprint(c.Gaps(0).Corners, string(c.filler))
+	c.cmpFX.OnInit(e)
+}
+
+type linerFX struct {
+	// cc is the provided content of this type's instance which defaults
+	// to 8 lines: 1st, 2nd, 3rd, 4th, ..., 8th
+	cc []string
+}
+
+func lineString(no int) string {
+	switch no {
+	case 1:
+		return "1st"
+	case 2:
+		return "2nd"
+	case 3:
+		return "3rd"
+	}
+	return fmt.Sprintf("%dth", no)
+}
+
+func (l *linerFX) initLines(n int) *linerFX {
+	if n < 0 {
+		panic("new liner fixture: negative number of lines")
+	}
+	cc := []string{}
+	for i := 0; i < n; i++ {
+		cc = append(cc, lineString(i+1))
+	}
+	l.cc = cc
+	return l
+}
+
+func (l *linerFX) Print(idx int, w *EnvLineWriter) bool {
+	if len(l.cc) == 0 {
+		l.initLines(8)
+	}
+	if len(l.cc) <= idx || idx < 0 {
+		return false
+	}
+	fmt.Fprintf(w, l.cc[idx])
+	return idx+1 < len(l.cc)
+}
+
+type scrollableLinerFX struct {
+	linerFX
+}
+
+func (l *scrollableLinerFX) Len() int {
+	if len(l.cc) == 0 {
+		l.initLines(8)
+	}
+	return len(l.cc)
+}
+
+type focusableLinerFX struct {
+	scrollableLinerFX
+	// highlighted and trimmed are provided by the Highlighted interface
+	// method indicating if a focused line is highlighted and if that
+	// highlight should be trimmed.  Both properties default to false.
+	highlighted, trimmed bool
+	// returns to a given line index if the line is focusable or not.
+	// focusable defaults to func(_ int) bool { return true }
+	focusable func(idx int) bool
+}
+
+func (l *focusableLinerFX) initLines(n int) *focusableLinerFX {
+	l.scrollableLinerFX.initLines(n)
+	return l
+}
+
+func (l *focusableLinerFX) IsFocusable(idx int) bool {
+	if l.focusable == nil {
+		return true
+	}
+	return l.focusable(idx)
+}
+
+func (l *focusableLinerFX) Highlighted() (highlighted, trimmed bool) {
+	return l.highlighted, l.trimmed
+}
+
+type srcFX struct {
+	cmpFX
+	liner Liner
+}
+
+func (c *srcFX) OnInit(e *Env) {
+	if c.liner == nil {
+		c.liner = &linerFX{}
+	}
+	c.Src = &ContentSource{Liner: c.liner}
 	c.cmpFX.OnInit(e)
 }

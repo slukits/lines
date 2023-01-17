@@ -5,6 +5,7 @@
 package lines
 
 import (
+	"sync"
 	"testing"
 	"time"
 
@@ -86,6 +87,8 @@ func TermFixture(
 	ll.scr = newScreen(ui, c, ll.Globals)
 	ll.Globals.propagation = globalsPropagationClosure(ll.scr)
 	ll.backend = ui
+	ll.Quitting = &quitting{Mutex: &sync.Mutex{}}
+	ll.Quitting.AddRune('q')
 	tt := &Fixture{
 		backend: backend,
 		Lines:   ll,

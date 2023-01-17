@@ -183,9 +183,9 @@ func (c *gutterGap) OnInit(e *lines.Env) {
 	}
 	c.CC = []lines.Componenter{&gutter{}}
 	c.Dim().SetWidth(18).SetHeight(7)
-	lines.Print(c.Gaps(0).Left.At(0), '😵')
-	lines.Print(c.Gaps(0).Left.At(2), '🙃')
-	lines.Print(c.Gaps(0).Left.At(4), '🤨')
+	lines.Print(c.Gaps(0).Left.At(0), '●')
+	lines.Print(c.Gaps(0).Left.At(2), '☺')
+	lines.Print(c.Gaps(0).Left.At(4), '')
 }
 
 type gutter struct{ lines.Component }

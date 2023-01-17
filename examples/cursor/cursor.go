@@ -58,7 +58,7 @@ func (c *App) OnInit(e *lines.Env) {
 		feature, c
 
 	// make demos focusable by mouse-click
-	c.FF.AddRecursive(lines.Focusable)
+	c.FF.Set(lines.Focusable)
 
 	// have the cursor demo horizontally and vertically centered on
 	// bigger screens.

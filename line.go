@@ -87,15 +87,17 @@ func (l *Line) reset(ff LineFlags, s *Style) *Line {
 }
 
 func (l *Line) setFlags(ff LineFlags) {
+	if l.ff == ff {
+		return
+	}
 	l.ff = ff | dirty
 }
 
 // Switch turns given flag(s) on if they are not all set otherwise these
 // flags are removed.
 func (l *Line) Switch(ff LineFlags) {
-	l.setDirty()
 	if l.ff&ff == ff {
-		l.ff &^= ff
+		l.setFlags(l.ff &^ ff)
 		return
 	}
 	ff = cleanForFlagging(ff)
@@ -105,7 +107,7 @@ func (l *Line) Switch(ff LineFlags) {
 	case l.ff&TrimmedHighlighted != 0 && ff&Highlighted != 0:
 		l.ff &^= TrimmedHighlighted
 	}
-	l.ff |= ff
+	l.setFlags(l.ff | ff)
 }
 
 func (l *Line) Flag(ff LineFlags) {
@@ -113,7 +115,7 @@ func (l *Line) Flag(ff LineFlags) {
 		return
 	}
 	ff = cleanForFlagging(ff)
-	l.ff |= ff
+	l.setFlags(l.ff | ff)
 }
 
 // IsFlagged returns true if given line l has given flags ff set; false
@@ -123,7 +125,7 @@ func (l *Line) IsFlagged(ff LineFlags) bool {
 }
 
 // Unflag removes given flags ff from given line l.
-func (l *Line) Unflag(ff LineFlags) { l.ff &^= ff }
+func (l *Line) Unflag(ff LineFlags) { l.setFlags(l.ff &^ ff) }
 
 // cleanForFlagging removes inconsistent flags preferring usually
 // the more specific one.

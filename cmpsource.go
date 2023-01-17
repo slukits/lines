@@ -105,7 +105,7 @@ func (cs *ContentSource) cleanup(c *component) {
 		cs.initialize(c)
 	}
 
-	n := c.contentScreenLines()
+	n := c.ContentScreenLines()
 	if n <= 0 {
 		return
 	}
@@ -116,37 +116,32 @@ func (cs *ContentSource) initialize(c *component) {
 	c.ensureFeatures()
 	if el, ok := cs.Liner.(EditLiner); ok {
 		if hl, tr := el.Highlighted(); hl {
-			if !c.ff.has(HighlightedEditable) {
-				c.ff.add(HighlightedEditable, false)
-			}
 			if tr {
-				c.LL.Focus.Trimmed()
+				c.ff.set(TrimmedHighlightEnabled)
+			} else {
+				c.ff.set(HighlightEnabled)
 			}
-			return
-		} else {
-			if !c.ff.has(Editable) {
-				c.ff.add(Editable, false)
-			}
+		}
+		if !c.ff.has(Editable) {
+			c.ff.set(Editable)
 		}
 		return
 	}
 	if _, ok := cs.Liner.(ScrollableLiner); ok {
 		if !c.ff.has(Scrollable) {
-			c.ff.add(Scrollable, false)
+			c.ff.set(Scrollable)
 		}
 	}
 	if fl, ok := cs.Liner.(FocusableLiner); ok {
 		if hl, tr := fl.Highlighted(); hl {
-			if !c.ff.has(LinesHighlightedFocusable) {
-				c.ff.add(LinesHighlightedFocusable, false)
-			}
 			if tr {
-				c.LL.Focus.Trimmed()
+				c.ff.set(TrimmedHighlightEnabled)
+			} else {
+				c.ff.set(HighlightEnabled)
 			}
-			return
 		}
 		if !c.ff.has(LinesFocusable) {
-			c.ff.add(LinesFocusable, false)
+			c.ff.set(LinesFocusable)
 		}
 	}
 }
@@ -157,7 +152,7 @@ func (cs *ContentSource) sync(n int, c *component) {
 	}
 	idx := cs.first
 	lw := &EnvLineWriter{cmp: c, line: idx - cs.first}
-	for cs.Print(idx, lw) && idx-cs.first < n {
+	for idx-cs.first < n && cs.Print(idx, lw) {
 		idx++
 		lw = &EnvLineWriter{cmp: c, line: idx - cs.first}
 	}

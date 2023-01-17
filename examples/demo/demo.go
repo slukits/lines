@@ -2,20 +2,22 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+/*
+Package demo provides helper for the example packages in "examples".
+*/
 package demo
 
 import (
 	"fmt"
 
 	"github.com/slukits/lines"
-	"github.com/slukits/lines/examples/frame"
 	"github.com/slukits/lines/internal/lyt"
 )
 
 // Demo implements features all demonstrations, i.e. menu, context,
 // tool-tip and stacked, have in common.
 type Demo struct {
-	frame.Titled
+	Titled
 	dg   dimGapper
 	Next lines.Componenter
 }

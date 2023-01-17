@@ -51,6 +51,13 @@ func (s *_lines) Reports_quit_key_events_to_all_quitter(t *T) {
 		OnQuit(func() { quitReported++ })
 	fx_.FireKey(CtrlD)
 	t.Eq(6, quitReported)
+	fx_ = fx(t, &cmpFX{})
+	fx_.Lines.
+		OnQuit(func() { quitReported++ }).
+		OnQuit(func() { quitReported++ })
+	fx_.Lines.Quitting.AddKey(CtrlX)
+	fx_.FireKey(CtrlX)
+	t.Eq(8, quitReported)
 }
 
 func (s *_lines) Reports_layout_after_initialization(t *T) {
@@ -154,30 +161,6 @@ func (s *_lines) Reports_focus_loss_to_all_parents_not_focused_to(t *T) {
 		cmp1.N(onFocusLost) == 0 && stk.N(onFocusLost) == 1 &&
 		cmp2.N(onFocusLost) == 1)
 }
-
-type stackedCmpFX struct {
-	Component
-	Stacking
-	lostFocusReported bool
-}
-
-func newStacking(cc ...Componenter) *stackedCmpFX {
-	return &stackedCmpFX{Stacking: Stacking{CC: cc}}
-}
-
-func (c *stackedCmpFX) stacked(idx int) *cmpFX {
-	return c.CC[idx].(*cmpFX)
-}
-
-func (c *stackedCmpFX) OnFocusLost(*Env) { c.lostFocusReported = true }
-
-type fcsCmpFX struct {
-	Component
-	hasFocus bool
-}
-
-func (c *fcsCmpFX) OnFocus(*Env)     { c.hasFocus = true }
-func (c *fcsCmpFX) OnFocusLost(*Env) { c.hasFocus = false }
 
 func (s *_lines) Ignores_focus_on_focused_component(t *T) {
 	cmp := &stackingFX{}
@@ -338,7 +321,7 @@ func (s *_lines) Adjusts_set_content_area_cursor_on_resize(t *T) {
 func (s *_lines) Reports_cursor_change_on_resize(t *T) {
 	cmp := &cmpFX{
 		onInit: func(c *cmpFX, e *Env) {
-			c.FF.Add(CellFocusable)
+			c.FF.Set(CellFocusable)
 			c.Dim().SetWidth(10).SetHeight(2)
 			fmt.Fprint(e, "1st\n2nd\n3rd")
 			e.Lines.SetCursor(0, 0)

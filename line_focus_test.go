@@ -11,28 +11,26 @@ import (
 	. "github.com/slukits/gounit"
 )
 
-type lineFocusFeat struct {
-	Suite
-}
+type lineFocus struct{ Suite }
 
-func (s *lineFocusFeat) SetUp(t *T) { t.Parallel() }
+func (s *lineFocus) SetUp(t *T) { t.Parallel() }
 
-func (s *lineFocusFeat) Has_initially_no_line_focused(t *T) {
+func (s *lineFocus) Has_initially_no_line_focused(t *T) {
 	cmp := &cmpFX{
 		onInit: func(c *cmpFX, e *Env) {
 			t.Eq(-1, c.LL.Focus.Current())
-			// no-ops for coverage
-			c.LL.Focus.Next(false)
+			// NoOps for coverage
+			c.LL.Focus.Next()
 			c.LL.Focus.Reset()
 			t.Eq(-1, c.LL.Focus.Current())
 		}}
 	fx(t, cmp)
 }
 
-func (s *lineFocusFeat) Focuses_first_focusable_line_on_down_key(t *T) {
+func (s *lineFocus) Focuses_first_focusable_line_on_down_key(t *T) {
 	cmp := &cmpFX{
 		onInit: func(c *cmpFX, e *Env) {
-			c.FF.Add(LinesFocusable)
+			c.FF.Set(LinesFocusable)
 			fmt.Fprint(e, "first\nsecond")
 		},
 		onLineFocus: func(c *cmpFX, e *Env, cIdx, sIdx int) {
@@ -57,10 +55,10 @@ func (s *lineFocusFeat) Focuses_first_focusable_line_on_down_key(t *T) {
 	t.Eq(2, cmp.N(onLineFocus))
 }
 
-func (s *lineFocusFeat) Reports_line_focus_loss(t *T) {
+func (s *lineFocus) Reports_line_focus_loss(t *T) {
 	cmp := &cmpFX{
 		onInit: func(c *cmpFX, e *Env) { // OnInit
-			c.FF.Add(LinesFocusable)
+			c.FF.Set(LinesFocusable)
 			fmt.Fprint(e, "first\nsecond")
 		},
 		onLineFocusLost: func(lcf *cmpFX, e *Env, cIdx, sIdx int) {
@@ -74,10 +72,10 @@ func (s *lineFocusFeat) Reports_line_focus_loss(t *T) {
 	t.Eq(1, cmp.N(onLineFocusLost))
 }
 
-func (s *lineFocusFeat) Reports_overflowing_line_on_focus(t *T) {
+func (s *lineFocus) Reports_overflowing_line_on_focus(t *T) {
 	cmp := &cmpFX{
 		onInit: func(c *cmpFX, e *Env) { // OnInit
-			c.FF.Add(LinesFocusable)
+			c.FF.Set(LinesFocusable)
 			fmt.Fprint(e, "an overflowing line")
 		},
 		onLineOverflowing: func(_ *cmpFX, _ *Env, left, right bool) {
@@ -92,10 +90,10 @@ func (s *lineFocusFeat) Reports_overflowing_line_on_focus(t *T) {
 	t.Eq(1, cmp.N(onLineOverflowing))
 }
 
-func (s *lineFocusFeat) Reports_overflowing_line_on_cursor_move(t *T) {
+func (s *lineFocus) Reports_overflowing_line_on_cursor_move(t *T) {
 	cmp := &cmpFX{
 		onInit: func(c *cmpFX, e *Env) { // OnInit
-			c.FF.Add(CellFocusable)
+			c.FF.Set(CellFocusable)
 			fmt.Fprint(e, "1234")
 		},
 		onLineOverflowing: func(c *cmpFX, _ *Env, left, right bool) {
@@ -140,10 +138,10 @@ func (s *lineFocusFeat) Reports_overflowing_line_on_cursor_move(t *T) {
 	t.Eq(6, cmp.N(onLineOverflowing))
 }
 
-func (s *lineFocusFeat) Reports_cursor_position_changes(t *T) {
+func (s *lineFocus) Reports_cursor_position_changes(t *T) {
 	cmp := &cmpFX{
 		onInit: func(c *cmpFX, e *Env) {
-			c.FF.Add(CellFocusable)
+			c.FF.Set(CellFocusable)
 			fmt.Fprint(e, "123")
 		},
 	}
@@ -167,10 +165,10 @@ func (s *lineFocusFeat) Reports_cursor_position_changes(t *T) {
 	t.Eq(fx.Screen(), "23")
 }
 
-func (s *lineFocusFeat) Focuses_next_focusable_line_on_down_key(t *T) {
+func (s *lineFocus) Focuses_next_focusable_line_on_down_key(t *T) {
 	cmp := &cmpFX{
 		onInit: func(c *cmpFX, e *Env) {
-			c.FF.Add(LinesFocusable)
+			c.FF.Set(LinesFocusable)
 			fmt.Fprint(e, "first\nsecond\nthird")
 			c.LL.By(1).Flag(NotFocusable)
 		},
@@ -191,10 +189,10 @@ func (s *lineFocusFeat) Focuses_next_focusable_line_on_down_key(t *T) {
 	t.Eq(2, cmp.N(onLineFocus))
 }
 
-func (s *lineFocusFeat) Resets_if_no_next_focusable(t *T) {
+func (s *lineFocus) Resets_if_no_next_focusable(t *T) {
 	cmp := &cmpFX{
 		onInit: func(c *cmpFX, e *Env) {
-			c.FF.Add(LinesFocusable)
+			c.FF.Set(LinesFocusable)
 			fmt.Fprint(e.LL(0), "first")
 		},
 		onLineFocus: func(c *cmpFX, e *Env, cIdx, sIdx int) {
@@ -224,10 +222,10 @@ func (s *lineFocusFeat) Resets_if_no_next_focusable(t *T) {
 	t.Eq(2, cmp.cc[onLineFocusLost])
 }
 
-func (s *lineFocusFeat) Focuses_previous_focusable_line_on_up_key(t *T) {
+func (s *lineFocus) Focuses_previous_focusable_line_on_up_key(t *T) {
 	cmp := &cmpFX{
 		onInit: func(c *cmpFX, e *Env) {
-			c.FF.Add(LinesFocusable)
+			c.FF.Set(LinesFocusable)
 			fmt.Fprint(e, "first\nsecond")
 		},
 		onLineFocus: func(c *cmpFX, e *Env, cIdx, sIdx int) {
@@ -285,10 +283,10 @@ func (s *lineFocusFeat) Focuses_previous_focusable_line_on_up_key(t *T) {
 	t.True(cmp.cc[onLineFocus] == 5 && cmp.cc[onLineFocusLost] == 4)
 }
 
-func (s *lineFocusFeat) Reset_triggered_by_unfocusable_feature(t *T) {
+func (s *lineFocus) Reset_triggered_by_unfocusable_feature(t *T) {
 	cmp := &cmpFX{
 		onInit: func(c *cmpFX, e *Env) {
-			c.FF.Add(LinesFocusable)
+			c.FF.Set(LinesFocusable)
 			fmt.Fprint(e, "first\nsecond")
 		},
 		onLineFocus: func(c *cmpFX, e *Env, cIdx, sIdx int) {
@@ -307,10 +305,10 @@ func (s *lineFocusFeat) Reset_triggered_by_unfocusable_feature(t *T) {
 	t.Eq(1, cmp.cc[onLineFocusLost])
 }
 
-func (s *lineFocusFeat) Scrolls_to_next_highlighted_line(t *T) {
+func (s *lineFocus) Scrolls_to_next_focusable_line(t *T) {
 	cmp := &cmpFX{
 		onInit: func(c *cmpFX, e *Env) {
-			c.FF.Add(LinesFocusable)
+			c.FF.Set(LinesFocusable)
 			c.dim.SetHeight(2)
 			for i := 0; i < 7; i++ {
 				fmt.Fprintf(e.LL(i), "line %d", i+1)
@@ -331,10 +329,10 @@ func (s *lineFocusFeat) Scrolls_to_next_highlighted_line(t *T) {
 	t.Eq(1, cmp.cc[onLineFocus])
 }
 
-func (s *lineFocusFeat) Scrolls_to_previous_highlighted_line(t *T) {
+func (s *lineFocus) Scrolls_to_previous_focusable_line(t *T) {
 	cmp := &cmpFX{
 		onInit: func(c *cmpFX, e *Env) {
-			c.FF.Add(LinesFocusable)
+			c.FF.Set(LinesFocusable)
 			c.dim.SetHeight(2)
 			for i := 0; i < 7; i++ {
 				fmt.Fprintf(e.LL(i), "line %d", i+1)
@@ -364,10 +362,10 @@ func (s *lineFocusFeat) Scrolls_to_previous_highlighted_line(t *T) {
 	t.Eq(3, cmp.cc[onLineFocus])
 }
 
-func (s *lineFocusFeat) Inverts_bg_fg_of_focused_if_highlighted(t *T) {
+func (s *lineFocus) Inverts_bg_fg_of_focused_if_highlighted(t *T) {
 	cmp := &cmpFX{
 		onInit: func(c *cmpFX, e *Env) {
-			c.FF.Add(LinesFocusable | LineFocusHighlightable)
+			c.FF.Set(LinesFocusable | HighlightEnabled)
 			fmt.Fprint(e.LL(0), "line 1")
 		},
 		onLineFocus: func(c *cmpFX, e *Env, _, _ int) {
@@ -389,10 +387,10 @@ func (s *lineFocusFeat) Inverts_bg_fg_of_focused_if_highlighted(t *T) {
 	}
 }
 
-func (s *lineFocusFeat) Moves_highlight_to_next_focused_line(t *T) {
+func (s *lineFocus) Moves_highlight_to_next_focused_line(t *T) {
 	cmp := &cmpFX{
 		onInit: func(c *cmpFX, e *Env) {
-			c.FF.Add(LinesFocusable | LineFocusHighlightable)
+			c.FF.Set(LinesFocusable | HighlightEnabled)
 			fmt.Fprint(e.LL(0), "line 1")
 			fmt.Fprint(e.LL(1), "line 2")
 			c.LL.By(1).Flag(NotFocusable)
@@ -409,8 +407,7 @@ func (s *lineFocusFeat) Moves_highlight_to_next_focused_line(t *T) {
 	}
 	tt := fx(t, cmp)
 	tt.FireResize(len("line n"), 2)
-	tt.FireKey(Down)
-	tt.FireKey(Down)
+	tt.FireKeys(Down, Down)
 
 	t.Eq(2, cmp.cc[onLineFocus])
 	t.Eq("line 2\nline 3", tt.Screen())
@@ -425,12 +422,42 @@ func (s *lineFocusFeat) Moves_highlight_to_next_focused_line(t *T) {
 	}
 }
 
-func (s *lineFocusFeat) Trims_highlight_to_non_blanks(t *T) {
+func (s *lineFocus) Removes_highlight_if_unfocused(t *T) {
+	cmp := &cmpFX{
+		onInit: func(c *cmpFX, e *Env) {
+			c.FF.Set(LinesFocusable | TrimmedHighlightEnabled)
+			fmt.Fprint(e.LL(0), " no_blanks ")
+		},
+	}
+	fx := fx(t, cmp)
+	fx.FireResize(len(" no_blanks "), 1)
+	fx.Lines.Update(cmp, nil, func(e *Env) {
+		t.Eq(-1, cmp.LL.Focus.Current())
+		t.Not.True(cmp.LL.By(0).IsFlagged(TrimmedHighlighted))
+	})
+	fx.FireKey(Down)
+	fx.Lines.Update(cmp, nil, func(e *Env) {
+		t.Eq(0, cmp.LL.Focus.Current())
+		t.True(cmp.LL.By(0).IsFlagged(TrimmedHighlighted))
+	})
+	fx.FireKey(Down)
+	fx.Lines.Update(cmp, nil, func(e *Env) {
+		t.Eq(-1, cmp.LL.Focus.Current())
+		t.Not.True(cmp.LL.By(0).IsFlagged(TrimmedHighlighted))
+		cmp.FF.Set(HighlightEnabled)
+	})
+	fx.FireKey(Down)
+	fx.Lines.Update(cmp, nil, func(e *Env) {
+		t.Eq(0, cmp.LL.Focus.Current())
+		t.True(cmp.LL.By(0).IsFlagged(Highlighted))
+	})
+}
+
+func (s *lineFocus) Trims_highlight_to_non_blanks(t *T) {
 	var dflSty, hiSty Style
 	cmp := &cmpFX{
 		onInit: func(c *cmpFX, e *Env) {
-			c.FF.Add(LinesFocusable | LineFocusHighlightable)
-			c.LL.Focus.Trimmed()
+			c.FF.Set(LinesFocusable | TrimmedHighlightEnabled)
 			fmt.Fprint(e.LL(0), " no_blanks ")
 			dflSty = c.Globals().Style(Default)
 			hiSty = dflSty.WithAA(Reverse)
@@ -438,31 +465,37 @@ func (s *lineFocusFeat) Trims_highlight_to_non_blanks(t *T) {
 	}
 	fx := fx(t, cmp)
 	fx.FireResize(len(" no_blanks "), 1)
+	fx.Lines.Update(cmp, nil, func(e *Env) {
+		t.Not.True(cmp.LL.By(0).IsFlagged(TrimmedHighlighted))
+	})
 	fx.FireKey(Down)
+	fx.Lines.Update(cmp, nil, func(e *Env) {
+		t.True(cmp.LL.By(0).IsFlagged(TrimmedHighlighted))
+	})
 	l1 := fx.Cells()[0]
 	for i, x := range l1 {
 		switch i {
 		case 0, 10:
-			x.Style.Equals(dflSty)
+			t.True(x.Style.Equals(dflSty))
 		default:
-			x.Style.Equals(hiSty)
+			t.True(x.Style.Equals(hiSty))
 		}
 	}
 	fx.FireKey(Down)
 	fx.Lines.Update(cmp, nil, func(e *Env) {
-		cmp.LL.Focus.Trimmed()
+		cmp.FF.Set(HighlightEnabled)
 	})
 	fx.FireKey(Down)
 	l1 = fx.Cells()[0]
 	for _, x := range l1 {
-		x.Style.Equals(hiSty)
+		t.True(x.Style.Equals(hiSty))
 	}
 }
 
-func (s *lineFocusFeat) Reports_focused_line_on_line_selection(t *T) {
+func (s *lineFocus) Reports_focused_line_on_line_selection(t *T) {
 	cmp := &cmpFX{
 		onInit: func(c *cmpFX, e *Env) {
-			c.FF.Add(LinesSelectable)
+			c.FF.Set(LinesSelectable)
 			fmt.Fprint(e, "first\nsecond")
 		},
 		onLineFocus: func(c *cmpFX, e *Env, cIdx, sIdx int) {
@@ -487,243 +520,9 @@ func (s *lineFocusFeat) Reports_focused_line_on_line_selection(t *T) {
 	t.Eq(1, cmp.cc[onLineSelection])
 }
 
-func (s *lineFocusFeat) Has_cursor_on_focused_line_if_cell_focusable(t *T) {
+func (s *lineFocus) Resets_line_start_on_line_focus_change(t *T) {
 	cmp := &cmpFX{onInit: func(cf *cmpFX, e *Env) {
-		cf.FF.Add(CellFocusable)
-		fmt.Fprint(e, "first line")
-	}}
-	tt := fx(t, cmp)
-	testCursor := func() {
-		tt.Lines.Update(cmp, nil, func(e *Env) {
-			ln, cl, haveCursor := cmp.CursorPosition()
-			t.True(haveCursor)
-			t.Eq(0, ln)
-			t.Eq(0, cl)
-		})
-	}
-	tt.FireKey(Down)
-	t.Eq(cmp, tt.Lines.CursorComponent())
-	testCursor()
-	tt.FireKey(Down)
-	tt.Lines.Update(cmp, nil, func(e *Env) {
-		_, _, haveCursor := cmp.CursorPosition()
-		t.Not.True(haveCursor)
-	})
-	tt.FireKey(Up)
-	t.Eq(cmp, tt.Lines.CursorComponent())
-	testCursor()
-}
-
-func (s *lineFocusFeat) Moves_cursor_on_next_cell_focus_feature(t *T) {
-	cmp := &cmpFX{onInit: func(cf *cmpFX, e *Env) {
-		cf.FF.Add(CellFocusable)
-		fmt.Fprint(e, "first line")
-	}}
-	tt := fx(t, cmp)
-	tt.FireKey(Down)
-	tt.FireKey(Right)
-	tt.Lines.Update(cmp, nil, func(e *Env) {
-		ln, cl, haveCursor := cmp.CursorPosition()
-		t.True(haveCursor)
-		t.Eq(0, ln)
-		t.Eq(1, cl)
-	})
-}
-
-func (s *lineFocusFeat) Moves_content_if_cursor_at_border(t *T) {
-	cmp := &cmpFX{onInit: func(cf *cmpFX, e *Env) {
-		cf.FF.Add(CellFocusable)
-		fmt.Fprint(e, "123456")
-		cf.Dim().SetWidth(4).SetHeight(1)
-	}}
-	tt := fx(t, cmp)
-	t.Eq("1234", tt.ScreenOf(cmp))
-	tt.FireKey(Down)
-	for i := 0; i < 3; i++ {
-		tt.FireKey(Right)
-	}
-	t.Eq("1234", tt.ScreenOf(cmp))
-	tt.Lines.Update(cmp, nil, func(e *Env) {
-		_, cl, haveCursor := cmp.CursorPosition()
-		t.True(haveCursor)
-		t.Eq(3, cl)
-	})
-	tt.FireKey(Right)
-	t.Eq("2345", tt.ScreenOf(cmp))
-
-	for i := 0; i < 4; i++ {
-		tt.FireKey(Left)
-	}
-	t.Eq("1234", tt.ScreenOf(cmp))
-}
-
-func (s *lineFocusFeat) Moves_content_and_cursor_on_end_cell_feature(
-	t *T,
-) {
-	cmp := &cmpFX{onInit: func(cf *cmpFX, e *Env) {
-		cf.FF.Add(CellFocusable)
-		fmt.Fprint(e, "12345")
-		cf.Dim().SetWidth(6).SetHeight(1)
-	}}
-	tt := fx(t, cmp)
-	t.Eq("12345 ", tt.ScreenOf(cmp))
-	tt.FireKeys(Down, End)
-	tt.Lines.Update(cmp, nil, func(e *Env) {
-		_, cl, haveCursor := cmp.CursorPosition()
-		t.True(haveCursor)
-		t.Eq(4, cl)
-	})
-	tt.FireKey(Home)
-	tt.Lines.Update(cmp, nil, func(e *Env) {
-		cmp.Dim().SetWidth(4)
-		_, cl, _ := cmp.CursorPosition()
-		t.Eq(0, cl)
-	})
-	t.Eq("1234", tt.ScreenOf(cmp))
-	tt.FireKey(End)
-	tt.Lines.Update(cmp, nil, func(e *Env) {
-		_, cl, haveCursor := cmp.CursorPosition()
-		t.True(haveCursor)
-		t.Eq(3, cl)
-	})
-	t.Eq("2345", tt.ScreenOf(cmp))
-}
-
-func (s *lineFocusFeat) Moves_content_and_cursor_on_home_cell_feature(
-	t *T,
-) {
-	cmp := &cmpFX{onInit: func(cf *cmpFX, e *Env) {
-		cf.FF.Add(CellFocusable)
-		fmt.Fprint(e, "12345")
-		cf.Dim().SetWidth(6).SetHeight(1)
-	}}
-	tt := fx(t, cmp)
-	t.Eq("12345 ", tt.ScreenOf(cmp))
-	tt.FireKey(Down)
-	tt.FireKey(End)
-	tt.FireKey(Home)
-	tt.Lines.Update(cmp, nil, func(e *Env) {
-		_, cl, haveCursor := cmp.CursorPosition()
-		t.True(haveCursor)
-		t.Eq(0, cl)
-		cmp.Dim().SetWidth(4)
-	})
-	t.Eq("1234", tt.ScreenOf(cmp))
-	tt.FireKey(End)
-	t.Eq("2345", tt.ScreenOf(cmp))
-	tt.FireKey(Home)
-	tt.Lines.Update(cmp, nil, func(e *Env) {
-		_, cl, haveCursor := cmp.CursorPosition()
-		t.True(haveCursor)
-		t.Eq(0, cl)
-	})
-	t.Eq("1234", tt.ScreenOf(cmp))
-}
-
-func (s *lineFocusFeat) Moves_cursor_on_line_focusable_features(t *T) {
-	cmp := &cmpFX{onInit: func(cf *cmpFX, e *Env) {
-		cf.FF.Add(CellFocusable)
-		fmt.Fprint(e, "123456\n1234\n123456")
-		cf.Dim().SetWidth(6).SetHeight(3)
-	}}
-	tt := fx(t, cmp)
-	testCursor := func(ln, cl int) {
-		tt.Lines.Update(cmp, nil, func(e *Env) {
-			_ln, _cl, haveCursor := cmp.CursorPosition()
-			t.True(haveCursor)
-			t.Eq(ln, _ln)
-			t.Eq(cl, _cl)
-		})
-	}
-	tt.FireKey(Down)
-	tt.FireKey(End)
-	testCursor(0, 5)
-	tt.FireKey(Down)
-	testCursor(1, 3)
-	tt.FireKey(Down)
-	testCursor(2, 3)
-	tt.FireKey(End)
-	testCursor(2, 5)
-	tt.FireKey(Up)
-	testCursor(1, 3)
-	tt.FireKey(Up)
-	testCursor(0, 3)
-}
-
-func (s *lineFocusFeat) No_ops_on_cell_focusable_features(t *T) {
-	cmp := &cmpFX{onInit: func(cf *cmpFX, e *Env) {
-		cf.FF.Add(CellFocusable)
-		fmt.Fprint(e, "12345")
-		cf.Dim().SetWidth(3).SetHeight(1)
-	}}
-	tt := fx(t, cmp)
-	testCursor := func(ln, cl int, have bool) {
-		tt.Lines.Update(cmp, nil, func(e *Env) {
-			_ln, _cl, _have := cmp.CursorPosition()
-			t.Eq(ln, _ln)
-			t.Eq(cl, _cl)
-			t.Eq(have, _have)
-		})
-	}
-	ln, cl, have := 0, 0, false
-	tt.Lines.Update(cmp, nil, func(e *Env) {
-		ln, cl, have = cmp.CursorPosition()
-	})
-	tt.FireKey(Right)
-	testCursor(ln, cl, have)
-	tt.FireKey(Left)
-	testCursor(ln, cl, have)
-	tt.FireKey(End)
-	testCursor(ln, cl, have)
-	tt.FireKey(Home)
-	testCursor(ln, cl, have)
-	tt.FireKey(Down)
-	tt.Lines.Update(cmp, nil, func(e *Env) {
-		ln, cl, have = cmp.CursorPosition()
-	})
-	tt.FireKey(Left)
-	testCursor(ln, cl, have)
-	tt.FireKey(Home)
-	testCursor(ln, cl, have)
-	tt.FireKey(End)
-	tt.Lines.Update(cmp, nil, func(e *Env) {
-		ln, cl, have = cmp.CursorPosition()
-	})
-	tt.FireKey(Right)
-	t.Eq("345", tt.ScreenOf(cmp)) // catched an incrementStart bug
-	testCursor(ln, cl, have)
-	tt.FireKey(End)
-	testCursor(ln, cl, have)
-}
-
-func (s *lineFocusFeat) Removes_cursor_if_line_focus_resets(t *T) {
-	cmp := &cmpFX{onInit: func(cf *cmpFX, e *Env) {
-		cf.FF.Add(CellFocusable)
-		fmt.Fprint(e, "12345\n12345")
-		cf.Dim().SetWidth(6).SetHeight(2)
-	}}
-	tt := fx(t, cmp)
-	haveCursor := func(b bool, n int) {
-		tt.Lines.Update(cmp, nil, func(e *Env) {
-			_, _, have := cmp.CursorPosition()
-			t.Eq(b, have)
-		})
-		t.Eq(n, cmp.N(onCursor))
-	}
-	haveCursor(false, 0)
-	tt.FireKey(Down)
-	haveCursor(true, 1)
-	tt.FireKey(Up)
-	haveCursor(false, 2)
-	for i := 0; i < 3; i++ {
-		tt.FireKey(Down)
-	}
-	haveCursor(false, 5)
-}
-
-func (s *lineFocusFeat) Resets_line_start_on_line_focus_change(t *T) {
-	cmp := &cmpFX{onInit: func(cf *cmpFX, e *Env) {
-		cf.FF.Add(CellFocusable)
+		cf.FF.Set(CellFocusable)
 		fmt.Fprint(e, "12345\n12345")
 		cf.Dim().SetWidth(3).SetHeight(2)
 	}}
@@ -739,44 +538,7 @@ func (s *lineFocusFeat) Resets_line_start_on_line_focus_change(t *T) {
 	t.Eq("123\n123", tt.ScreenOf(cmp))
 }
 
-func (s *lineFocusFeat) test_cursor_pos(
-	fx *Fixture, t *T, cmp *cmpFX, slIdx, scIdx int,
-) {
-	fx.Lines.Update(cmp, nil, func(e *Env) {
-		slIdx, scIdx, hasCursor := cmp.CursorPosition()
-		t.FatalIfNot(t.True((hasCursor)))
-		t.Eq(slIdx, slIdx)
-		t.Eq(scIdx, scIdx)
-	})
-}
-
-func (s *lineFocusFeat) Sets_cursor_after_last_rune(t *T) {
-	cmp := &cmpFX{onInit: func(cf *cmpFX, e *Env) {
-		cf.FF.Add(CellFocusable)
-		cf.LL.Focus.EolAfterLastRune()
-		fmt.Fprint(e, "12345\n6789\n12345")
-		cf.Dim().SetWidth(3).SetHeight(2)
-	}}
-
-	fx := fx(t, cmp)
-	fx.FireKeys(Down, End, End, Right)
-	t.Eq(fx.ScreenOf(cmp)[0], "45 ")
-	s.test_cursor_pos(fx, t, cmp, 0, 2)
-
-	fx.FireKey(Down)
-	s.test_cursor_pos(fx, t, cmp, 1, 2)
-	fx.FireKey(Right)
-	s.test_cursor_pos(fx, t, cmp, 1, 2)
-	t.Eq(fx.ScreenOf(cmp)[1], "789")
-	fx.FireKey(Right)
-	s.test_cursor_pos(fx, t, cmp, 1, 2)
-	t.Eq(fx.ScreenOf(cmp)[1], "89 ")
-	fx.FireKey(Right)
-	s.test_cursor_pos(fx, t, cmp, 1, 2)
-	t.Eq(fx.ScreenOf(cmp)[1], "89 ")
-}
-
 func TestLineFocus(t *testing.T) {
 	t.Parallel()
-	Run(&lineFocusFeat{}, t)
+	Run(&lineFocus{}, t)
 }

@@ -275,7 +275,7 @@ func (c *icmpFX) OnInit(e *Env) {
 
 func (s *KB) Executes_key_feature(t *T) {
 	tt := s.tt(t, &icmpFX{init: func(c *icmpFX, e *Env) {
-		c.FF.Add(Scrollable)
+		c.FF.Set(Scrollable)
 		c.Dim().SetHeight(2)
 		fmt.Fprint(e, "first\nsecond\nthird\nforth")
 	}})

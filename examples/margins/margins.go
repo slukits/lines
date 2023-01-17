@@ -16,10 +16,11 @@ func (c *cmp) OnInit(e *lines.Env) {
 	c.Dim().SetWidth(20).SetHeight(1)
 }
 
-func (c *cmp) OnLayout(e *lines.Env) {
+func (c *cmp) OnLayout(e *lines.Env) (reflow bool) {
 	_, mr, _, ml := c.Dim().Margin()
 	x, y, w, h := c.Dim().Printable()
 	fmt.Fprintf(e, "%d:%d (%d,%d) %dx%d", ml, mr, x, y, w, h)
+	return false
 }
 
 type app struct {

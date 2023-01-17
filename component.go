@@ -352,15 +352,7 @@ func (c *component) ensureFeatures() *features {
 	if c.ff != nil {
 		return c.ff
 	}
-	c.ff = defaultFeatures.copy()
-	return c.ff
-}
-
-func (c *component) ensureQuitableFeatures() *features {
-	if c.ff != nil {
-		return c.ff
-	}
-	c.ff = quitableFeatures.copy()
+	c.ff = &features{}
 	return c.ff
 }
 
@@ -382,8 +374,9 @@ type layoutComponenter interface {
 	userComponent() Componenter
 }
 
-// stackingWrapper wraps a stacking user-component for the
-// layout-manager.
+// stackingWrapper wraps a stacking user-component for the layout
+// manager.  Avoiding panics on Gaps- or Dim-access through the layout
+// manager
 type stackingWrapper struct{ *component }
 
 func (sw *stackingWrapper) Gaps() api.Gaps {
@@ -406,13 +399,17 @@ func (sw *stackingWrapper) ForStacked(cb func(lyt.Dimer) bool) {
 				sw.userCmp.backend(),
 				sw.globals().clone(),
 			)
+			if sw.ff.all() != NoFeature {
+				cmp.embedded().layoutCmp.wrapped().ff = sw.ff.copy()
+			}
 		}
 		return cb(cmp.layoutComponent())
 	})
 }
 
-// chainingWrapper wraps a chaining user-component for the
-// layout-manager.
+// chainingWrapper wraps a chaining user-component for the layout
+// manager.  Avoiding panics on Gaps- or Dim-access through the layout
+// manager
 type chainingWrapper struct{ *component }
 
 func (sw *chainingWrapper) Gaps() api.Gaps {
@@ -435,6 +432,9 @@ func (cw *chainingWrapper) ForChained(cb func(lyt.Dimer) bool) {
 				cw.userCmp.backend(),
 				cw.globals().clone(),
 			)
+			if cw.ff.all() != NoFeature {
+				cmp.embedded().layoutCmp.wrapped().ff = cw.ff.copy()
+			}
 		}
 		return cb(cmp.layoutComponent())
 	})

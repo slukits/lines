@@ -210,20 +210,17 @@ func focusedPath(
 
 	// find the deepest nested focusable component in the path ...
 	var focus layoutComponenter
-	for _, d := range path {
-		ff := d.(layoutComponenter).wrapped().ff
+	for i := len(path) - 1; i >= 0; i-- {
+		ff := path[i].(layoutComponenter).wrapped().ff
 		if ff == nil {
 			continue
 		}
 		f := ff.buttonFeature(evt.Button(), evt.Mod())
-		if f&(Focusable|_recursive) == Focusable|_recursive {
-			focus = path[len(path)-1].(layoutComponenter)
-			break
-		}
 		if f&Focusable == NoFeature {
 			continue
 		}
-		focus = d.(layoutComponenter)
+		focus = path[i].(layoutComponenter)
+		break
 	}
 	if focus == nil {
 		return path

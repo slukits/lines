@@ -22,7 +22,7 @@ func reportKey(cntx *rprContext, evt api.KeyEventer) (quit bool) {
 	}
 	if cntx.scr.focus.userComponent().embedded().Edit.IsActive() {
 		reportKeyEdit(cntx.scr.focus, evt, cntx)
-		return cntx.scr.root().ff.keyQuits(evt.Key())
+		return false
 	}
 	cntx.scr.forFocused(func(c layoutComponenter) (stop bool) {
 		if sb := reportKeyListener(c, evt, cntx); sb {
@@ -37,7 +37,7 @@ func reportKey(cntx *rprContext, evt api.KeyEventer) (quit bool) {
 		return false
 	}
 	execKeyFeature(cntx, evt)
-	return cntx.scr.root().ff.keyQuits(evt.Key())
+	return false
 }
 
 // reportKeyEdit reports first to OnKey implementations then the event
@@ -147,7 +147,7 @@ func reportRune(cntx *rprContext, evt RuneEventer) (quit bool) {
 		return false
 	}
 	execRuneFeature(cntx, evt)
-	return cntx.scr.root().ff.runeQuits(evt.Rune())
+	return false
 }
 
 func reportEdit(

@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"strings"
 	"testing"
-	"time"
 
 	. "github.com/slukits/gounit"
 )
@@ -20,24 +19,6 @@ func (s *AComponent) SetUp(t *T) { t.Parallel() }
 func (s *AComponent) Access_panics_outside_event_processing(t *T) {
 	_, cmp := fxCmp(t)
 	t.Panics(func() { cmp.Dim().SetHeight(20) })
-}
-
-func cmpfx(t *T, d ...time.Duration) (*Fixture, *cmpFX) {
-	cmp := &cmpFX{}
-	var tt *Fixture
-	if len(d) == 0 {
-		tt = TermFixture(t.GoT(), 0, cmp)
-	} else {
-		tt = TermFixture(t.GoT(), d[0], cmp)
-	}
-	return tt, cmp
-}
-
-func xcmpfx(t *T, cmp Componenter, d ...time.Duration) *Fixture {
-	if len(d) == 0 {
-		return TermFixture(t.GoT(), 0, cmp)
-	}
-	return TermFixture(t.GoT(), d[0], cmp)
 }
 
 func (s *AComponent) Creates_needed_lines_on_write(t *T) {
@@ -320,15 +301,15 @@ func (s *AComponent) Is_replaceable(t *T) {
 	cmp.onUpdate = func(_ *cmpFX, _ *Env, data interface{}) {
 		cmp.CC[1] = data.(Componenter)
 	}
-	tt := xcmpfx(t, cmp)
-	t.Eq(long, tt.ScreenOf(cmp).Trimmed().String())
+	fx := fx(t, cmp)
+	t.Eq(long, fx.ScreenOf(cmp).Trimmed().String())
 
-	t.FatalOn(tt.Lines.Update(cmp, &cmpFX{
+	t.FatalOn(fx.Lines.Update(cmp, &cmpFX{
 		onInit: func(c *cmpFX, e *Env) {
 			c.Dim().SetHeight(1)
 			fmt.Fprint(e, "short line")
 		}}, nil))
-	str := tt.ScreenOf(cmp).Trimmed().String()
+	str := fx.ScreenOf(cmp).Trimmed().String()
 	t.Eq("short line", str)
 }
 
