@@ -19,7 +19,8 @@ const (
 	keyListener
 	runeListener
 	onKey
-	onRune
+	onRuneEvt // Note one day this should disappear in favor of a
+	// unified component fixture
 )
 
 type kbEvent struct {
@@ -78,7 +79,7 @@ func (ke kbEvents) get(evtType kbEventType) *kbEvent {
 }
 
 func (ke kbEvents) HasKey() bool  { return ke.get(onKey) != nil }
-func (ke kbEvents) HasRune() bool { return ke.get(onRune) != nil }
+func (ke kbEvents) HasRune() bool { return ke.get(onRuneEvt) != nil }
 func (ke kbEvents) HasKeyListener() bool {
 	return ke.get(keyListener) != nil
 }
@@ -100,7 +101,7 @@ func (fx *kbFX) OnKey(e *Env, k Key, mm ModifierMask) {
 }
 
 func (fx *kbFX) OnRune(e *Env, r rune, mm ModifierMask) {
-	fx.append(e.Evt, onRune)
+	fx.append(e.Evt, onRuneEvt)
 	if fx.stopBubblingOnRune {
 		e.StopBubbling()
 	}
@@ -192,7 +193,7 @@ func (s *KB) Reports_to_runer_implementation(t *T) {
 	t.Not.True(fx.HasRune())
 	tt.FireRune('r', Alt)
 	t.True(fx.HasRune())
-	fx.forEvtOf(onRune, func(ke kbEvent) (stop bool) {
+	fx.forEvtOf(onRuneEvt, func(ke kbEvent) (stop bool) {
 		evt := ke.Eventer.(RuneEventer)
 		t.Eq('r', evt.Rune())
 		t.Eq(Alt, evt.Mod())
@@ -274,7 +275,7 @@ func (c *icmpFX) OnInit(e *Env) {
 
 func (s *KB) Executes_key_feature(t *T) {
 	tt := s.tt(t, &icmpFX{init: func(c *icmpFX, e *Env) {
-		c.FF.Add(Scrollable)
+		c.FF.Set(Scrollable)
 		c.Dim().SetHeight(2)
 		fmt.Fprint(e, "first\nsecond\nthird\nforth")
 	}})

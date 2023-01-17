@@ -98,7 +98,7 @@ func newScreen(backend api.UIer, cmp Componenter, gg *globals) *screen {
 	}
 	gg.scr = scr
 	lc := cmp.initialize(cmp, backend, gg.clone())
-	lc.wrapped().ensureQuitableFeatures()
+	lc.wrapped().ensureFeatures()
 	scr.lyt = &lyt.Manager{Root: lc}
 	scr.focus = lc
 	scr.cursor = (&cursor{}).Reset()

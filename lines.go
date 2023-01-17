@@ -6,6 +6,7 @@ package lines
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/slukits/lines/internal/api"
@@ -48,6 +49,90 @@ type resizeEventer = api.ResizeEventer
 // type embedding [lines.Component] implements the Dimer interface.
 type Dimer = lyt.Dimer
 
+// quitting controls the quitting keys and runes of a lines instance.
+type quitting struct {
+	*sync.Mutex
+	kk map[Key]bool
+	rr map[rune]bool
+}
+
+// AddKey adds given Key k to the quitting keys of parent Lines
+// instance.
+func (q *quitting) AddKey(k Key) *quitting {
+	if q == nil {
+		return q
+	}
+	q.Lock()
+	defer q.Unlock()
+	if q.kk == nil {
+		q.kk = map[Key]bool{}
+	}
+	q.kk[k] = true
+	return q
+}
+
+// DelKey removes given Key k from the quitting keys of parent Lines
+// instance.
+func (q *quitting) DelKey(k Key) *quitting {
+	if q == nil {
+		return q
+	}
+	q.Lock()
+	defer q.Unlock()
+	delete(q.kk, k)
+	return q
+}
+
+// AddRune adds given rune r to the quitting runes.
+func (q *quitting) AddRune(r rune) *quitting {
+	if q == nil {
+		return q
+	}
+	q.Lock()
+	defer q.Unlock()
+	if q.rr == nil {
+		q.rr = map[rune]bool{}
+	}
+	q.rr[r] = true
+	return q
+}
+
+// DelRune removes given rune r from the quitting runes.
+func (q *quitting) DelRune(r rune) *quitting {
+	if q == nil {
+		return q
+	}
+	q.Lock()
+	defer q.Unlock()
+	delete(q.rr, r)
+	return q
+}
+
+// Rune returns true if given rune r quits the event-loop of parent
+// Lines instance.
+func (q *quitting) Rune(r rune) bool {
+	if q == nil || q.rr == nil {
+		return false
+	}
+	return q.rr[r]
+}
+
+// Key returns true if given Key k quits the event-loop of parent Lines
+// instance.  Note CtrlC and CtrlD returns always true if parent Lines
+// instance wasn't created by a Kiosk-constructor.
+func (q *quitting) Key(k Key) bool {
+	if q == nil {
+		return false
+	}
+	if k == CtrlC || k == CtrlD {
+		return true
+	}
+	if q.kk == nil {
+		return false
+	}
+	return q.kk[k]
+}
+
 // Lines listens to a backend implementation's reporting of events and
 // controls the event reporting to client components (see [Component])
 // and their layout accordingly.  Use one of the constructors [Term],
@@ -56,6 +141,11 @@ type Lines struct {
 
 	// scr to report resize events to screen components.
 	scr *screen
+
+	// Quitting provides an instance to control key/rune-bindings for
+	// terminating the event-loop and unblocking [Lines.WaitForQuit].
+	// Note if Quitting is set the keys CtrlC/CtrlD always quit.
+	Quitting *quitting
 
 	// backend is needed to post events.
 	backend api.EventProcessor
@@ -66,14 +156,24 @@ type Lines struct {
 	Globals *globals
 }
 
-// Term returns a Lines instance with a terminal backend displaying and
-// reporting events to given component cmp and its nested components.
-// cmp has the Quitable feature set to 'q', ctrl-c and ctrl-d.  The
-// binding to 'q' may be removed.  The bindings to ctrl-c and ctrl-d may
-// not be removed.  Use the [TermKiosk] constructor for an setup without
-// any quit bindings.  Term panics if the terminal screen can't be
-// obtained.  NOTE to create a Componenter-instance define a type which
-// embeds the [Component] type:
+func newTerm(cmp Componenter) *Lines {
+	ll := Lines{}
+	ll.backend = term.New(ll.listen)
+	ll.Globals = newGlobals(nil)
+	ll.scr = newScreen(ll.backend.(api.UIer), cmp, ll.Globals)
+	ll.Globals.propagation = globalsPropagationClosure(ll.scr)
+	return &ll
+}
+
+// Term returns a Lines l instance with a terminal backend displaying
+// and reporting events to given component cmp and its nested
+// components.  By default 'q', ctrl-c and ctrl-d terminate the
+// event-loop and unblock  l.WaitForQuit().  The binding to 'q' may be
+// removed.  The bindings to ctrl-c and ctrl-d may not be removed.  Use
+// the [TermKiosk] constructor for an setup without any quit bindings.
+// Term panics if the terminal screen can't be obtained.  NOTE to create
+// a Componenter-instance define a type which embeds the [Component]
+// type:
 //
 //	type myComponent struct { lines.Component }
 //	lines.Term(&myComponent{}).WaitForQuit()
@@ -85,12 +185,10 @@ type Lines struct {
 // processing user input until the quit event occurs using
 // [Lines.WaitForQuit].
 func Term(cmp Componenter) *Lines {
-	ll := Lines{}
-	ll.backend = term.New(ll.listen)
-	ll.Globals = newGlobals(nil)
-	ll.scr = newScreen(ll.backend.(api.UIer), cmp, ll.Globals)
-	ll.Globals.propagation = globalsPropagationClosure(ll.scr)
-	return &ll
+	ll := newTerm(cmp)
+	ll.Quitting = &quitting{Mutex: &sync.Mutex{}}
+	ll.Quitting.AddRune('q')
+	return ll
 }
 
 // Componenter is the private interface a type must implement to be used
@@ -155,8 +253,7 @@ type Componenter interface {
 // Quitable feature, i.e. the application can't be quit by the user by
 // default.
 func TermKiosk(cmp Componenter) *Lines {
-	quitableFeatures = defaultFeatures
-	return Term(cmp)
+	return newTerm(cmp)
 }
 
 // SetRoot replaces currently used root component by given component.
@@ -170,7 +267,10 @@ func (ll *Lines) Quit() { ll.backend.Quit() }
 
 // OnQuit registers given function to be called on quitting
 // event-polling and -reporting.
-func (ll *Lines) OnQuit(listener func()) { ll.backend.OnQuit(listener) }
+func (ll *Lines) OnQuit(listener func()) *Lines {
+	ll.backend.OnQuit(listener)
+	return ll
+}
 
 // WaitForQuit blocks until given Lines-instance is quit.  (Except a
 // Lines instance provided by a [Fixture] in which case WaitForQuit is
@@ -224,6 +324,18 @@ func (u *UpdateEvent) When() time.Time { return u.when }
 func (u *UpdateEvent) Source() interface{} { return u }
 
 func (ll *Lines) listen(evt api.Eventer) {
+	if evt, ok := evt.(RuneEventer); ok {
+		if ll.Quitting.Rune(evt.Rune()) {
+			ll.backend.Quit()
+			return
+		}
+	}
+	if evt, ok := evt.(KeyEventer); ok {
+		if ll.Quitting.Key(evt.Key()) {
+			ll.backend.Quit()
+			return
+		}
+	}
 	switch evt := evt.(type) {
 	case resizeEventer:
 		width, height := evt.Size()
@@ -234,10 +346,7 @@ func (ll *Lines) listen(evt api.Eventer) {
 			postSync()
 		}
 	default:
-		if quit := report(evt, ll, ll.scr); quit {
-			ll.backend.Quit()
-			return
-		}
+		report(evt, ll, ll.scr)
 		reportInit(ll, ll.scr)
 		ll.scr.softSync(ll)
 	}

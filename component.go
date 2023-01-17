@@ -56,6 +56,9 @@ type Component struct {
 	// Scroll provides a component's API for scrolling.
 	Scroll *Scroller
 
+	// Edit provides a component's API to control editing its content.
+	Edit *Editor
+
 	// bcknd to post Update and Focus events
 	bcknd api.UIer
 
@@ -178,6 +181,21 @@ func (c *Component) layoutComponent() layoutComponenter {
 	return c.layoutCmp
 }
 
+// isNesting returns true if the component is stacking or chaining other
+// components.
+func (c *Component) isNesting() bool {
+	if !c.isInitialized() {
+		return false
+	}
+	switch c.layoutCmp.(type) {
+	case *stackingWrapper:
+		return true
+	case *chainingWrapper:
+		return true
+	}
+	return false
+}
+
 func (c *Component) embedded() *Component { return c }
 
 // Gaps returns a gaps writer at given leven allowing to do framing,
@@ -229,20 +247,7 @@ func (c *Component) SetCursor(
 // the line and column index of the cursor in the content area and true
 // if c has the cursor set; otherwise -1, -1 and false is return.
 func (c *Component) CursorPosition() (line, column int, _ bool) {
-	if c.gg == nil {
-		return -1, -1, false
-	}
-	if c.gg.scr.cursor.Removed() {
-		return -1, -1, false
-	}
-	x, y := c.gg.scr.cursor.Coordinates()
-	cx, cy, cw, ch := c.ContentArea()
-	x -= cx
-	y -= cy
-	if x < 0 || x >= cw || y < 0 || y >= ch {
-		return -1, -1, false
-	}
-	return y, x, true
+	return c.cursorPosition()
 }
 
 // component is the actual implementation of a lines-Component.
@@ -283,6 +288,26 @@ func (c *component) globals() *globals {
 		return nil
 	}
 	return c.gg
+}
+
+// cursorPosition returns relative to given component c's content origin
+// the line and column index of the cursor in the content area and true
+// if c has the cursor set; otherwise -1, -1 and false is return.
+func (c *component) cursorPosition() (line, column int, _ bool) {
+	if c.gg == nil {
+		return -1, -1, false
+	}
+	if c.gg.scr.cursor.Removed() {
+		return -1, -1, false
+	}
+	x, y := c.gg.scr.cursor.Coordinates()
+	cx, cy, cw, ch := c.ContentArea()
+	x -= cx
+	y -= cy
+	if x < 0 || x >= cw || y < 0 || y >= ch {
+		return -1, -1, false
+	}
+	return y, x, true
 }
 
 func (c *component) setCursor(
@@ -327,15 +352,7 @@ func (c *component) ensureFeatures() *features {
 	if c.ff != nil {
 		return c.ff
 	}
-	c.ff = defaultFeatures.copy()
-	return c.ff
-}
-
-func (c *component) ensureQuitableFeatures() *features {
-	if c.ff != nil {
-		return c.ff
-	}
-	c.ff = quitableFeatures.copy()
+	c.ff = &features{}
 	return c.ff
 }
 
@@ -357,8 +374,9 @@ type layoutComponenter interface {
 	userComponent() Componenter
 }
 
-// stackingWrapper wraps a stacking user-component for the
-// layout-manager.
+// stackingWrapper wraps a stacking user-component for the layout
+// manager.  Avoiding panics on Gaps- or Dim-access through the layout
+// manager
 type stackingWrapper struct{ *component }
 
 func (sw *stackingWrapper) Gaps() api.Gaps {
@@ -381,13 +399,17 @@ func (sw *stackingWrapper) ForStacked(cb func(lyt.Dimer) bool) {
 				sw.userCmp.backend(),
 				sw.globals().clone(),
 			)
+			if sw.ff.all() != NoFeature {
+				cmp.embedded().layoutCmp.wrapped().ff = sw.ff.copy()
+			}
 		}
 		return cb(cmp.layoutComponent())
 	})
 }
 
-// chainingWrapper wraps a chaining user-component for the
-// layout-manager.
+// chainingWrapper wraps a chaining user-component for the layout
+// manager.  Avoiding panics on Gaps- or Dim-access through the layout
+// manager
 type chainingWrapper struct{ *component }
 
 func (sw *chainingWrapper) Gaps() api.Gaps {
@@ -410,6 +432,9 @@ func (cw *chainingWrapper) ForChained(cb func(lyt.Dimer) bool) {
 				cw.userCmp.backend(),
 				cw.globals().clone(),
 			)
+			if cw.ff.all() != NoFeature {
+				cmp.embedded().layoutCmp.wrapped().ff = cw.ff.copy()
+			}
 		}
 		return cb(cmp.layoutComponent())
 	})

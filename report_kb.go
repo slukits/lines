@@ -8,11 +8,21 @@ import (
 	"github.com/slukits/lines/internal/api"
 )
 
+// reportKey branches of to reportKeyEdit in case the currently focused
+// component has an active Editor otherwise the key event triggers first
+// potential listener calls followed by OnKey-implementations of all
+// nested focused components.  Finally if bubbling wasn't stopped
+// registered key-features are executed.  reportKey returns true if
+// given key is registered as quit-key.
 func reportKey(cntx *rprContext, evt api.KeyEventer) (quit bool) {
 	sb := false
 	stopBubbling := func() bool {
 		sb = true
 		return true
+	}
+	if cntx.scr.focus.userComponent().embedded().Edit.IsActive() {
+		reportKeyEdit(cntx.scr.focus, evt, cntx)
+		return false
 	}
 	cntx.scr.forFocused(func(c layoutComponenter) (stop bool) {
 		if sb := reportKeyListener(c, evt, cntx); sb {
@@ -27,7 +37,41 @@ func reportKey(cntx *rprContext, evt api.KeyEventer) (quit bool) {
 		return false
 	}
 	execKeyFeature(cntx, evt)
-	return cntx.scr.root().ff.keyQuits(evt.Key())
+	return false
+}
+
+// reportKeyEdit reports first to OnKey implementations then the event
+// is mapped to an Edit edt.  Is the later not possible the event is
+// passed on to be executed by a potential key-feature.  Otherwise edt
+// is reported to an potential OnEdit implementation.  Both listeners
+// (OnKey/OnEdit) can prevent further processing of the key event
+// through their return values.  If not the edit on the focused
+// component's content is performed.
+func reportKeyEdit(
+	lc layoutComponenter, evt KeyEventer, cntx *rprContext,
+) {
+	if stopBbl := reportOnKey(lc, evt, cntx); stopBbl {
+		return
+	}
+	editor := lc.userComponent().embedded().Edit
+	if editor == nil {
+		panic("lines: report: on-edit: editor missing")
+	}
+	edt := editor.MapEvent(evt)
+	if edt == nil {
+		execKeyFeature(cntx, evt)
+		return
+	}
+	ec, ok := lc.userComponent().(Editer)
+	if ok {
+		suppressEdit := false
+		callback(lc.userComponent(), cntx, func(e *Env) {
+			suppressEdit = ec.OnEdit(e, edt)
+		})
+		if suppressEdit {
+			return
+		}
+	}
 }
 
 func reportKeyListener(
@@ -81,6 +125,15 @@ func reportRune(cntx *rprContext, evt RuneEventer) (quit bool) {
 		sb = true
 		return true
 	}
+	if cntx.scr.focus.userComponent().embedded().Edit.IsActive() {
+		if sb := reportOnRune(cntx.scr.focus, evt, cntx); sb {
+			return false
+		}
+		if suppress := reportEdit(cntx.scr.focus, evt, cntx); suppress {
+			return false
+		}
+		return false
+	}
 	cntx.scr.forFocused(func(c layoutComponenter) (stop bool) {
 		if sb := reportRuneListener(c, evt, cntx); sb {
 			return stopBubbling()
@@ -94,20 +147,48 @@ func reportRune(cntx *rprContext, evt RuneEventer) (quit bool) {
 		return false
 	}
 	execRuneFeature(cntx, evt)
-	return cntx.scr.root().ff.runeQuits(evt.Rune())
+	return false
 }
 
-func reportRuneListener(
-	c layoutComponenter, evt RuneEventer, cntx *rprContext,
-) (stopBubbling bool) {
-	if c.wrapped().lst == nil {
-		return false
-	}
-	l, ok := c.wrapped().lst.runeListenerOf(evt.Rune(), evt.Mod())
+func reportEdit(
+	lc layoutComponenter, evt RuneEventer, cntx *rprContext,
+) (suppressEdit bool) {
+	ec, ok := lc.userComponent().(Editer)
 	if !ok {
 		return false
 	}
-	env := callback(c.userComponent(), cntx, l)
+	editor := lc.userComponent().embedded().Edit
+	if editor == nil {
+		panic("lines: report: on-edit: editor missing")
+	}
+	ln, cl, haveCursor := lc.wrapped().cursorPosition()
+	if !haveCursor {
+		panic("lines: report: on-edit: cursor position missing")
+	}
+	edt := &Edit{
+		Line: ln,
+		Cell: cl,
+		Type: editor.mode,
+		Rune: evt.Rune(),
+	}
+	callback(lc.userComponent(), cntx, func(e *Env) {
+		suppressEdit = ec.OnEdit(e, edt)
+	})
+	return suppressEdit
+}
+
+func reportRuneListener(
+	lc layoutComponenter, evt RuneEventer, cntx *rprContext,
+) (stopBubbling bool) {
+	c := lc.wrapped()
+	if c.lst == nil {
+		return false
+	}
+	l, ok := c.lst.runeListenerOf(evt.Rune(), evt.Mod())
+	if !ok {
+		return false
+	}
+	env := callback(lc.userComponent(), cntx, l)
 	return env&envStopBubbling == envStopBubbling
 }
 

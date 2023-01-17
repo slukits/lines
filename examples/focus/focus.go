@@ -40,8 +40,8 @@ func (c *msg) OnInit(e *lines.Env) {
 	)
 }
 
-func (c *msg) OnUpdate(e *lines.Env) {
-	fmt.Fprint(e, e.Evt.(*lines.UpdateEvent).Data.(string))
+func (c *msg) OnUpdate(e *lines.Env, data interface{}) {
+	fmt.Fprint(e, data.(string))
 }
 
 // lineFocus component has a list of lines of which a few can be
@@ -58,7 +58,7 @@ const (
 )
 
 func (c *lineFocus) OnInit(e *lines.Env) {
-	c.FF.Add(lines.LinesSelectable)
+	c.FF.Set(lines.LinesSelectable)
 	c.Dim().SetHeight(3)
 	if err := e.Lines.Focus(c); err != nil {
 		panic(err)
@@ -89,7 +89,7 @@ func (c *lineFocus) OnLineFocus(e *lines.Env, cIdx, sIdx int) {
 	}
 }
 
-func (c *lineFocus) OnLineSelection(e *lines.Env, idx int) {
+func (c *lineFocus) OnLineSelection(e *lines.Env, cIdx, sIdx int) {
 	if c.LL.Focus.Current() < 0 {
 		if err := e.Lines.Update(c.msg, msgNothing, nil); err != nil {
 			panic(err)

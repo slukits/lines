@@ -46,13 +46,29 @@ type FocusableLiner interface {
 	Highlighted() (highlighted, trimmed bool)
 }
 
+// EditLiner implementations are [FocusableLiner] implementations
+// turning the editable feature of associated component on.
+type EditLiner interface {
+	FocusableLiner
+
+	// OnEdit implementation gets edit requests of a component's screen
+	// cell reported and returns true iff the edit request should be
+	// carried out.  Given line writer allows to print to edited line
+	// while given Edit-instance provides the information about the
+	// edit.
+	OnEdit(w *EnvLineWriter, e *Edit) bool
+}
+
 // A ContentSource instance may be assigned to a [Component]'s Src
 // property whose [Liner] is then used by the [Component] to print its
 // content. E.g. if MyLiner is a Liner implementation and c a Component:
 //
 //	c.Src = &lines.ContentSource{Liner: &MyLiner{}}
 //
-// now c uses provided Liner instance to print its content.
+// now c uses provided Liner instance to print its content.  NOTE
+// according to a ContentSource's Liner implementation the setting of
+// corresponding features is triggered.  E.g. is a Liner implementation
+// a ScrollableLiner the component has the feature Scrollable set.
 type ContentSource struct {
 
 	// Liner provides a components content
@@ -63,7 +79,7 @@ type ContentSource struct {
 	clean bool
 
 	// init indicates if initializations have to be done which are
-	// derived from the concrete liner implementation.
+	// derived evaluation of given liner implementation.
 	init bool
 
 	first int
@@ -89,7 +105,7 @@ func (cs *ContentSource) cleanup(c *component) {
 		cs.initialize(c)
 	}
 
-	n := c.contentScreenLines()
+	n := c.ContentScreenLines()
 	if n <= 0 {
 		return
 	}
@@ -98,23 +114,34 @@ func (cs *ContentSource) cleanup(c *component) {
 
 func (cs *ContentSource) initialize(c *component) {
 	c.ensureFeatures()
+	if el, ok := cs.Liner.(EditLiner); ok {
+		if hl, tr := el.Highlighted(); hl {
+			if tr {
+				c.ff.set(TrimmedHighlightEnabled)
+			} else {
+				c.ff.set(HighlightEnabled)
+			}
+		}
+		if !c.ff.has(Editable) {
+			c.ff.set(Editable)
+		}
+		return
+	}
 	if _, ok := cs.Liner.(ScrollableLiner); ok {
 		if !c.ff.has(Scrollable) {
-			c.ff.add(Scrollable, false)
+			c.ff.set(Scrollable)
 		}
 	}
 	if fl, ok := cs.Liner.(FocusableLiner); ok {
 		if hl, tr := fl.Highlighted(); hl {
-			if !c.ff.has(LinesHighlightedFocusable) {
-				c.ff.add(LinesHighlightedFocusable, false)
-			}
 			if tr {
-				c.LL.Focus.Trimmed()
+				c.ff.set(TrimmedHighlightEnabled)
+			} else {
+				c.ff.set(HighlightEnabled)
 			}
-			return
 		}
 		if !c.ff.has(LinesFocusable) {
-			c.ff.add(LinesFocusable, false)
+			c.ff.set(LinesFocusable)
 		}
 	}
 }
@@ -125,7 +152,7 @@ func (cs *ContentSource) sync(n int, c *component) {
 	}
 	idx := cs.first
 	lw := &EnvLineWriter{cmp: c, line: idx - cs.first}
-	for cs.Print(idx, lw) && idx-cs.first < n {
+	for idx-cs.first < n && cs.Print(idx, lw) {
 		idx++
 		lw = &EnvLineWriter{cmp: c, line: idx - cs.first}
 	}

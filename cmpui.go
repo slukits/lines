@@ -124,7 +124,7 @@ func (c *component) Reset(idx int, ff ...LineFlags) {
 
 	if idx == -1 {
 		c.setFirst(0)
-		height := c.contentScreenLines()
+		height := c.ContentScreenLines()
 		if len(*c.ll) > height {
 			ll := (*c.ll)[:height]
 			c.ll = &ll
@@ -161,7 +161,7 @@ func (c *component) sync(rw runeWriter) {
 		}
 		return
 	}
-	cll := c.contentScreenLines()
+	cll := c.ContentScreenLines()
 	if c.mod&Tailing == Tailing && c.Len() >= cll {
 		c.setFirst(c.Len() - cll)
 	}
@@ -199,8 +199,8 @@ func (c *component) syncContent(rw runeWriter) {
 
 // clear fills the receiving component's printable area with spaces.
 func (c *component) syncCleared(rw runeWriter) {
-	if c.first()+c.contentScreenLines() > c.Len() {
-		c.setFirst(ints.Max(0, c.Len()-c.contentScreenLines()))
+	if c.first()+c.ContentScreenLines() > c.Len() {
+		c.setFirst(ints.Max(0, c.Len()-c.ContentScreenLines()))
 	}
 	cx, cy, cw, ch := c.dim.Screen()
 	for y := cy; y < cy+ch; y++ {
@@ -220,6 +220,9 @@ func (c *component) syncCleared(rw runeWriter) {
 	if c.Src.IsDirty() {
 		c.Src.cleanup(c)
 	} else if c.Src != nil {
+		if len(*c.ll) > ch { // keep no of lines and screen hight in sync
+			*c.ll = (*c.ll)[:ch]
+		}
 		c.Src.sync(ch, c)
 	}
 	c.ll.For(c._first, func(i int, l *Line) (stop bool) {
@@ -261,7 +264,7 @@ func (c *component) ContentArea() (x, y, w, h int) {
 		h - len(c.gaps.top.ll) - len(c.gaps.bottom.ll)
 }
 
-func (c *component) contentScreenLines() int {
+func (c *component) ContentScreenLines() int {
 	_, _, _, sh := c.dim.Printable()
 	if c.gaps == nil {
 		return sh

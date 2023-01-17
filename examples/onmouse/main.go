@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/slukits/lines"
-	"github.com/slukits/lines/examples/frame"
+	"github.com/slukits/lines/examples/demo"
 )
 
 func main() {
@@ -19,7 +19,7 @@ func main() {
 type app struct {
 	lines.Component
 	lines.Chaining
-	frame.Titled
+	demo.Titled
 }
 
 func (c *app) OnInit(e *lines.Env) {
@@ -46,7 +46,7 @@ func (c *eventsAggregates) OnInit(e *lines.Env) {
 
 type events struct {
 	lines.Component
-	frame.Titled
+	demo.Titled
 	reporter   lines.Componenter
 	last       time.Time
 	aggregates lines.Componenter
@@ -106,7 +106,7 @@ func (c *events) OnDrop(e *lines.Env, b lines.ButtonMask, x, y int) {
 
 type aggregates struct {
 	lines.Component
-	frame.Titled
+	demo.Titled
 	ee []string
 }
 
@@ -128,7 +128,7 @@ func (c *aggregates) OnUpdate(e *lines.Env, event interface{}) {
 
 type report struct {
 	lines.Component
-	frame.Titled
+	demo.Titled
 	ee []string
 }
 

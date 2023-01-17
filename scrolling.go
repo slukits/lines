@@ -14,7 +14,7 @@ func (s Scroller) IsAtTop() bool { return s.c.first() == 0 }
 // IsAtBottom is true if a component's printable area contains the
 // component's last line.
 func (s Scroller) IsAtBottom() bool {
-	return s.c.first()+s.c.contentScreenLines() >= s.c.Len()
+	return s.c.first()+s.c.ContentScreenLines() >= s.c.Len()
 }
 
 // CoordinateToIndex maps a y-coordinate relative to the components
@@ -36,7 +36,7 @@ func (s Scroller) CoordinateToIndex(y int) (line int) {
 // height of 1 is one line.  For a height h with 1 < h < 20 "one page"
 // is h - 1.  For h >= 20 "one page" is h - h/10.
 func (s Scroller) Up() {
-	height, scroll := s.c.contentScreenLines(), 0
+	height, scroll := s.c.ContentScreenLines(), 0
 	if height <= 0 || s.c.first() == 0 {
 		return
 	}
@@ -62,7 +62,7 @@ func (s Scroller) ToTop() { s.c.setFirst(0) }
 // ToBottom scrolls to the index that the last screen line displays the
 // last component line.
 func (s Scroller) ToBottom() {
-	height := s.c.contentScreenLines()
+	height := s.c.ContentScreenLines()
 	if height <= 0 {
 		return
 	}
@@ -73,7 +73,7 @@ func (s Scroller) ToBottom() {
 // component height of 1 is one line.  For a height h with 1 < h < 20
 // "one page" is h - 1.  For h >= 20 "one page" is h - h/10.
 func (s Scroller) Down() {
-	height, scroll := s.c.contentScreenLines(), 0
+	height, scroll := s.c.ContentScreenLines(), 0
 	if height <= 0 || height >= s.c.Len() {
 		return
 	}
@@ -94,7 +94,7 @@ func (s Scroller) Down() {
 
 // To scrolls to the index that the line with given index is displayed.
 func (s Scroller) To(idx int) {
-	height := s.c.contentScreenLines()
+	height := s.c.ContentScreenLines()
 	if height <= 0 {
 		return
 	}

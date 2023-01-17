@@ -242,7 +242,7 @@ func (s *Mouse) Click_moves_focus_and_reports_to_focusable(t *T) {
 	fx := fx(t, cmp)
 	var fxX, fxY int
 	t.FatalOn(fx.Lines.Update(cmp.nonZero(), nil, func(e *Env) {
-		cmp.nonZero().FF.Add(Focusable)
+		cmp.nonZero().FF.Set(Focusable)
 		t.Not.True(e.Focused() == cmp.nonZero())
 		// need an event callback to access component features
 		fxX, fxY = cmp.nonZero().Dim().X(), cmp.nonZero().Dim().Y()
@@ -259,7 +259,7 @@ func (s *Mouse) Context_moves_focus_and_reports_to_focusable(t *T) {
 	fx := fx(t, cmp)
 	var fxX, fxY int
 	t.FatalOn(fx.Lines.Update(cmp.nonZero(), nil, func(e *Env) {
-		cmp.nonZero().FF.Add(Focusable)
+		cmp.nonZero().FF.Set(Focusable)
 		t.Not.True(e.Focused() == cmp.nonZero())
 		// need an event callback to access component features
 		fxX, fxY = cmp.nonZero().Dim().X(), cmp.nonZero().Dim().Y()
@@ -287,7 +287,7 @@ func (s *Mouse) Click_coordinates_are_translated_into_component(t *T) {
 	fx := fx(t, cmp)
 	var fxX, fxY int
 	t.FatalOn(fx.Lines.Update(cmp.nonZero(), nil, func(e *Env) {
-		cmp.nonZero().FF.Add(Focusable)
+		cmp.nonZero().FF.Set(Focusable)
 		fxX, fxY = cmp.nonZero().Dim().X(), cmp.nonZero().Dim().Y()
 	}))
 	fx.FireClick(fxX+1, fxY+1)
@@ -309,7 +309,7 @@ func (s *Mouse) Events_are_bubbling(t *T) {
 	fx := fx(t, cmp)
 	var fxX, fxY int
 	t.FatalOn(fx.Lines.Update(cmp.nonZero(), nil, func(e *Env) {
-		cmp.nonZero().FF.Add(Focusable)
+		cmp.nonZero().FF.Set(Focusable)
 		fxX, fxY = cmp.nonZero().Dim().X(), cmp.nonZero().Dim().Y()
 	}))
 	fx.FireClick(fxX+1, fxY+1)
@@ -327,7 +327,7 @@ func (s *Mouse) Event_bubbling_may_be_stopped(t *T) {
 	cmp.nonZero().stopBubbling = onClick | onContext | onMouse
 	var fxX, fxY int
 	t.FatalOn(fx.Lines.Update(cmp.nonZero(), nil, func(e *Env) {
-		cmp.nonZero().FF.Add(Focusable)
+		cmp.nonZero().FF.Set(Focusable)
 		fxX, fxY = cmp.nonZero().Dim().X(), cmp.nonZero().Dim().Y()
 	}))
 	fx.FireClick(fxX+1, fxY+1)

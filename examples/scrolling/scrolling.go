@@ -82,7 +82,7 @@ type scrolling struct {
 }
 
 func (c *scrolling) OnInit(e *lines.Env) {
-	c.FF.AddRecursive(lines.Focusable)
+	c.FF.Set(lines.Focusable)
 	c.Dim().SetHeight(c.height())
 	if !c.gaps {
 		frame(c, []rune("no gaps-trimmed highlight"), true)
@@ -132,7 +132,7 @@ var ll = []string{" 1st", " 2nd", " 3rd", " 4th", " 5th", " 6th",
 	"15th", "16th", "17th", "18th", "19th", "20th"}
 
 func (c *direct) OnInit(e *lines.Env) {
-	c.FF.Add(lines.LinesSelectable | lines.Scrollable)
+	c.FF.Set(lines.LinesSelectable | lines.Scrollable)
 	if c.gaps {
 		frame(c, directTitle, false)
 	}
@@ -145,7 +145,9 @@ func (c *direct) OnInit(e *lines.Env) {
 	}
 
 	if !c.gaps {
-		c.LL.Focus.Trimmed()
+		c.FF.Set(lines.TrimmedHighlightEnabled)
+	} else {
+		c.FF.Set(lines.HighlightEnabled)
 	}
 	c.Dim().SetWidth(c.width())
 }

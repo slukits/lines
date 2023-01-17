@@ -52,7 +52,7 @@ func (c *App) OnInit(e *lines.Env) {
 	c.Dim().SetWidth(72).SetHeight(24)
 
 	// make demos focusable by mouse-click
-	c.FF.AddRecursive(lines.Focusable)
+	c.FF.Set(lines.Focusable)
 }
 
 // row is a structuring component for App which stacks rows which in
