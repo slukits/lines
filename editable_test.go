@@ -35,7 +35,9 @@ EditLiner interface.
 package lines
 
 import (
+	"fmt"
 	"testing"
+	"time"
 
 	. "github.com/slukits/gounit"
 )
@@ -67,6 +69,34 @@ func (s *_editable) Component_has_non_nil_edit_property(t *T) {
 	}))
 }
 
+func (s *_editable) Component_is_focusable(t *T) {
+	fx, cmp := fxCmpFF(t, Editable)
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+		t.True(cmp.FF.Has(Focusable))
+	}))
+}
+
+func (s *_editable) Component_has_focusable_lines(t *T) {
+	fx, cmp := fxCmpFF(t, Editable)
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+		t.True(cmp.FF.Has(LinesFocusable))
+	}))
+}
+
+func (s *_editable) Component_s_focused_lines_are_unfocusable(t *T) {
+	fx, cmp := fxCmpFF(t, Editable)
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+		t.True(cmp.FF.Has(LineUnfocusable))
+	}))
+}
+
+func (s *_editable) Component_has_focusable_cells(t *T) {
+	fx, cmp := fxCmpFF(t, Editable)
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+		t.True(cmp.FF.Has(CellFocusable))
+	}))
+}
+
 func (s *_editable) Component_s_editor_is_inactive_by_default(t *T) {
 	cmp := &cmpFX{}
 	fx := fx(t, cmp)
@@ -78,42 +108,17 @@ func (s *_editable) Component_s_editor_is_inactive_by_default(t *T) {
 	}))
 }
 
-// func (s *_editable) Component_s_editor_is_activated_on_insert(t *T) {
-// 	fx, cmp := fxFF(t, Editable)
-// 	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
-// 		t.Not.True(cmp.Edit.IsActive())
-// 	}))
-// 	fx.FireKey(Insert)
-// 	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
-// 		t.True(cmp.Edit.IsActive())
-// 	}))
-// }
-
-func (s *_editable) Component_is_focusable(t *T) {
-	fx, cmp := fxFF(t, Editable)
+func (s *_editable) Component_s_editor_is_activated_on_insert(t *T) {
+	cmp := &cmpFX{onInit: func(_ *cmpFX, e *Env) {
+		fmt.Fprint(e, "1st\n2nd\n3rd\n4th")
+	}}
+	fx := fxFF(t, Editable, cmp, 20*time.Minute)
 	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
-		t.True(cmp.FF.Has(Focusable))
+		t.Not.True(cmp.Edit.IsActive())
 	}))
-}
-
-func (s *_editable) Component_has_focusable_lines(t *T) {
-	fx, cmp := fxFF(t, Editable)
+	fx.FireKey(Insert)
 	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
-		t.True(cmp.FF.Has(LinesFocusable))
-	}))
-}
-
-func (s *_editable) Component_s_focused_lines_are_unfocusable(t *T) {
-	fx, cmp := fxFF(t, Editable)
-	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
-		t.True(cmp.FF.Has(LineUnfocusable))
-	}))
-}
-
-func (s *_editable) Component_has_focusable_cells(t *T) {
-	fx, cmp := fxFF(t, Editable)
-	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
-		t.True(cmp.FF.Has(CellFocusable))
+		t.True(cmp.Edit.IsActive())
 	}))
 }
 
@@ -254,7 +259,7 @@ func (s *_editable) Component_has_focusable_cells(t *T) {
 // 	t.Eq(2, cmp.cc[onEdit])
 // }
 
-// func (s *_editable) Reports_join_deleting_preceeding_line_break(t *T) {
+// func (s *_editable) Reports_join_deleting_preceding_line_break(t *T) {
 // 	cmp := &cmpFX{
 // 		onInit: func(c *cmpFX, e *Env) {
 // 			c.FF.Add(Editable)

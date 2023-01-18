@@ -81,7 +81,24 @@ func fxCmp(
 	return TermFixture(t.GoT(), d, cmp), cmp
 }
 
-func fxFF(
+func fxFF(t *gounit.T, ff FeatureMask, cmp *cmpFX,
+	timeout ...time.Duration) *Fixture {
+
+	d := time.Duration(0)
+	if len(timeout) > 0 {
+		d = timeout[0]
+	}
+	onInit := cmp.onInit
+	cmp.onInit = func(c *cmpFX, e *Env) {
+		c.FF.Set(ff)
+		if onInit != nil {
+			onInit(c, e)
+		}
+	}
+	return TermFixture(t.GoT(), d, cmp)
+}
+
+func fxCmpFF(
 	t *gounit.T, ff FeatureMask, timeout ...time.Duration,
 ) (*Fixture, *cmpFX) {
 	d := time.Duration(0)
@@ -89,9 +106,7 @@ func fxFF(
 		d = timeout[0]
 	}
 	cmp := &cmpFX{
-		onInit: func(c *cmpFX, e *Env) {
-			c.FF.Set(ff)
-		},
+		onInit: func(c *cmpFX, e *Env) { c.FF.Set(ff) },
 	}
 	return TermFixture(t.GoT(), d, cmp), cmp
 }
