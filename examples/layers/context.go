@@ -9,7 +9,6 @@ import (
 
 	"github.com/slukits/lines"
 	"github.com/slukits/lines/examples/demo"
-	"github.com/slukits/lines/examples/frame"
 )
 
 // context associates the context-demo content-area with a context menu
@@ -56,7 +55,7 @@ type contextMenu struct {
 	lines.Component
 
 	// Titled frames the context menu items
-	frame.Titled
+	demo.Titled
 
 	// close since a context menu is modal it is the only component which
 	// can trigger its closeing.  The functionality is provided by
