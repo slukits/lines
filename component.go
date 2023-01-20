@@ -164,6 +164,12 @@ func (c *Component) disable() {
 	c.component = nil
 }
 
+// isEnabled returns true if given Component c's internal component is
+// set; false otherwise.
+func (c *Component) isEnabled() bool {
+	return c.component != nil
+}
+
 // isInitialized returns true if embedded component-instance is wrapped
 // in a layout component and has been initialized.
 func (c *Component) isInitialized() bool {

@@ -123,7 +123,13 @@ func (cs *ContentSource) initialize(c *component) {
 			}
 		}
 		if !c.ff.has(Editable) {
-			c.ff.set(Editable)
+			if c.userCmp.isEnabled() {
+				c.userCmp.embedded().FF.Set(Editable)
+			} else {
+				c.userCmp.enable()
+				c.userCmp.embedded().FF.Set(Editable)
+				c.userCmp.disable()
+			}
 		}
 		return
 	}

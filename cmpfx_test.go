@@ -317,7 +317,7 @@ func (l *linerFX) initLines(n int) *linerFX {
 }
 
 func (l *linerFX) Print(idx int, w *EnvLineWriter) bool {
-	if len(l.cc) == 0 {
+	if l.cc == nil {
 		l.initLines(8)
 	}
 	if len(l.cc) <= idx || idx < 0 {
@@ -332,7 +332,7 @@ type scrollableLinerFX struct {
 }
 
 func (l *scrollableLinerFX) Len() int {
-	if len(l.cc) == 0 {
+	if l.cc == nil {
 		l.initLines(8)
 	}
 	return len(l.cc)
@@ -363,6 +363,19 @@ func (l *focusableLinerFX) IsFocusable(idx int) bool {
 
 func (l *focusableLinerFX) Highlighted() (highlighted, trimmed bool) {
 	return l.highlighted, l.trimmed
+}
+
+type editableLinerFX struct {
+	focusableLinerFX
+}
+
+func (l *editableLinerFX) initLines(n int) *editableLinerFX {
+	l.scrollableLinerFX.initLines(n)
+	return l
+}
+
+func (l *editableLinerFX) OnEdit(w *EnvLineWriter, e *Edit) bool {
+	return true
 }
 
 type srcFX struct {

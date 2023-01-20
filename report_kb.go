@@ -57,7 +57,7 @@ func reportKeyEdit(
 	if editor == nil {
 		panic("lines: report: on-edit: editor missing")
 	}
-	edt := editor.MapEvent(evt)
+	edt := editor.mapEvent(evt)
 	if edt == nil {
 		execKeyFeature(cntx, evt)
 		return

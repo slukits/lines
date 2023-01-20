@@ -210,15 +210,13 @@ func reportSelectedLine(cntx *rprContext, usr Componenter) {
 }
 
 func editorInsert(cntx *rprContext, usr Componenter) {
-	_, _, hasCursor := usr.layoutComponent().wrapped().cursorPosition()
-	if !hasCursor {
-		executeLineFocus(cntx, usr, usr.embedded().LL.Focus.Next)
+	if !usr.embedded().Edit.IsActive() {
 		usr.embedded().Edit.Resume()
 		return
 	}
 	if usr.embedded().Edit.IsReplacing() {
 		usr.embedded().LL.Focus.EolAtLastRune()
-	} else {
-		usr.embedded().LL.Focus.EolAfterLastRune()
+		return
 	}
+	usr.embedded().LL.Focus.EolAfterLastRune()
 }

@@ -46,8 +46,8 @@ type Editor struct {
 	mode      EditType
 }
 
-// IsActive returns false if given Editor e is nil or suspended;
-// otherwise true is returned.
+// IsActive returns false if given Editor e is nil or suspended or if no
+// cursor position is set; otherwise true is returned.
 func (e *Editor) IsActive() bool {
 	if e == nil || e.suspended {
 		return false
@@ -70,6 +70,17 @@ func (e *Editor) Resume() {
 		return
 	}
 	e.suspended = false
+	_, _, hasCursor := e.c.cursorPosition()
+	if !hasCursor {
+		e.c.ensureAsManyLineInstancesAsScreenLines()
+		e.c.LL.Focus.EolAfterLastRune()
+		if (*e.c.ll)[0].isZero() {
+			e.c.setCursor(0, 0)
+		} else {
+			e.c.LL.Focus.Next()
+		}
+		return
+	}
 }
 
 func (e *Editor) Replacing() {
@@ -80,7 +91,7 @@ func (e *Editor) IsReplacing() bool {
 	return e.mode == Rpl
 }
 
-func (e *Editor) MapEvent(evt KeyEventer) *Edit {
+func (e *Editor) mapEvent(evt KeyEventer) *Edit {
 	switch evt.Key() {
 	case Backspace, Delete:
 		return e.delEdit(evt)

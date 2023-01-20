@@ -7,6 +7,7 @@ package lines
 import (
 	"sort"
 	"strings"
+	"unicode"
 )
 
 // LineFlags control the behavior and layout of a displayed line.
@@ -193,6 +194,25 @@ func (l *Line) setClean() {
 // isDirty returns true if the dirty flag is set.
 func (l *Line) isDirty() bool {
 	return l.ff&dirty != 0
+}
+
+// isZero returns true if the content of given Line l is zero; otherwise
+// false is returned.
+func (l *Line) isZero() bool { return len(l.rr) == 0 }
+
+// isEmpty returns true if the content of given Line l is zero or
+// consists only of whitespace characters; otherwise false is returned.
+func (l *Line) isEmpty() bool {
+	if len(l.rr) == 0 {
+		return true
+	}
+	for _, r := range l.rr {
+		if unicode.IsSpace(r) {
+			continue
+		}
+		return false
+	}
+	return true
 }
 
 // setDefaultStyle sets given line l's zeroRange style of its style

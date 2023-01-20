@@ -292,6 +292,18 @@ func (c *component) setFirst(f int) {
 	c.dirty = true
 }
 
+func (c *component) ensureAsManyLineInstancesAsScreenLines() {
+	bb := [][]byte{}
+	for i := 0; i < c.ContentScreenLines()-len(*c.ll); i++ {
+		bb = append(bb, []byte(""))
+	}
+	if len(bb) == 0 {
+		return
+	}
+	sty := c.globals().Style(Default)
+	c.ll.replaceAt(len(*c.ll), -1, &sty, bb...)
+}
+
 // first returns the index of the first line displayed taking an
 // optionally set component source into account.
 func (c *component) first() int {
