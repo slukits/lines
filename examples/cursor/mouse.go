@@ -20,7 +20,7 @@ type clickDemo struct {
 var clickTitle []rune = []rune("left-click")
 
 func (c *clickDemo) OnInit(e *lines.Env) {
-	c.Init(c, e, clickTitle)
+	c.InitDemo(c, e, clickTitle)
 	c.Dim().SetWidth(32)
 }
 

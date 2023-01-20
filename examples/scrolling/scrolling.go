@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 /*
-Package scrolling chains to components one of which gets its content
+Package scrolling chains two components one of which gets its content
 from a source with a liner implementation while the other one's content
 is directly written to it.  Both have identical content and every line
 with an even index is focusable.  Both components should behave exactly

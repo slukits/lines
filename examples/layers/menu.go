@@ -24,7 +24,7 @@ var menuTitle []rune = []rune("menu-demo")
 
 // OnInit sets up the component structure of the menu-demo.
 func (c *menuDemo) OnInit(e *lines.Env) {
-	c.Init(c, e, menuTitle)
+	c.InitDemo(c, e, menuTitle)
 	menuBar, menuTxt := &menuBar{}, &menuTxt{}
 	menuBar.reporter = menuTxt
 	c.CC = append(c.CC, menuBar, menuTxt)

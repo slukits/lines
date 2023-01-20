@@ -34,7 +34,7 @@ var appTitle []rune = []rune("layers demo")
 // OnInit sets up the components structure of the layers-demo.
 func (c *App) OnInit(e *lines.Env) {
 
-	c.Init(c, e, appTitle)
+	c.InitDemo(c, e, appTitle)
 
 	// set up the nested components and how they relate to each other.
 	c.CC = []lines.Componenter{&row{}, &row{}}

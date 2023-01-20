@@ -23,7 +23,7 @@ var contextTitle []rune = []rune("context-demo")
 
 // OnInit sets up the context-area component.
 func (c *context) OnInit(e *lines.Env) {
-	c.Init(c, e, contextTitle)
+	c.InitDemo(c, e, contextTitle)
 	c.CC = append(c.CC, &contextArea{})
 }
 

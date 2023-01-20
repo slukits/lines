@@ -18,8 +18,9 @@ import (
 // tool-tip and stacked, have in common.
 type Demo struct {
 	Titled
-	dg   dimGapper
-	Next lines.Componenter
+	dg                          dimGapper
+	Next                        lines.Componenter
+	DefaultWidth, DefaultHeight int
 }
 
 type dimGapper interface {
@@ -29,11 +30,17 @@ type dimGapper interface {
 }
 
 // Init sets up the embedding component's title and its default size.
-func (d *Demo) Init(dg dimGapper, e *lines.Env, title []rune) {
+func (d *Demo) InitDemo(dg dimGapper, e *lines.Env, title []rune) {
+	if d.DefaultWidth == 0 {
+		d.DefaultWidth = 25
+	}
+	if d.DefaultHeight == 0 {
+		d.DefaultHeight = 8
+	}
+	d.dg = dg
 	d.Title = title
 	d.Default(dg, e)
-	dg.Dim().SetWidth(25).SetHeight(d.Height())
-	d.dg = dg
+	dg.Dim().SetWidth(d.width()).SetHeight(d.height())
 }
 
 func (d *Demo) WriteTip(s string) {
@@ -45,7 +52,27 @@ func (d *Demo) WriteTip(s string) {
 		string(rr[1:]))
 }
 
-func (d *Demo) Height() int { return 8 }
+type heighter interface {
+	Height() int
+}
+
+func (d *Demo) height() int {
+	if h, ok := d.dg.(heighter); ok {
+		return h.Height()
+	}
+	return 8
+}
+
+type widther interface {
+	Width() int
+}
+
+func (d *Demo) width() int {
+	if w, ok := d.dg.(widther); ok {
+		return w.Width()
+	}
+	return 25
+}
 
 // OnFocus switches to double-framing.
 func (d *Demo) OnFocus(e *lines.Env) { d.Focused(d.dg, e) }

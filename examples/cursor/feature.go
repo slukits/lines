@@ -34,7 +34,7 @@ func enum(i int) string {
 }
 
 func (c *featureDemo) OnInit(e *lines.Env) {
-	c.Init(c, e, featureTitle)
+	c.InitDemo(c, e, featureTitle)
 	c.Dim().SetWidth(64).SetHeight(10)
 	c.FF.Set(lines.CellFocusable | lines.HighlightEnabled)
 	fmt.Fprint(c.Gaps(1).Top, "")   // create gap for focused tip

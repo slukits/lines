@@ -22,7 +22,7 @@ var stackedTitle []rune = []rune("stacked-demo")
 // OnInit creates the dummy off-screen components which are then
 // layered with the stacking layers.
 func (c *stacked) OnInit(e *lines.Env) {
-	c.Init(c, e, stackedTitle)
+	c.InitDemo(c, e, stackedTitle)
 	c.CC = append(c.CC, &layered{}, &layered{}, &layered{}, &layered{})
 	c.first = true
 }

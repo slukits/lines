@@ -19,7 +19,7 @@ type arrowsDemo struct {
 var arrowsTitle []rune = []rune("cursor-keys")
 
 func (c *arrowsDemo) OnInit(e *lines.Env) {
-	c.Init(c, e, arrowsTitle)
+	c.InitDemo(c, e, arrowsTitle)
 	c.Dim().SetWidth(32)
 	fmt.Fprint(e.LL(1),
 		"first line of content\n",
