@@ -5,6 +5,25 @@ package api
 // i.e. red is 0xFF0000.
 type Color int32
 
+type CCC struct {
+	C1st  Color
+	C2nd  Color
+	C3rd  Color
+	C4th  Color
+	C5th  Color
+	C6th  Color
+	C7th  Color
+	C8th  Color
+	C9th  Color
+	C10th Color
+	C11th Color
+	C12th Color
+	C13th Color
+	C14th Color
+	C15th Color
+	C16th Color
+}
+
 const (
 	Black                Color = 0x000000
 	Maroon               Color = 0x800000

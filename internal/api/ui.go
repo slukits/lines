@@ -123,6 +123,8 @@ type Displayer interface {
 	//  - if x and y are inside the screen and a non-zero cursor style
 	//    is given the arguments are returned as received.
 	SetCursor(x, y int, cs ...CursorStyle) (int, int, CursorStyle)
+
+	CurrentColors() CCC
 }
 
 // EventProcessor provides user input events and programmatically posted

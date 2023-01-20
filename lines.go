@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gdamore/tcell/v2"
 	"github.com/slukits/lines/internal/api"
 	"github.com/slukits/lines/internal/lyt"
 	"github.com/slukits/lines/internal/term"
@@ -52,8 +53,9 @@ type Dimer = lyt.Dimer
 // quitting controls the quitting keys and runes of a lines instance.
 type quitting struct {
 	*sync.Mutex
-	kk map[Key]bool
-	rr map[rune]bool
+	kk    map[Key]bool
+	rr    map[rune]bool
+	kiosk bool
 }
 
 // AddKey adds given Key k to the quitting keys of parent Lines
@@ -124,7 +126,7 @@ func (q *quitting) Key(k Key) bool {
 	if q == nil {
 		return false
 	}
-	if k == CtrlC || k == CtrlD {
+	if (k == CtrlC || k == CtrlD) && !q.kiosk {
 		return true
 	}
 	if q.kk == nil {
@@ -218,6 +220,21 @@ type Componenter interface {
 	// i.e. accessing its properties and methods is likely to panic.
 	disable()
 
+	// isEnabled checks if an embedded Component instance's internal
+	// component instance is set or not.
+	//
+	// NOTE this feature was added because the ContentSource of a
+	// component might needs at initialization time to set the Editable
+	// of a component which must trigger the setting of the
+	// Edit-property which only happens if the
+	// Component.FF.Set(Editable) is called and not if
+	// component.ff.set(Editable).  The former call is only possible if
+	// the component is enabled.  To avoid enabling an already enabled
+	// feature and disabling it wrongly it is possible to check now.
+	// This all seems awfully complicated so maybe we can change that in
+	// the future.
+	isEnabled() bool
+
 	// hasLayoutWrapper is true if a component is part of the layout and
 	// its layout has been calculated by the layout manager.
 	hasLayoutWrapper() bool
@@ -253,12 +270,18 @@ type Componenter interface {
 // Quitable feature, i.e. the application can't be quit by the user by
 // default.
 func TermKiosk(cmp Componenter) *Lines {
-	return newTerm(cmp)
+	lines := newTerm(cmp)
+	lines.Quitting = &quitting{Mutex: &sync.Mutex{}, kiosk: true}
+	return lines
 }
 
 // SetRoot replaces currently used root component by given component.
 func (ll *Lines) SetRoot(c Componenter) {
 	ll.scr.setRoot(c, ll.Globals)
+}
+
+func (ll *Lines) CurrentColors() api.CCC {
+	return ll.scr.backend.CurrentColors()
 }
 
 // Quit posts a quit event which consequently closes given Lines
@@ -451,4 +474,8 @@ func Print(w AtWriter, rr interface{}) {
 		panic(fmt.Sprintf(
 			"lines: print: expected rune/rune-slice; got %T", rr))
 	}
+}
+
+func DBGTcell(ll *Lines) tcell.Screen {
+	return term.DBGTcell(ll.backend)
 }

@@ -135,6 +135,27 @@ func (u *UI) quit() {
 	}
 }
 
+func (u *UI) CurrentColors() api.CCC {
+	return api.CCC{
+		C1st:  api.Color(tcell.ColorBlack.Hex()),
+		C2nd:  api.Color(tcell.ColorMaroon.Hex()),
+		C3rd:  api.Color(tcell.ColorGreen.Hex()),
+		C4th:  api.Color(tcell.ColorOlive.Hex()),
+		C5th:  api.Color(tcell.ColorNavy.Hex()),
+		C6th:  api.Color(tcell.ColorPurple.Hex()),
+		C7th:  api.Color(tcell.ColorTeal.Hex()),
+		C8th:  api.Color(tcell.ColorSilver.Hex()),
+		C9th:  api.Color(tcell.ColorGray.Hex()),
+		C10th: api.Color(tcell.ColorRed.Hex()),
+		C11th: api.Color(tcell.ColorLime.Hex()),
+		C12th: api.Color(tcell.ColorYellow.Hex()),
+		C13th: api.Color(tcell.ColorBlue.Hex()),
+		C14th: api.Color(tcell.ColorFuchsia.Hex()),
+		C15th: api.Color(tcell.ColorAqua.Hex()),
+		C16th: api.Color(tcell.ColorWhite.Hex()),
+	}
+}
+
 // screenEvent is used to read the content of a simulation screen while
 // making sure no other event is writing to it.
 type quitEvent struct {
@@ -299,4 +320,12 @@ func (u *UI) SetCursor(x, y int, cs ...api.CursorStyle) (
 	}
 	u.lib.ShowCursor(x, y)
 	return x, y, _cs
+}
+
+func DBGTcell(ep api.EventProcessor) tcell.Screen {
+	ui, ok := ep.(*UI)
+	if !ok {
+		return nil
+	}
+	return ui.lib
 }
