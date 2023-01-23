@@ -261,6 +261,10 @@ func (ll *Lines) SetRoot(c Componenter) {
 	ll.scr.setRoot(c, ll.Globals)
 }
 
+func (ll *Lines) Root() Componenter {
+	return ll.scr.root().userCmp
+}
+
 // Quit posts a quit event which consequently closes given Lines
 // instance's backend and unblocks WaitForQuit.
 func (ll *Lines) Quit() { ll.backend.Quit() }
