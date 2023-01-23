@@ -59,17 +59,20 @@ func New(listener func(api.Eventer)) *UI {
 		panic(fmt.Sprintf(
 			"lines: term: new: can't obtain screen: %v", err))
 	}
-	return initUI(lib, listener)
+	return initUI(lib, listener, true)
 }
 
 func (u *UI) Lib() interface{} { return u.lib }
 
-func initUI(lib tcell.Screen, l func(api.Eventer)) *UI {
+func initUI(lib tcell.Screen, l func(api.Eventer), gpm bool) *UI {
 	if err := lib.Init(); err != nil {
 		panic(fmt.Sprintf(
 			"lines: term: new: can't obtain screen: %v", err))
 	}
-	lib, haveGPM := internal.WarpGPMSupport(lib)
+	haveGPM := false
+	if gpm {
+		lib, haveGPM = internal.WarpGPMSupport(lib)
+	}
 	if !haveGPM {
 		lib.EnableMouse()
 	}
