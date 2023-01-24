@@ -7,7 +7,7 @@ package lines
 // An EnvWriter instance provides an API for styling and formatting the
 // writing to a component's line(s) starting at its first line.
 type EnvWriter struct {
-	cmp cmpWriter
+	cmp Componenter
 	sty *Style
 }
 
@@ -63,7 +63,7 @@ func (w *EnvWriter) LL(idx int) *EnvLineWriter {
 // Write to a components screen-portion made available by an Env
 // instance provided to a listener implementation.
 func (w *EnvWriter) Write(bb []byte) (int, error) {
-	return w.cmp.write(bb, 0, -1, w.sty)
+	return w.cmp.embedded().write(bb, 0, -1, w.sty)
 }
 
 // An EnvLineWriter provides an API for styling and formatting the
@@ -71,7 +71,11 @@ func (w *EnvWriter) Write(bb []byte) (int, error) {
 type EnvLineWriter struct {
 	sty  *Style
 	line int
-	cmp  cmpWriter
+	cmp  Componenter
+
+	// inner set to true circumvents a panic if Componenter cmp is not
+	// enabled.
+	inner bool
 }
 
 // Sty sets the next write's style, i.e. its style attributes and
@@ -122,7 +126,11 @@ func (w *EnvLineWriter) AA(aa StyleAttributeMask) *EnvLineWriter {
 // attributes or fore- and background colors are applied for these
 // lines.
 func (w *EnvLineWriter) Write(bb []byte) (int, error) {
-	return w.cmp.write(bb, w.line, -1, w.sty)
+	if w.inner {
+		return w.cmp.embedded().layoutComponent().wrapped().
+			write(bb, w.line, -1, w.sty)
+	}
+	return w.cmp.embedded().write(bb, w.line, -1, w.sty)
 }
 
 // At returns a writer which writes at given line writer w's line at
@@ -138,7 +146,7 @@ func (w *EnvLineWriter) At(cell int) *EnvAtWriter {
 type EnvAtWriter struct {
 	sty        *Style
 	line, cell int
-	cmp        cmpWriter
+	cmp        Componenter
 }
 
 // Sty sets the next write's style, i.e. its style attributes and
@@ -202,18 +210,18 @@ func (w *EnvAtWriter) WriteAt(rr []rune) {
 	if len(rr) == 0 {
 		return
 	}
-	w.cmp.writeAt(rr, w.line, w.cell, w.sty)
+	w.cmp.embedded().writeAt(rr, w.line, w.cell, w.sty)
 }
 
 type envAtFillingWriter struct {
 	sty        *Style
 	line, cell int
-	cmp        cmpWriter
+	cmp        Componenter
 }
 
 func (w *envAtFillingWriter) WriteAt(rr []rune) {
 	if len(rr) == 0 {
 		return
 	}
-	w.cmp.writeAtFilling(rr[0], w.line, w.cell, w.sty)
+	w.cmp.embedded().writeAtFilling(rr[0], w.line, w.cell, w.sty)
 }

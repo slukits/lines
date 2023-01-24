@@ -179,17 +179,17 @@ func (f *LineFocus) lineIndexOfContent(idx int) int {
 	if f.c.Src == nil {
 		return idx
 	}
-	if idx-f.c.first() < 0 || idx-f.c.first() >= len(*f.c.ll) {
+	if idx-f.c.First() < 0 || idx-f.c.First() >= len(*f.c.ll) {
 		return -1
 	}
-	return idx - f.c.first()
+	return idx - f.c.First()
 }
 
 func (f *LineFocus) switchScrollingSourcedHighlight(scroll int) {
 	if f.current == -1 {
 		return
 	}
-	idx, hlFlag := f.current-f.c.first(), f.hlLineFlag()
+	idx, hlFlag := f.current-f.c.First(), f.hlLineFlag()
 	if idx >= 0 && idx < f.c.ContentScreenLines() {
 		_, clm, crsr := f.c.CursorPosition()
 		if crsr {
@@ -201,7 +201,7 @@ func (f *LineFocus) switchScrollingSourcedHighlight(scroll int) {
 			l.Switch(hlFlag)
 		}
 	}
-	start := f.c.first() + scroll
+	start := f.c.First() + scroll
 	end := start + f.c.ContentScreenLines()
 	if f.current < start || f.current >= end {
 		return
@@ -235,6 +235,6 @@ func (s *LineFocus) Reset() {
 }
 
 func (s *LineFocus) onDisplay(idx int) bool {
-	return idx >= s.c.first() &&
-		idx < s.c.first()+s.c.ContentScreenLines()
+	return idx >= s.c.First() &&
+		idx < s.c.First()+s.c.ContentScreenLines()
 }

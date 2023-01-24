@@ -46,8 +46,7 @@ func (s *ASourcedComponent) Displays_the_first_n_source_lines(t *T) {
 	tt, cmp := fxCmp(t)
 	tt.FireResize(3, 2)
 	tt.Lines.Update(cmp, nil, func(e *Env) {
-		cmp.Src = &ContentSource{
-			Liner: &linerFX{}}
+		cmp.Src = &ContentSource{Liner: &linerFX{}}
 	})
 
 	t.Eq("1st\n2nd", tt.Screen())

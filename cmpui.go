@@ -199,7 +199,7 @@ func (c *component) syncContent(rw runeWriter) {
 
 // clear fills the receiving component's printable area with spaces.
 func (c *component) syncCleared(rw runeWriter) {
-	if c.first()+c.ContentScreenLines() > c.Len() {
+	if c.First()+c.ContentScreenLines() > c.Len() {
 		c.setFirst(ints.Max(0, c.Len()-c.ContentScreenLines()))
 	}
 	cx, cy, cw, ch := c.dim.Screen()
@@ -264,6 +264,8 @@ func (c *component) ContentArea() (x, y, w, h int) {
 		h - len(c.gaps.top.ll) - len(c.gaps.bottom.ll)
 }
 
+// ContentScreenLines returns a component c's number of screen lines
+// which are not used for gaps.
 func (c *component) ContentScreenLines() int {
 	_, _, _, sh := c.dim.Printable()
 	if c.gaps == nil {
@@ -292,9 +294,9 @@ func (c *component) setFirst(f int) {
 	c.dirty = true
 }
 
-// first returns the index of the first line displayed taking an
-// optionally set component source into account.
-func (c *component) first() int {
+// First returns the content index of the content displayed in the
+// components first screen line.
+func (c *component) First() int {
 	if c.Src != nil {
 		return c.Src.first
 	}

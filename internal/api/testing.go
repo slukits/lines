@@ -299,6 +299,53 @@ func (cs CellsScreen) Trimmed() CellsScreen {
 	return hTrimmed
 }
 
+func (cs CellsScreen) Equals(other CellsScreen) bool {
+	for i, l := range cs {
+		for j, c := range l {
+			if len(other) <= i {
+				return false
+			}
+			if len(other[i]) <= j {
+				return false
+			}
+			oc := other[i][j]
+			if oc.Style != c.Style || oc.Rune != c.Rune {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+type CellScreenDiff struct {
+	LinesCount int
+	CellsCount int
+	Line, Cell int
+}
+
+func (cs CellsScreen) FirstDiff(other CellsScreen) CellScreenDiff {
+	d := CellScreenDiff{
+		LinesCount: -1, CellsCount: -1, Line: -1, Cell: -1}
+	for i, l := range cs {
+		for j, c := range l {
+			if len(other) <= i {
+				d.LinesCount = i
+				return d
+			}
+			if len(other[i]) <= j {
+				d.LinesCount, d.CellsCount = i, j
+				return d
+			}
+			oc := other[i][j]
+			if oc.Style != c.Style || oc.Rune != c.Rune {
+				d.Line, d.Cell = i, j
+				return d
+			}
+		}
+	}
+	return d
+}
+
 func (cs CellsScreen) len() int { return len(cs) }
 
 func (cs CellsScreen) forLine(cb func(l liner) (stop bool)) {

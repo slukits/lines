@@ -127,9 +127,11 @@ func (cs *ContentSource) initialize(c *component) {
 		}
 		return
 	}
-	if _, ok := cs.Liner.(ScrollableLiner); ok {
-		if !c.ff.has(Scrollable) {
-			c.ff.set(Scrollable)
+	if sl, ok := cs.Liner.(ScrollableLiner); ok {
+		if c.ContentScreenLines() < sl.Len() {
+			if !c.ff.has(Scrollable) {
+				c.ff.set(Scrollable)
+			}
 		}
 	}
 	if fl, ok := cs.Liner.(FocusableLiner); ok {
@@ -151,10 +153,12 @@ func (cs *ContentSource) sync(n int, c *component) {
 		return
 	}
 	idx := cs.first
-	lw := &EnvLineWriter{cmp: c, line: idx - cs.first}
+	lw := &EnvLineWriter{
+		inner: true, cmp: c.userCmp, line: idx - cs.first}
 	for idx-cs.first < n && cs.Print(idx, lw) {
 		idx++
-		lw = &EnvLineWriter{cmp: c, line: idx - cs.first}
+		lw = &EnvLineWriter{
+			inner: true, cmp: c.userCmp, line: idx - cs.first}
 	}
 }
 

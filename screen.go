@@ -334,8 +334,8 @@ func (s *screen) haveModal() (lc layoutComponenter) {
 // with changed layout implementing Layouter.  It also calls back for
 // every component with changed layout if callback not nil.
 func (s *screen) syncReflowLayout(lines *Lines, cb func(Componenter)) {
-	cntx := &rprContext{ll: lines, scr: s}
-	for reflow := s.lyt.IsDirty(); reflow; {
+	cntx, count := &rprContext{ll: lines, scr: s}, 0
+	for reflow := s.lyt.IsDirty(); reflow && count < 10; {
 		reflow = false
 		ll := s.lyt.Layers
 		s.lyt.Reflow(func(d lyt.Dimer) {
@@ -356,6 +356,7 @@ func (s *screen) syncReflowLayout(lines *Lines, cb func(Componenter)) {
 				})
 		}
 		if reflow {
+			count++
 			reportInit(lines, s)
 		}
 	}

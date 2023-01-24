@@ -13,22 +13,22 @@ import (
 type Counter int
 
 const (
-	OnInit Counter = iota
-	OnLayout
-	OnUpdate
-	OnFocus
-	OnFocusLost
-	OnLineFocus
-	OnLineFocusLost
-	OnLineSelection
-	OnLineOverflowing
-	OnCursor
-	OnRune
-	OnEdit
-	OnOutOfBoundClick
-	OnOutOfBoundMove
-	OnMouse
-	OnKey
+	NInit Counter = iota
+	NLayout
+	NUpdate
+	NFocus
+	NFocusLost
+	NLineFocus
+	NLineFocusLost
+	NLineSelection
+	NLineOverflowing
+	NCursor
+	NRune
+	NEdit
+	NOutOfBoundClick
+	NOutOfBoundMove
+	NMouse
+	NKey
 )
 
 // TODO: refactor make this component replace all component fixtures
@@ -52,4 +52,53 @@ type Cmp struct {
 	cc                map[Counter]int
 	tt                map[Counter]time.Time
 	gaps              bool
+}
+
+// Wraps a comptonenter enabling the user to inject code on certain
+// events.
+type Wrap struct {
+	lines.Componenter
+	ONInit   func(lines.Componenter, *lines.Env)
+	ONLayout func(lines.Componenter, *lines.Env) (reflow bool)
+	cc       map[Counter]int
+}
+
+func (w *Wrap) N(c Counter) int { return w.cc[c] }
+
+func (w *Wrap) OnInit(e *lines.Env) {
+	w.cc = map[Counter]int{}
+	w.cc[NInit]++
+	if w.ONInit != nil {
+		w.ONInit(w.Componenter, e)
+	}
+	i, ok := w.Componenter.(lines.Initer)
+	if !ok {
+		return
+	}
+	i.OnInit(e)
+}
+
+func (w *Wrap) OnLayout(e *lines.Env) (reflow bool) {
+	w.cc[NLayout]++
+	if w.ONLayout != nil {
+		w.ONLayout(w.Componenter, e)
+	}
+	l, ok := w.Componenter.(lines.Layouter)
+	if !ok {
+		return
+	}
+	return l.OnLayout(e)
+}
+
+type Chaining struct {
+	lines.Component
+	lines.Chaining
+}
+
+func (c *Chaining) Set(
+	cmp lines.Componenter, cc ...lines.Componenter,
+) *Chaining {
+	c.CC = append(c.CC, cmp)
+	c.CC = append(c.CC, cc...)
+	return c
 }
