@@ -406,7 +406,7 @@ func (s *_gaps) Have_set_writer_style_in_full_gap_line(t *T) {
 	t.Eq(" top     ", cc)
 	exp := (Style{}).WithAA(Bold).WithFG(Yellow).WithBG(Blue)
 	for _, c := range cc[1 : len(cc)-1] {
-		t.True(c.Style.Equals(exp))
+		t.Eq(c.Style, exp)
 	}
 }
 
@@ -429,10 +429,10 @@ func (s *_gaps) Have_set_at_writer_style(t *T) {
 	for _, c := range tt.CellsOf(cmp)[0] {
 		switch c.Rune {
 		case '-':
-			c.Style.Equals(frame)
+			t.Eq(c.Style, frame)
 		case ' ':
 		default:
-			c.Style.Equals(title)
+			t.Eq(c.Style, title)
 		}
 	}
 }

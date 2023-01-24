@@ -476,9 +476,9 @@ func (s *lineFocus) Trims_highlight_to_non_blanks(t *T) {
 	for i, x := range l1 {
 		switch i {
 		case 0, 10:
-			t.True(x.Style.Equals(dflSty))
+			t.Eq(x.Style, dflSty)
 		default:
-			t.True(x.Style.Equals(hiSty))
+			t.Eq(x.Style, hiSty)
 		}
 	}
 	fx.FireKey(Down)
@@ -488,7 +488,7 @@ func (s *lineFocus) Trims_highlight_to_non_blanks(t *T) {
 	fx.FireKey(Down)
 	l1 = fx.Cells()[0]
 	for _, x := range l1 {
-		t.True(x.Style.Equals(hiSty))
+		t.Eq(x.Style, hiSty)
 	}
 }
 

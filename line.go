@@ -539,7 +539,7 @@ func (l *Line) highlighted(
 		return l.highlightTrimmed(rr, ss, gg)
 	}
 	for r, s := range ss {
-		ss[r] = highlightStyle(s, gg.Style(Highlight))
+		ss[r] = gg.Highlight(s)
 	}
 	return ss
 }
@@ -567,19 +567,18 @@ func (l *Line) highlightTrimmed(
 		switch {
 		case r.Start() < tl && r.End() > tl && r.End() <= tr:
 			ss[Range{r.Start(), tl}] = ss[r]
-			ss[Range{tl, r.End()}] = highlightStyle(
-				ss[r], gg.Style(Highlight))
+			ss[Range{tl, r.End()}] = gg.Highlight(ss[r])
 			delete(ss, r)
 		case r.Start() >= tl && r.End() <= tr:
-			ss[r] = highlightStyle(ss[r], gg.Style(Highlight))
+			ss[r] = gg.Highlight(ss[r])
 		case r.Start() >= tl && r.Start() < tr && r.End() > tr:
 			ss[Range{tr, r.End()}] = ss[r]
-			ss[Range{r.Start(), tr}] = highlightStyle(ss[r], gg.Style(Highlight))
+			ss[Range{r.Start(), tr}] = gg.Highlight(ss[r])
 			delete(ss, r)
 		case r.Start() < tl && r.End() > tr:
 			ss[Range{r.Start(), tl}] = ss[r]
 			ss[Range{tr, r.End()}] = ss[r]
-			ss[Range{tl, tr}] = highlightStyle(ss[r], gg.Style(Highlight))
+			ss[Range{tl, tr}] = gg.Highlight(ss[r])
 			delete(ss, r)
 		}
 	}
@@ -588,28 +587,9 @@ func (l *Line) highlightTrimmed(
 		return ss
 	}
 	for _, r := range urr {
-		ss[r] = highlightStyle(ss[zeroRange], gg.Style(Highlight))
+		ss[r] = gg.Highlight(ss[zeroRange])
 	}
 	return ss
-}
-
-// highlightStyle returns the highlighted version of given style s by
-// "adding" given style h to it.
-func highlightStyle(s, h Style) Style {
-	if h.AA() != 0 {
-		if s.AA()&h.AA() == 0 {
-			s = s.WithAdded(h.AA())
-		} else {
-			s = s.WithRemoved(h.AA())
-		}
-	}
-	if h.FG() != DefaultColor {
-		s = s.WithFG(h.FG())
-	}
-	if h.BG() != DefaultColor {
-		s = s.WithBG(h.BG())
-	}
-	return s
 }
 
 // trim returns the index of the first non-space rune and the index

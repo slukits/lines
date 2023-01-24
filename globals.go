@@ -48,10 +48,11 @@ type globals struct {
 	ssUpdated   map[StyleType]globalStyleUpdates
 	onUpdate    func(globalsUpdates, StyleType, globalStyleUpdates)
 	propagation func(func(globaler))
+	highlighter func(Style) Style
 }
 
 func newGlobals(propagation func(func(globaler))) *globals {
-	return &globals{
+	gg := &globals{
 		tabWidth: 4,
 		ss: map[StyleType]Style{
 			Default:   DefaultStyle,
@@ -59,20 +60,23 @@ func newGlobals(propagation func(func(globaler))) *globals {
 		},
 		propagation: propagation,
 	}
+	gg.highlighter = defaultHighlighter(gg)
+	return gg
 }
 
 // clone makes a copy of given globals gg without the propagation,
 // updated and ssUpdated properties.
 func (gg *globals) clone() *globals {
-	cpy := globals{
+	cpy := &globals{
 		scr:      gg.scr,
 		tabWidth: gg.tabWidth,
 		ss:       map[StyleType]Style{},
 	}
+	cpy.highlighter = defaultHighlighter(cpy)
 	for k, v := range gg.ss {
 		cpy.ss[k] = v
 	}
-	return &cpy
+	return cpy
 }
 
 // setCursor sets the cursor in a components given line at given column.
@@ -87,6 +91,77 @@ func (gg *globals) SetUpdateListener(
 ) *globals {
 	gg.onUpdate = l
 	return gg
+}
+
+func (gg *globals) SetHighlighter(h func(Style) Style) *globals {
+	if h == nil {
+		return gg.setDefaultHighlighter()
+	}
+	gg.highlighter = h
+	if gg.updated&globalHighlighter == 0 {
+		gg.updated |= globalHighlighter
+	}
+	if gg.onUpdate != nil {
+		gg.onUpdate(globalHighlighter, 0, 0)
+	}
+	if gg.propagation == nil {
+		return gg
+	}
+	gg.propagation(func(g globaler) {
+		g.globals().prpHighlighter(h)
+	})
+	return gg
+}
+
+func (gg *globals) setDefaultHighlighter() *globals {
+	gg.highlighter = defaultHighlighter(gg)
+	if gg.updated&globalHighlighter == 0 {
+		gg.updated |= globalHighlighter
+	}
+	if gg.onUpdate != nil {
+		gg.onUpdate(globalHighlighter, 0, 0)
+	}
+	if gg.propagation == nil {
+		return gg
+	}
+	gg.propagation(func(g globaler) {
+		g.globals().prpHighlighter(defaultHighlighter(g.globals()))
+	})
+	return gg
+}
+
+func defaultHighlighter(gg *globals) func(s Style) Style {
+	return func(s Style) Style {
+		h := gg.Style(Highlight)
+		if h.AA() != 0 {
+			if s.AA()&h.AA() == 0 {
+				s = s.WithAdded(h.AA())
+			} else {
+				s = s.WithRemoved(h.AA())
+			}
+		}
+		if h.FG() != DefaultColor {
+			s = s.WithFG(h.FG())
+		}
+		if h.BG() != DefaultColor {
+			s = s.WithBG(h.BG())
+		}
+		return s
+	}
+}
+
+func (gg *globals) prpHighlighter(h func(Style) Style) {
+	if gg.updated&globalHighlighter != 0 {
+		return
+	}
+	gg.highlighter = h
+	if gg.onUpdate != nil {
+		gg.onUpdate(globalHighlighter, 0, 0)
+	}
+}
+
+func (gg *globals) Highlight(s Style) Style {
+	return gg.highlighter(s)
 }
 
 // TabWidth returns the currently set tab-width in given globals gg.
@@ -372,6 +447,7 @@ type globalsUpdates uint64
 const (
 	globalTabWidth globalsUpdates = 1 << iota
 	globalFmt
+	globalHighlighter
 )
 
 type globalStyleUpdates uint8
