@@ -98,3 +98,29 @@ func (l *SelectableLiner) SetSty(sty lines.Style) *SelectableLiner {
 	l.ScrollableLiner.SetSty(sty)
 	return l
 }
+
+func (l *SelectableLiner) IsFocusable(_ int) bool { return true }
+
+type HighlightingLiner struct {
+	SelectableLiner
+	hi lines.Style
+}
+
+func (l *HighlightingLiner) SetII(ii []string) *HighlightingLiner {
+	l.SelectableLiner.SetII(ii)
+	return l
+}
+
+func (l *HighlightingLiner) SetSty(sty lines.Style) *HighlightingLiner {
+	l.SelectableLiner.SetSty(sty)
+	return l
+}
+
+func (l *HighlightingLiner) SetHi(sty lines.Style) *HighlightingLiner {
+	l.hi = sty
+	return l
+}
+
+func (l *HighlightingLiner) Highlight(s lines.Style) lines.Style {
+	return l.hi
+}

@@ -39,11 +39,6 @@ type FocusableLiner interface {
 	// IsFocusable returns true iff the line with given index idx is
 	// focusable.
 	IsFocusable(idx int) bool
-
-	// Highlighted indicates if focusable lines are highlighted if
-	// focused.  And in case they are highlighted if they should be
-	// trimmed highlighted.
-	Highlighted() (highlighted, trimmed bool)
 }
 
 // EditLiner implementations are [FocusableLiner] implementations
@@ -57,6 +52,15 @@ type EditLiner interface {
 	// while given Edit-instance provides the information about the
 	// edit.
 	OnEdit(w *EnvLineWriter, e *Edit) bool
+}
+
+// Highlighter provides a highlighter which may be set to a components
+// globals.
+type Highlighter interface {
+
+	// Highlight implementation of a *Liner is set a Highlighter in the
+	// globals of the component whose source has this liner.
+	Highlight(Style) Style
 }
 
 // A ContentSource instance may be assigned to a [Component]'s Src
@@ -114,14 +118,7 @@ func (cs *ContentSource) cleanup(c *component) {
 
 func (cs *ContentSource) initialize(c *component) {
 	c.ensureFeatures()
-	if el, ok := cs.Liner.(EditLiner); ok {
-		if hl, tr := el.Highlighted(); hl {
-			if tr {
-				c.ff.set(TrimmedHighlightEnabled)
-			} else {
-				c.ff.set(HighlightEnabled)
-			}
-		}
+	if _, ok := cs.Liner.(EditLiner); ok {
 		if !c.ff.has(Editable) {
 			c.ff.set(Editable)
 		}
@@ -134,17 +131,13 @@ func (cs *ContentSource) initialize(c *component) {
 			}
 		}
 	}
-	if fl, ok := cs.Liner.(FocusableLiner); ok {
-		if hl, tr := fl.Highlighted(); hl {
-			if tr {
-				c.ff.set(TrimmedHighlightEnabled)
-			} else {
-				c.ff.set(HighlightEnabled)
-			}
-		}
+	if _, ok := cs.Liner.(FocusableLiner); ok {
 		if !c.ff.has(LinesFocusable) {
 			c.ff.set(LinesFocusable)
 		}
+	}
+	if hl, ok := cs.Liner.(Highlighter); ok {
+		c.globals().SetHighlighter(hl.Highlight)
 	}
 }
 

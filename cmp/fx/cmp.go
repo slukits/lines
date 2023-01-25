@@ -102,3 +102,16 @@ func (c *Chaining) Set(
 	c.CC = append(c.CC, cc...)
 	return c
 }
+
+type Stacking struct {
+	Cmp
+	lines.Stacking
+}
+
+func (s *Stacking) Set(
+	cmp lines.Componenter, cc ...lines.Componenter,
+) *Stacking {
+	s.CC = append(s.CC, cmp)
+	s.CC = append(s.CC, cc...)
+	return s
+}

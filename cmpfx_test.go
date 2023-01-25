@@ -325,10 +325,6 @@ func (l *scrollableLinerFX) Len() int {
 
 type focusableLinerFX struct {
 	scrollableLinerFX
-	// highlighted and trimmed are provided by the Highlighted interface
-	// method indicating if a focused line is highlighted and if that
-	// highlight should be trimmed.  Both properties default to false.
-	highlighted, trimmed bool
 	// returns to a given line index if the line is focusable or not.
 	// focusable defaults to func(_ int) bool { return true }
 	focusable func(idx int) bool
@@ -344,10 +340,6 @@ func (l *focusableLinerFX) IsFocusable(idx int) bool {
 		return true
 	}
 	return l.focusable(idx)
-}
-
-func (l *focusableLinerFX) Highlighted() (highlighted, trimmed bool) {
-	return l.highlighted, l.trimmed
 }
 
 type srcFX struct {

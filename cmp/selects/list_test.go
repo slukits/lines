@@ -125,6 +125,22 @@ func (s *AList) Has_focusable_lines(t *T) {
 	}))
 }
 
+func (s *AList) Has_highlight_able_lines(t *T) {
+	cmp := &List{Items: []string{"item"}}
+	fx := fx.New(t, cmp)
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *lines.Env) {
+		t.True(cmp.FF.Has(lines.HighlightEnabled))
+	}))
+}
+
+func (s *AList) Has_selectable_lines(t *T) {
+	cmp := &List{Items: []string{"item"}}
+	fx := fx.New(t, cmp)
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *lines.Env) {
+		t.True(cmp.FF.Has(lines.LineSelectable))
+	}))
+}
+
 func (s *AList) Is_scrollable_if_items_exceed_component_height(t *T) {
 	cmp := &List{Items: fx.NStrings(50)}
 	fx := fx.New(t, cmp)
@@ -250,11 +266,8 @@ func (s *AList) Applies_provided_styler(t *T) {
 		WithFG(lines.Silver).WithAA(lines.Bold)
 	cmp := &List{
 		Items: []string{"12", "1234", "123"},
-		Styler: func(_ int, highlight bool) lines.Style {
-			if !highlight {
-				return sty
-			}
-			return lines.DefaultStyle
+		Styler: func(_ int) lines.Style {
+			return sty
 		},
 	}
 	fx := fx.New(t, cmp)
@@ -273,13 +286,207 @@ func (s *AList) Liner_supersedes_items_and_styler(t *T) {
 		SelectableLiner: (&fx.SelectableLiner{}).
 			SetII([]string{"12", "1234", "123"}).SetSty(styLN),
 		Items:  []string{"blub", "42", "hurz"},
-		Styler: func(_ int, _ bool) lines.Style { return sty },
+		Styler: func(_ int) lines.Style { return sty },
 	}
 	fx := fx.New(t, cmp)
 	t.FatalIfNot(t.Eq("12  \n1234\n123 ", fx.ScreenOf(cmp)))
 	for _, l := range fx.CellsOf(cmp) {
 		t.Eq(styLN, l[0].Style)
 	}
+}
+
+func (s *AList) Highlights_its_first_item_on_down_key(t *T) {
+	cmp := &List{Items: []string{"12", "1234", "123"}}
+	fx_ := fx.New(t, cmp)
+	fx_.FireKey(lines.Down)
+	hi := fx_.Lines.Globals.Style(lines.Default)
+	t.Eq(fx_.CellsOf(cmp)[0][0].Style, hi)
+
+	cmp = &List{SelectableLiner: &fx.SelectableLiner{}}
+	cmp.SelectableLiner.(*fx.SelectableLiner).II =
+		[]string{"12", "1234", "123"}
+	fx_ = fx.New(t, cmp)
+	fx_.FireKey(lines.Down)
+	t.Eq(fx_.CellsOf(cmp)[0][0].Style, hi)
+}
+
+func (s *AList) Highlights_a_mouse_hovered_list_item(t *T) {
+	cmp := &List{Items: []string{"12", "1234", "123"}}
+	fx := fx.New(t, cmp)
+	x, y := 0, 0
+	fx.Lines.Update(cmp, nil, func(e *lines.Env) {
+		x, y, _, _ = cmp.Dim().Printable()
+	})
+	dflt := fx.Lines.Globals.Style(lines.Highlight)
+
+	fx.FireMove(x, y) // move to/highlight the first item
+	t.Eq(fx.CellsOf(cmp)[0][0].Style, fx.Lines.Globals.Style(lines.Default))
+	t.Eq(fx.CellsOf(cmp)[1][0].Style, dflt)
+	fx.FireMove(x+1, y+2) // move to/highlight the third item
+	t.Eq(fx.CellsOf(cmp)[2][0].Style, fx.Lines.Globals.Style(lines.Default))
+	t.Eq(fx.CellsOf(cmp)[0][0].Style, dflt)
+}
+
+func (s *AList) Uses_liner_highlighter(t *T) {
+	hi := lines.DefaultStyle.WithBG(lines.DarkBlue).
+		WithFG(lines.Silver).WithAA(lines.Bold)
+	cmp := &List{SelectableLiner: (&fx.HighlightingLiner{}).SetHi(hi)}
+	cmp.SelectableLiner.(*fx.HighlightingLiner).II =
+		[]string{"12", "1234", "123"}
+	fx := fx.New(t, cmp)
+	fx.FireKey(lines.Down) // focus first line
+	t.Eq(fx.CellsOf(cmp)[0][0].Style, hi)
+
+	x, y := 0, 0
+	fx.Lines.Update(cmp, nil, func(e *lines.Env) {
+		x, y, _, _ = cmp.Dim().Printable()
+	})
+	fx.FireMove(x, y+2) // focus third line
+	t.Eq(fx.CellsOf(cmp)[2][0].Style, hi)
+}
+
+func (s *AList) Removes_line_focus_on_exit(t *T) {
+	lst := &List{Items: []string{"12", "1234", "123"}}
+	cmp := (&fx.Stacking{}).Set(lst, &fx.Cmp{})
+	fx := fx.New(t, cmp)
+	x, y, height := 0, 0, 0
+	fx.Lines.Update(lst, nil, func(e *lines.Env) {
+		x, y, _, height = lst.Dim().Printable()
+	})
+	dflt := fx.Lines.Globals.Style(lines.Highlight)
+
+	fx.FireMove(x, y) // move to/highlight the first item
+	t.Eq(fx.CellsOf(lst)[0][0].Style, fx.Lines.Globals.Style(lines.Default))
+	fx.FireMove(x, y+height)
+	t.Eq(fx.CellsOf(lst)[0][0].Style, dflt)
+}
+
+func (s *AList) Removes_line_focus_on_focus_lost(t *T) {
+	lst, c := &List{Items: []string{"12", "1234", "123"}}, &fx.Cmp{}
+	cmp := (&fx.Stacking{}).Set(lst, c)
+	fx := fx.New(t, cmp)
+	fx.Lines.Focus(lst)
+	x, y := 0, 0
+	fx.Lines.Update(lst, nil, func(e *lines.Env) {
+		x, y, _, _ = lst.Dim().Printable()
+	})
+	dflt := fx.Lines.Globals.Style(lines.Highlight)
+
+	fx.FireMove(x, y) // move to/highlight the first item
+	t.Eq(fx.CellsOf(lst)[0][0].Style, fx.Lines.Globals.Style(lines.Default))
+	fx.Lines.Focus(c)
+	t.Eq(fx.CellsOf(lst)[0][0].Style, dflt)
+}
+
+func (s *AList) Reports_clicked_list_item(t *T) {
+	reported := -1
+	cmp := &List{
+		Items:    []string{"12", "1234", "123"},
+		Listener: func(i int) { reported = i },
+	}
+	fx := fx.New(t, cmp)
+	x, y := 0, 0
+	fx.Lines.Update(cmp, nil, func(e *lines.Env) {
+		x, y, _, _ = cmp.Dim().Printable()
+	})
+
+	fx.FireClick(x, y) // select the first item
+	t.Eq(0, reported)
+}
+
+func (s *AList) Reports_clicked_liner_item(t *T) {
+	reported := -1
+	cmp := &List{
+		SelectableLiner: (&fx.SelectableLiner{}),
+		Listener:        func(i int) { reported = i },
+	}
+	cmp.SelectableLiner.(*fx.SelectableLiner).II =
+		[]string{"12", "1234", "123"}
+	fx := fx.New(t, cmp)
+	x, y := 0, 0
+	fx.Lines.Update(cmp, nil, func(e *lines.Env) {
+		x, y, _, _ = cmp.Dim().Printable()
+	})
+
+	fx.FireClick(x, y+1) // select the second item
+	t.Eq(1, reported)
+}
+
+func (s *AList) Reports_selected_list_item(t *T) {
+	reported := -1
+	cmp := &List{
+		Items:    []string{"12", "1234", "123"},
+		Listener: func(i int) { reported = i },
+	}
+	fx := fx.New(t, cmp)
+	fx.FireKeys(lines.Down, lines.Enter)
+	t.Eq(0, reported)
+}
+
+func (s *AList) Reports_selected_liner_item(t *T) {
+	reported := -1
+	cmp := &List{
+		SelectableLiner: (&fx.SelectableLiner{}),
+		Listener:        func(i int) { reported = i },
+	}
+	cmp.SelectableLiner.(*fx.SelectableLiner).II =
+		[]string{"12", "1234", "123"}
+	fx := fx.New(t, cmp)
+
+	fx.FireKeys(lines.Down, lines.Down, lines.Down, lines.Enter)
+	t.Eq(2, reported)
+}
+
+func (s *AList) Scrolls_to_off_screen_list_items(t *T) {
+	cmp := &List{Items: []string{"12", "3456", "789"}}
+	fx := fx.Sized(t, 10, 2, cmp)
+	t.Contains(fx.Screen(), "3456")
+	t.Not.Contains(fx.Screen(), "789")
+
+	fx.FireKeys(lines.Down, lines.Down, lines.Down)
+	t.Contains(fx.Screen(), "789")
+}
+
+func (s *AList) Reports_scrolled_to_list_item(t *T) {
+	reported := 1
+	cmp := &List{
+		Items:    []string{"12", "3456", "789"},
+		Listener: func(i int) { reported = i },
+	}
+	fx := fx.Sized(t, 10, 2, cmp)
+	t.Contains(fx.Screen(), "3456")
+	t.Not.Contains(fx.Screen(), "789")
+
+	fx.FireKeys(lines.Down, lines.Down, lines.Down)
+	t.Contains(fx.Screen(), "789")
+	fx.FireKey(lines.Enter)
+	t.Eq(2, reported)
+}
+
+func (s *AList) Scrolls_to_off_screen_source_liner_item(t *T) {
+	cmp := &List{SelectableLiner: (&fx.SelectableLiner{})}
+	cmp.SelectableLiner.(*fx.SelectableLiner).II =
+		[]string{"12", "3456", "789"}
+	fx := fx.Sized(t, 10, 2, cmp)
+	t.Contains(fx.Screen(), "3456")
+	t.Not.Contains(fx.Screen(), "789")
+
+	fx.FireKeys(lines.Down, lines.Down, lines.Down)
+	t.Contains(fx.Screen(), "789")
+}
+
+func (s *AList) Reports_scrolled_to_source_liner_item(t *T) {
+	reported := -1
+	cmp := &List{
+		SelectableLiner: (&fx.SelectableLiner{}),
+		Listener:        func(i int) { reported = i },
+	}
+	cmp.SelectableLiner.(*fx.SelectableLiner).II =
+		[]string{"12", "3456", "789"}
+	fx := fx.Sized(t, 10, 2, cmp)
+
+	fx.FireKeys(lines.Down, lines.Down, lines.Down, lines.Enter)
+	t.Eq(2, reported)
 }
 
 func TestAList(t *testing.T) {

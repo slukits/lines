@@ -375,8 +375,7 @@ func (m *Manager) LocateAt(x, y int) (path []Dimer, err error) {
 	if l := m.Layers.Encloses(x, y); l != nil {
 		return l.LocateAt(x, y)
 	}
-	last, path := m.Root, []Dimer{}
-	forDD := (func(func(d Dimer) bool))(nil)
+	last, forDD := m.Root, (func(func(d Dimer) bool))(nil)
 	for last != nil {
 		d := last
 		path, last = append(path, d), nil

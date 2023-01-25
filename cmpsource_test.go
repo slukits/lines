@@ -53,7 +53,8 @@ func (s *ASourcedComponent) Displays_the_first_n_source_lines(t *T) {
 }
 
 func (s *ASourcedComponent) Has_no_more_lines_than_screen_lines(t *T) {
-	cmp := &srcFX{liner: &focusableLinerFX{highlighted: true}}
+	cmp := &srcFX{liner: &focusableLinerFX{}}
+	cmp.onInit = func(c *cmpFX, e *Env) { c.FF.Set(HighlightEnabled) }
 	fx := fx(t, cmp, 20*time.Minute)
 	fx.FireResize(3, 2)
 	fx.Lines.Update(cmp, nil, func(e *Env) {
@@ -434,18 +435,26 @@ func (s *ASourcedComponent) Triggers_reset_on_unfocusable_feature(t *T) {
 }
 
 func (s *ASourcedComponent) Scrolls_to_next_focusable_line(t *T) {
-	cmp := &srcFX{liner: &focusableLinerFX{highlighted: true}}
+	cmp := &srcFX{liner: &focusableLinerFX{}}
 	cmp.onInit = func(c *cmpFX, e *Env) {
+		c.FF.Set(HighlightEnabled)
 		c.Dim().SetWidth(3).SetHeight(2)
 	}
-	fx := fx(t, cmp)
+	fx := fx(t, cmp, 20*time.Minute)
 	fx.FireResize(3, 2)
 	fx.FireKeys(Down, PgDn, Down)
 	fx.Lines.Update(cmp, nil, func(e *Env) {
 		t.Eq(1, cmp.LL.Focus.Current())
 	})
 	t.Eq("2nd\n3rd", fx.Screen())
-	fx.FireKeys(Down, Down, Down, Down, Down, PgUp, PgUp, Up)
+	fx.FireKeys(Down, Down, Down, Down, Down)
+	fx.Lines.Update(cmp, nil, func(e *Env) {
+		t.Eq(6, cmp.LL.Focus.Current())
+	})
+	t.Eq("6th\n7th", fx.Screen())
+	fx.FireKeys(PgUp, PgUp)
+	t.Eq("4th\n5th", fx.Screen())
+	fx.FireKey(Up)
 	t.Eq("5th\n6th", fx.Screen())
 	fx.Lines.Update(cmp, nil, func(e *Env) {
 		t.Eq(5, cmp.LL.Focus.Current())
@@ -487,10 +496,11 @@ func (s *ASourcedComponent) Scrolls_to_next_focusable_within_gaps(
 	t *T,
 ) {
 	cmp := &srcFX{cmpFX: cmpFX{gaps: true, onInit: func(c *cmpFX, e *Env) {
-		c.Src = &ContentSource{Liner: &focusableLinerFX{highlighted: true}}
+		c.Src = &ContentSource{Liner: &focusableLinerFX{}}
 		c.Src.Liner.(*focusableLinerFX).focusable = func(idx int) bool {
 			return idx == 3 || idx == 7
 		}
+		c.FF.Set(HighlightEnabled)
 	}}}
 	fx := fx(t, cmp)
 	fx.FireResize(5, 5)
@@ -514,10 +524,11 @@ func (s *ASourcedComponent) Scrolls_to_previous_focusable_within_gaps(
 	t *T,
 ) {
 	cmp := &srcFX{cmpFX: cmpFX{gaps: true, onInit: func(c *cmpFX, e *Env) {
-		c.Src = &ContentSource{Liner: &focusableLinerFX{highlighted: true}}
+		c.Src = &ContentSource{Liner: &focusableLinerFX{}}
 		c.Src.Liner.(*focusableLinerFX).focusable = func(idx int) bool {
 			return idx == 3 || idx == 7
 		}
+		c.FF.Set(HighlightEnabled)
 	}}}
 	fx := fx(t, cmp)
 	fx.FireResize(5, 5)
@@ -541,10 +552,11 @@ func (s *ASourcedComponent) Remembers_highlighted_line_on_scrolling(
 	t *T,
 ) {
 	cmp := &srcFX{cmpFX: cmpFX{gaps: true, onInit: func(c *cmpFX, e *Env) {
-		c.Src = &ContentSource{Liner: &focusableLinerFX{highlighted: true}}
+		c.Src = &ContentSource{Liner: &focusableLinerFX{}}
 		c.Src.Liner.(*focusableLinerFX).focusable = func(idx int) bool {
 			return idx == 3 || idx == 7
 		}
+		c.FF.Set(HighlightEnabled)
 	}}}
 	fx := fx(t, cmp)
 	fx.FireResize(5, 5)
@@ -597,9 +609,10 @@ func (s *ASourcedComponent) Inverts_bg_fg_of_focused_if_highlighted(
 	t *T,
 ) {
 	cmp := &srcFX{cmpFX: cmpFX{onInit: func(c *cmpFX, e *Env) {
-		liner := (&focusableLinerFX{highlighted: true}).initLines(2)
+		liner := (&focusableLinerFX{}).initLines(2)
 		liner.focusable = func(idx int) bool { return idx == 1 }
 		c.Src = &ContentSource{Liner: liner}
+		c.FF.Set(HighlightEnabled)
 		c.dim.SetWidth(3).SetHeight(2)
 	},
 		onLineFocus: func(c *cmpFX, _ *Env, _, _ int) {
@@ -632,8 +645,8 @@ func (s *ASourcedComponent) Inverts_bg_fg_of_focused_if_highlighted(
 func (s *ASourcedComponent) Gets_its_selected_lines_reported(t *T) {
 	cmp := &srcFX{cmpFX: cmpFX{gaps: true,
 		onInit: func(c *cmpFX, e *Env) {
-			c.FF.Set(LineSelectable)
-			liner := &focusableLinerFX{highlighted: true}
+			c.FF.Set(LineSelectable | HighlightEnabled)
+			liner := &focusableLinerFX{}
 			liner.focusable = func(idx int) bool {
 				return idx == 3 || idx == 7
 			}

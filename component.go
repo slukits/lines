@@ -272,7 +272,7 @@ type component struct {
 
 	Src *ContentSource
 
-	// _first holds the index of the _first displayed line
+	// _first holds the content line index of the _first displayed line
 	_first int
 
 	// slctd hold the index of the currently selected line

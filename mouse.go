@@ -127,7 +127,7 @@ type Enterer interface {
 
 	// OnEnter implementation of a component c gets the first mouse move
 	// inside c's printable area reported.
-	OnEnter(e *Env)
+	OnEnter(e *Env, x, y int)
 }
 
 // Exiter is implemented by components which want to be informed if the

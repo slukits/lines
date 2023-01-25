@@ -67,10 +67,10 @@ func (c *items) OnClick(e *lines.Env, x, y int) {
 	l := &ModalList{
 		List: List{
 			Items:    c.ii,
-			close:    c.close,
 			Listener: c.listener,
 			Styler:   c.styler,
 		},
+		close: c.close,
 	}
 	l.pos = lines.NewLayerPos(
 		c.Dim().X(), c.Dim().Y()+1,

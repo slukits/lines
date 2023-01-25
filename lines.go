@@ -257,9 +257,26 @@ func TermKiosk(cmp Componenter) *Lines {
 }
 
 // SetRoot replaces currently used root component by given component.
-func (ll *Lines) SetRoot(c Componenter) {
-	ll.scr.setRoot(c, ll.Globals)
+func (ll *Lines) SetRoot(c Componenter) error {
+	if c == nil {
+		return nil
+	}
+	return ll.backend.Post(&rootEvent{
+		when:    time.Now(),
+		newRoot: c,
+	})
 }
+
+// moveFocusEvent is posted by calling MoveFocus for a programmatically
+// change of focus.  This event-instance is not provided to the user.
+type rootEvent struct {
+	when    time.Time
+	newRoot Componenter
+}
+
+func (e *rootEvent) When() time.Time { return e.when }
+
+func (e *rootEvent) Source() interface{} { return e }
 
 // Quit posts a quit event which consequently closes given Lines
 // instance's backend and unblocks WaitForQuit.
@@ -337,6 +354,9 @@ func (ll *Lines) listen(evt api.Eventer) {
 		}
 	}
 	switch evt := evt.(type) {
+	case *rootEvent:
+		ll.scr.setRoot(evt.newRoot, ll.Globals)
+		ll.scr.hardSync(ll)
 	case resizeEventer:
 		width, height := evt.Size()
 		postSync := ll.scr.setSize(width, height, ll)

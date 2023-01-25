@@ -642,3 +642,5 @@ func (l *Line) pad(rr []rune, width int) []rune {
 	}
 	return append(rr, []rune(strings.Repeat(" ", c))...)
 }
+
+func (l *Line) String() string { return string(l.rr) }

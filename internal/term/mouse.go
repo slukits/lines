@@ -98,7 +98,7 @@ func (e *mouseEvent) Source() interface{} { return e.evt }
 func mouseAggregator() func(e *tcell.EventMouse) api.MouseEventer {
 
 	var last *tcell.EventMouse
-	inDrag, ox, oy := false, 0, 0
+	inDrag, ox, oy, firstMove := false, 0, 0, true
 
 	var clear = func(e *tcell.EventMouse) {
 		last = nil
@@ -142,22 +142,30 @@ func mouseAggregator() func(e *tcell.EventMouse) api.MouseEventer {
 	}
 
 	return func(e *tcell.EventMouse) (evt api.MouseEventer) {
+		switchFirstMove := func() {
+			if firstMove {
+				firstMove = false
+			}
+		}
 		switch last {
 		case nil:
 			if e.Buttons() == tcell.ButtonNone {
 				// ignore zero-button without movement
 				x, y := e.Position()
-				if ox == x && oy == y {
+				if ox == x && oy == y && !firstMove {
 					return
 				}
+				switchFirstMove()
 				evt = api.NewMouseMove(ox, oy, &mouseEvent{evt: e})
 				clear(e)
 				return evt
 			}
 			last = e
 			ox, oy = e.Position()
+			switchFirstMove()
 			return nil
 		default:
+			switchFirstMove()
 			if zeroEvt(last, e) {
 				return nil
 			}

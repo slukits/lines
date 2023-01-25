@@ -106,7 +106,8 @@ func reportEnterExit(cntx *rprContext, in layoutComponenter, evt *MouseMove) {
 		if in.Dim().PrintableContains(x, y) {
 			cntx.scr.mouseIn = in
 			if e, ok := in.userComponent().(Enterer); ok {
-				callback(in.userComponent(), cntx, e.OnEnter)
+				callback(in.userComponent(), cntx,
+					posCurry(e.OnEnter, x, y))
 			}
 		}
 		return
@@ -139,7 +140,7 @@ func reportEnterExit(cntx *rprContext, in layoutComponenter, evt *MouseMove) {
 
 	cntx.scr.mouseIn = in
 	if e, ok := in.userComponent().(Enterer); ok {
-		callback(in.userComponent(), cntx, e.OnEnter)
+		callback(in.userComponent(), cntx, posCurry(e.OnEnter, x, y))
 	}
 }
 

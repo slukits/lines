@@ -21,7 +21,7 @@ const NoDefault = -1
 
 // Styler provides style information for how to style elements of an
 // selection list.
-type Styler func(idx int, highlight bool) lines.Style
+type Styler func(idx int) lines.Style
 
 // Horizontal is a horizontally labeled drop down selection list.  While
 // the zero-value is ready to use it's not very useful.  Usually you

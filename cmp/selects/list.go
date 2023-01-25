@@ -43,9 +43,6 @@ type List struct {
 	// Listener is informed about a selected item
 	Listener func(int)
 
-	// close a items-layer
-	close func(*lines.Lines)
-
 	// focus keeps track of the menu-item which is currently hovered by
 	// the mouse pointer.
 	focus int
@@ -61,10 +58,13 @@ func (l *List) OnInit(e *lines.Env) {
 	if l.IsZero() {
 		return
 	}
-	l.FF.Set(lines.Focusable | lines.LinesFocusable)
+	l.FF.Set(lines.Focusable | lines.LinesSelectable |
+		lines.HighlightEnabled)
 	if l.SelectableLiner != nil {
 		l.Src = &lines.ContentSource{Liner: l.SelectableLiner}
 	}
+	l.Globals().SetStyle(
+		lines.Highlight, l.Globals().Style(lines.Default).Reverse())
 	l.Globals().SetStyle(
 		lines.Default, l.Globals().Style(lines.Default).Reverse())
 }
@@ -76,7 +76,13 @@ func (l *List) OnLayout(e *lines.Env) (reflow bool) {
 	}
 	_, _, w, h := l.ContentArea()
 	if l.len() > h {
-		l.FF.Set(lines.Scrollable)
+		if !l.FF.Has(lines.Scrollable) {
+			l.FF.Set(lines.Scrollable)
+		}
+	} else {
+		if l.FF.Has(lines.Scrollable) {
+			l.FF.Delete(lines.Scrollable)
+		}
 	}
 	if l.len() < h {
 		top, _, bottom, _ := l.GapsLen()
@@ -86,11 +92,19 @@ func (l *List) OnLayout(e *lines.Env) (reflow bool) {
 	width := l.maxWidth()
 	if width < w {
 		l.Dim().SetWidth(width)
+		reflow = true
 	}
 	if l.SelectableLiner == nil {
-		l.print(0, e)
+		l.print(e)
 	}
 	return reflow
+}
+
+func (l *List) OnFocusLost(e *lines.Env) {
+	if l.IsZero() {
+		return
+	}
+	l.LL.Focus.Reset()
 }
 
 func (c *List) maxWidth() int {
@@ -108,28 +122,10 @@ func (c *List) maxWidth() int {
 	return left + maxWdth + right
 }
 
-func (l *List) len() int {
-	if l.SelectableLiner != nil {
-		return l.SelectableLiner.Len()
-	}
-	return len(l.Items)
-}
-
-func (l *List) styler_() func(int, bool) lines.Style {
-	if l.Styler != nil {
-		return l.Styler
-	}
-	return styler(l)
-}
-
-func (l *List) print(start int, e *lines.Env) {
-	_, _, _, max := l.Dim().Printable()
-	for i, itm := range l.Items[start:] {
-		if i == max {
-			break
-		}
+func (l *List) print(e *lines.Env) {
+	for i, itm := range l.Items {
 		if l.Styler != nil {
-			fmt.Fprint(e.Sty(l.Styler(i+start, false)).LL(i), itm)
+			fmt.Fprint(e.Sty(l.Styler(i)).LL(i), itm)
 			continue
 		}
 		fmt.Fprint(e.LL(i), itm)
@@ -143,57 +139,21 @@ func (l *List) zeroPrint(e *lines.Env) {
 	fmt.Fprint(e, NoItems)
 }
 
-// styler returns default items styler closure styler.  NOTE a styler
-// call will panic outside a listener callback.
-func styler(l *List) (styler func(int, bool) lines.Style) {
-	var sty, hi lines.Style
-	hi = l.Globals().Style(lines.Default)
-	switch hi.AA() & lines.Reverse {
-	case lines.Reverse:
-		sty = hi.WithAA(hi.AA() &^ lines.Reverse)
-	default:
-		sty = hi.WithAA(hi.AA() | lines.Reverse)
-	}
-	styler = func(_ int, highlight bool) lines.Style {
-		if highlight {
-			return hi
-		}
-		return sty
-	}
-	return styler
-}
-
 // OnMove takes care of emphasizing the item hovered by the mouse
-// cursor.
+// cursor by moving the line-focus to it.
 func (l *List) OnMove(e *lines.Env, x, y int) {
 	if l.IsZero() {
 		return
 	}
-	l.setFocus(e, y)
+	l.LL.Focus.AtCoordinate(y)
 }
 
+// OnExit removes the line focus from a list.
 func (l *List) OnExit(e *lines.Env) {
 	if l.IsZero() {
 		return
 	}
-	l.setFocus(e, -1)
-}
-
-func (l *List) setFocus(e *lines.Env, idx int) {
-	if l.focus >= 0 && l.focus != idx {
-		l.resetFocus(e)
-	}
-	if idx > len(l.Items) || idx < 0 || l.focus == idx {
-		return
-	}
-	fmt.Fprint(e.Sty(l.styler_()(idx, true)).LL(idx), l.Items[idx])
-	l.focus = idx
-}
-
-func (l *List) resetFocus(e *lines.Env) {
-	itm := l.Items[l.focus]
-	fmt.Fprint(e.LL(l.focus).Sty(l.styler_()(l.focus, false)), itm)
-	l.focus = -1
+	l.LL.Focus.Reset()
 }
 
 // OnClick reports the selected menu-item if any.
@@ -204,18 +164,36 @@ func (l *List) OnClick(e *lines.Env, x, y int) {
 	l.report(e, y)
 }
 
-func (l *List) report(e *lines.Env, idx int) {
-	l.close(e.Lines)
-	l.focus = -1
-	if idx > len(l.Items) || idx < 0 {
+func (l *List) OnLineSelection(e *lines.Env, _, sl int) {
+	if l.IsZero() {
+		return
+	}
+	l.report(e, sl)
+}
+
+func (l *List) report(e *lines.Env, y int) {
+	if l.Listener == nil {
+		return
+	}
+	if y > l.len() || y < 0 {
 		l.Listener(-1)
 		return
 	}
-	l.Listener(idx)
+	l.Listener(l.First() + y)
+}
+
+func (l *List) len() int {
+	if l.SelectableLiner != nil {
+		return l.SelectableLiner.Len()
+	}
+	return len(l.Items)
 }
 
 type ModalList struct {
 	List
+
+	// close a items-layer
+	close func(*lines.Lines)
 
 	// MaxWidth is the maximum width which defaults to the list element
 	// with maximum width
@@ -229,6 +207,8 @@ type ModalList struct {
 
 // OnOutOfBoundClick closes the menu-items
 func (l *ModalList) OnOutOfBoundClick(e *lines.Env) bool {
+	l.close(e.Lines)
+	l.focus = -1
 	l.report(e, -1)
 	return false
 }
@@ -236,6 +216,9 @@ func (l *ModalList) OnOutOfBoundClick(e *lines.Env) bool {
 // OnOutOfBoundMove lets us remove the emphasis from the last emphasized
 // menu item.
 func (l *ModalList) OnOutOfBoundMove(e *lines.Env) bool {
-	l.setFocus(e, -1)
+	if l.IsZero() {
+		return false
+	}
+	l.LL.Focus.Reset()
 	return false
 }

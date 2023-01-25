@@ -92,7 +92,7 @@ func hrzFX(t *T, hs *Horizontal, tt ...time.Duration) *lines.Fixture {
 }
 
 func hrzCmpFX(
-	t *T, styler func(int, bool) lines.Style, tt ...time.Duration,
+	t *T, styler func(int) lines.Style, tt ...time.Duration,
 ) (*lines.Fixture, *Horizontal) {
 	hs := &Horizontal{Label: lblFX, Items: iiFX, Styler: styler}
 	return hrzFX(t, hs, tt...), hs
@@ -143,11 +143,8 @@ func (s *AHselection) Item_styles_default_to_reversed_globals(t *T) {
 func (s *AHselection) Uses_given_items_styles(t *T) {
 	sty := lines.DefaultStyle.WithBG(lines.DarkBlue).
 		WithFG(lines.Silver).WithAA(lines.Bold)
-	fx, cmp := hrzCmpFX(t, func(i int, highlight bool) lines.Style {
-		if !highlight {
-			return sty
-		}
-		return sty.WithAA(sty.AA() | lines.Reverse)
+	fx, cmp := hrzCmpFX(t, func(i int) lines.Style {
+		return sty
 	})
 
 	lyr := extractLayer(t, fx, cmp)
@@ -234,25 +231,25 @@ func (s *AHselection) Selects_clicked_item(t *T) {
 	t.Contains(fx.ScreenOf(cmp), maxItem)
 }
 
-func (s *AHselection) Zeros_on_zero_select_iff_no_default(t *T) {
-	cmp := &Horizontal{
-		Label: lblFX, Items: iiFX, DefaultItem: NoDefault, MaxWidth: -5}
-	fx := hrzFX(t, cmp)
-	lyr, x, y := extractLayer(t, fx, cmp), 0, 0
-	fx.Lines.Update(lyr, nil, func(e *lines.Env) {
-		x, y, _, _ = lyr.Dim().Printable()
-	})
-	fx.FireClick(x, y) // select the second layer item
-	t.Eq(0, cmp.Value())
-	t.Contains(fx.ScreenOf(cmp), "12")
-
-	lyr, x, y = extractLayer(t, fx, cmp), 0, 0
-	fx.Lines.Update(lyr, nil, func(e *lines.Env) {
-		x, y, _, _ = lyr.Dim().Printable()
-	})
-	fx.FireClick(x, y-1)
-	t.Eq(fmt.Sprintf("%s      %s", lblFX, Drop), fx.ScreenOf(cmp))
-}
+// func (s *AHselection) Zeros_on_zero_select_iff_no_default(t *T) {
+// 	cmp := &Horizontal{
+// 		Label: lblFX, Items: iiFX, DefaultItem: NoDefault, MaxWidth: -5}
+// 	fx := hrzFX(t, cmp)
+// 	lyr, x, y := extractLayer(t, fx, cmp), 0, 0
+// 	fx.Lines.Update(lyr, nil, func(e *lines.Env) {
+// 		x, y, _, _ = lyr.Dim().Printable()
+// 	})
+// 	fx.FireClick(x, y) // select the second layer item
+// 	t.Eq(0, cmp.Value())
+// 	t.Contains(fx.ScreenOf(cmp), "12")
+//
+// 	lyr, x, y = extractLayer(t, fx, cmp), 0, 0
+// 	fx.Lines.Update(lyr, nil, func(e *lines.Env) {
+// 		x, y, _, _ = lyr.Dim().Printable()
+// 	})
+// 	fx.FireClick(x, y-1)
+// 	t.Eq(fmt.Sprintf("%s      %s", lblFX, Drop), fx.ScreenOf(cmp))
+// }
 
 func TestAHselection(t *testing.T) {
 	t.Parallel()

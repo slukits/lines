@@ -123,7 +123,7 @@ func (c *mouseFX) OnMouse(e *Env, bm ButtonMask, x, y int) {
 	}
 }
 
-func (c *mouseFX) OnEnter(e *Env) {
+func (c *mouseFX) OnEnter(e *Env, x, y int) {
 	c.reported.append(onEnter, 0, 0)
 }
 
