@@ -19,6 +19,13 @@ type SelectableLiner interface {
 	MaxWidth() int
 }
 
+// Styler provides style information for how to style elements of an
+// selection list.
+type Styler func(idx int) lines.Style
+
+// Highlighter maps a given style to its highlighted version.
+type Highlighter func(lines.Style) lines.Style
+
 // List holds a list of given Items or uses a given ScrollableLiner as
 // items-source.  These items are offers for selection whereas an
 // selected item is reported to given Listener.
@@ -29,11 +36,16 @@ type List struct {
 	// superseded by a scrollable liner.
 	Items []string
 
-	// Styler defines optionally the (highlighted) styles of given
-	// Items.  Note a Styler is superseded by a scrollable liner
-	// and defaults to Reversed back- and foreground as default style
-	// and to default back- and foreground as highlight-style.
+	// Styler defines optionally the styles of given Items.  Note a
+	// Styler is superseded by a selectable liner. An Item's default
+	// style is the reversed component's default style.
 	Styler Styler
+
+	// Highlighter maps optionally a given style to its highlighted
+	// version.  Note a highlighter provided by a selectable liner
+	// supersedes this highlighter.  The highlighted default style is a
+	// component's default style.
+	Highlighter Highlighter
 
 	// SelectableLiner is an alternative to define the list-elements
 	// suited for big lists or lists with sophisticated styling of their
@@ -42,6 +54,14 @@ type List struct {
 
 	// Listener is informed about a selected item
 	Listener func(int)
+
+	// MaxWidth is the number of screen columns a list instance should
+	// occupy at most without gaps
+	MaxWidth int
+
+	// MaxHeight is the number of screen lines a list instance should
+	// occupy at most without gaps
+	MaxHeight int
 
 	// focus keeps track of the menu-item which is currently hovered by
 	// the mouse pointer.
@@ -52,7 +72,7 @@ func (l *List) IsZero() bool {
 	return len(l.Items) == 0 && l.SelectableLiner == nil
 }
 
-// OnInit prints the list items to the printable area.
+// OnInit sets basic features and default styles.
 func (l *List) OnInit(e *lines.Env) {
 	l.focus = -1
 	if l.IsZero() {
@@ -62,11 +82,19 @@ func (l *List) OnInit(e *lines.Env) {
 		lines.HighlightEnabled)
 	if l.SelectableLiner != nil {
 		l.Src = &lines.ContentSource{Liner: l.SelectableLiner}
+		if _, ok := l.SelectableLiner.(lines.Highlighter); !ok {
+			if l.Highlighter != nil {
+				l.Globals().SetHighlighter(l.Highlighter)
+			}
+		}
 	}
 	l.Globals().SetStyle(
 		lines.Highlight, l.Globals().Style(lines.Default).Reverse())
 	l.Globals().SetStyle(
 		lines.Default, l.Globals().Style(lines.Default).Reverse())
+	if l.SelectableLiner == nil && l.Highlighter != nil {
+		l.Globals().SetHighlighter(l.Highlighter)
+	}
 }
 
 func (l *List) OnLayout(e *lines.Env) (reflow bool) {
@@ -75,7 +103,7 @@ func (l *List) OnLayout(e *lines.Env) (reflow bool) {
 		return
 	}
 	_, _, w, h := l.ContentArea()
-	if l.len() > h {
+	if l.maxHeight() > h {
 		if !l.FF.Has(lines.Scrollable) {
 			l.FF.Set(lines.Scrollable)
 		}
@@ -84,9 +112,9 @@ func (l *List) OnLayout(e *lines.Env) (reflow bool) {
 			l.FF.Delete(lines.Scrollable)
 		}
 	}
-	if l.len() < h {
+	if l.maxHeight() < h {
 		top, _, bottom, _ := l.GapsLen()
-		l.Dim().SetHeight(l.len() + top + bottom)
+		l.Dim().SetHeight(l.maxHeight() + top + bottom)
 		reflow = true
 	}
 	width := l.maxWidth()
@@ -105,6 +133,14 @@ func (l *List) OnFocusLost(e *lines.Env) {
 		return
 	}
 	l.LL.Focus.Reset()
+}
+
+func (l *List) maxHeight() int {
+	h := l.len()
+	if l.MaxHeight > 0 && l.MaxHeight < h {
+		return l.MaxHeight
+	}
+	return h
 }
 
 func (c *List) maxWidth() int {
@@ -165,9 +201,6 @@ func (l *List) OnClick(e *lines.Env, x, y int) {
 }
 
 func (l *List) OnLineSelection(e *lines.Env, _, sl int) {
-	if l.IsZero() {
-		return
-	}
 	l.report(e, sl)
 }
 
@@ -205,7 +238,7 @@ type ModalList struct {
 	pos *lines.LayerPos
 }
 
-// OnOutOfBoundClick closes the menu-items
+// OnOutOfBoundClick reports a zero selection.
 func (l *ModalList) OnOutOfBoundClick(e *lines.Env) bool {
 	l.close(e.Lines)
 	l.focus = -1
