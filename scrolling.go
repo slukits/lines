@@ -4,8 +4,22 @@
 
 package lines
 
+type ScrollBarDef struct {
+	AtLeft   bool
+	GapIndex int
+	Style    Style
+	Position Style
+}
+
+func DefaultScrollbarDef() ScrollBarDef {
+	return ScrollBarDef{Style: DefaultStyle.Reverse(), Position: DefaultStyle}
+}
+
 // Scroller provides a component's scrolling API.
-type Scroller struct{ c *Component }
+type Scroller struct {
+	c   *Component
+	Bar bool
+}
 
 // IsAtTop returns true if the first screen line is the first component
 // line.
@@ -15,21 +29,6 @@ func (s Scroller) IsAtTop() bool { return s.c.First() == 0 }
 // component's last line.
 func (s Scroller) IsAtBottom() bool {
 	return s.c.First()+s.c.ContentScreenLines() >= s.c.Len()
-}
-
-// CoordinateToIndex maps a y-coordinate relative to the components
-// origin to its line index taking potential scrolling offsets into
-// account.
-func (s Scroller) CoordinateToIndex(y int) (line int) {
-	if s.c.First() == 0 {
-		return y
-	}
-	// TODO: add error handling
-	if s.c.First()+y >= s.c.Len() {
-		return s.c.Len() - 1
-	}
-
-	return s.c.First() + y
 }
 
 // Up scrolls one page up.  Whereas "one page" is in case of a component
@@ -56,7 +55,7 @@ func (s Scroller) Up() {
 }
 
 // ToTop scrolls a component's content to its first line, i.e. the first
-// screen line is the first component line.
+// screen line displays the first component line.
 func (s Scroller) ToTop() { s.c.setFirst(0) }
 
 // ToBottom scrolls to the index that the last screen line displays the
@@ -116,4 +115,77 @@ func (s Scroller) To(idx int) {
 	for idx >= s.c.First()+height {
 		s.Down()
 	}
+}
+
+func (s Scroller) scrollBarGap(c *component) (
+	w *GapWriter, sbd ScrollBarDef, ww *GapsWriter,
+) {
+	sbd = c.globals().ScrollBarDef()
+	if c.gaps == nil {
+		c.gaps = newGaps(c.gg.Style(Default))
+	}
+	ww = newGapsWriter(sbd.GapIndex, c.gaps)
+	if sbd.AtLeft {
+		return ww.Left, sbd, ww
+	}
+	return ww.Right, sbd, ww
+}
+
+func (s Scroller) setScrollBar(pos int, c *component) {
+	gw, sbd, _ := s.scrollBarGap(c)
+	if pos == -1 {
+		Print(gw.Sty(sbd.Style).At(0).Filling(), ' ')
+		return
+	}
+	if pos == 0 {
+		Print(gw.At(0).Sty(sbd.Position), ' ')
+		Print(gw.At(1).Sty(sbd.Style).Filling(), ' ')
+		return
+	}
+	if pos+1 >= c.ContentScreenLines() {
+		Print(gw.At(0).Sty(sbd.Style).Filling(), ' ')
+		Print(gw.At(c.ContentScreenLines()-1).Sty(sbd.Position), ' ')
+		return
+	}
+	Print(gw.At(0).Sty(sbd.Style).Filling(), ' ')
+	Print(gw.At(pos).Sty(sbd.Position), ' ')
+	Print(gw.At(pos+1).Sty(sbd.Style).Filling(), ' ')
+}
+
+func (s Scroller) updateBar() {
+	if !s.Bar {
+		return
+	}
+	c := s.c.layoutCmp.wrapped()
+	if c.ContentScreenLines() >= c.Len() {
+		s.setScrollBar(-1, c)
+		return
+	}
+	if c.First() == 0 {
+		s.setScrollBar(0, c)
+		return
+	}
+	if c.First()+c.ContentScreenLines() >= c.Len() {
+		s.setScrollBar(c.ContentScreenLines()-1, c)
+		return
+	}
+	s.setScrollBar(
+		(c.First()+c.ContentScreenLines()/2)/
+			(c.Len()/c.ContentScreenLines()), c)
+}
+
+func (s Scroller) BarContains(x, y int) bool {
+	top, _, bottom, _ := s.c.GapsLen()
+	if y < s.c.dim.Y()+top {
+		return false
+	}
+	if y >= s.c.dim.Y()+s.c.dim.Height()-bottom {
+		return false
+	}
+
+	sbd := s.c.globals().ScrollBarDef()
+	if !sbd.AtLeft {
+		return x == s.c.dim.X()+s.c.dim.Width()-(sbd.GapIndex+1)
+	}
+	return x == s.c.dim.X()+sbd.GapIndex
 }

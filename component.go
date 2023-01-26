@@ -53,9 +53,6 @@ type Component struct {
 	// keyboard listening.
 	Register *Listeners
 
-	// Scroll provides a component's API for scrolling.
-	Scroll *Scroller
-
 	// Edit provides a component's API to control editing its content.
 	Edit *Editor
 
@@ -121,8 +118,8 @@ func (c *Component) initialize(
 		dirty:   true,
 	}
 	c.FF = &Features{c: c}
-	c.Scroll = &Scroller{c: c}
 	c.Register = &Listeners{c: c}
+	inner.Scroll = &Scroller{c: c}
 	inner.LL = newComponentLines(c)
 	inner.gg.SetUpdateListener(cmpGlobalsClosure(inner))
 	switch userComponent.(type) {
@@ -212,15 +209,6 @@ func (c *Component) Gaps(level int) *GapsWriter {
 	return newGapsWriter(level, c.gaps)
 }
 
-// GapsLen returns the numbers of lines/columns a gap at the top, right,
-// bottom and left consumes.  Note a gap must have been written in
-// order to be created.  I.e. if gaps are written at OnLayout and
-// gaps-lengths are queried in OnAfterInit then these lengths might not
-// be what is expected.
-func (c *Component) GapsLen() (top, right, bottom, left int) {
-	return c.gaps.Len()
-}
-
 // Globals provides access to the API for manipulating component c
 // specific globally inherited properties like tab-width.  Note to
 // change such a property globally use the [Lines]-instance ll which
@@ -264,6 +252,9 @@ type component struct {
 	// the content of component lines use an Env(ironment) instance of a
 	// reported event.
 	LL *ComponentLines
+
+	// Scroll provides a component's API for scrolling.
+	Scroll *Scroller
 
 	lst                *listeners
 	ff                 *features

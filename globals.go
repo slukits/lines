@@ -41,14 +41,15 @@ type globaler interface{ globals() *globals }
 
 // globals represents setup/behavior for a component's lines.
 type globals struct {
-	scr         *screen
-	tabWidth    int
-	ss          map[StyleType]Style
-	updated     globalsUpdates
-	ssUpdated   map[StyleType]globalStyleUpdates
-	onUpdate    func(globalsUpdates, StyleType, globalStyleUpdates)
-	propagation func(func(globaler))
-	highlighter func(Style) Style
+	scr          *screen
+	tabWidth     int
+	ss           map[StyleType]Style
+	updated      globalsUpdates
+	ssUpdated    map[StyleType]globalStyleUpdates
+	onUpdate     func(globalsUpdates, StyleType, globalStyleUpdates)
+	propagation  func(func(globaler))
+	highlighter  func(Style) Style
+	scrollBarDef ScrollBarDef
 }
 
 func newGlobals(propagation func(func(globaler))) *globals {
@@ -58,7 +59,8 @@ func newGlobals(propagation func(func(globaler))) *globals {
 			Default:   DefaultStyle,
 			Highlight: DefaultStyle.WithAA(Reverse),
 		},
-		propagation: propagation,
+		scrollBarDef: DefaultScrollbarDef(),
+		propagation:  propagation,
 	}
 	gg.highlighter = defaultHighlighter(gg)
 	return gg
@@ -68,9 +70,10 @@ func newGlobals(propagation func(func(globaler))) *globals {
 // updated and ssUpdated properties.
 func (gg *globals) clone() *globals {
 	cpy := &globals{
-		scr:      gg.scr,
-		tabWidth: gg.tabWidth,
-		ss:       map[StyleType]Style{},
+		scr:          gg.scr,
+		tabWidth:     gg.tabWidth,
+		ss:           map[StyleType]Style{},
+		scrollBarDef: gg.scrollBarDef,
 	}
 	cpy.highlighter = defaultHighlighter(cpy)
 	for k, v := range gg.ss {
@@ -86,6 +89,8 @@ func (gg *globals) setCursor(line, column int, cs ...CursorStyle) {
 	gg.scr.setCursor(column, line, cs...)
 }
 
+// SetUpdateListener stores given function which is called in case a
+// globals property is updated informing about what was updated.
 func (gg *globals) SetUpdateListener(
 	l func(globalsUpdates, StyleType, globalStyleUpdates),
 ) *globals {
@@ -93,6 +98,10 @@ func (gg *globals) SetUpdateListener(
 	return gg
 }
 
+// SetHighlighter sets the function which is used to highlight a focused
+// line.  It does so either globally with propagation or component
+// local.  In the later case further global Highlighter updates are
+// ignored by that component.
 func (gg *globals) SetHighlighter(h func(Style) Style) *globals {
 	if h == nil {
 		return gg.setDefaultHighlighter()
@@ -167,9 +176,10 @@ func (gg *globals) Highlight(s Style) Style {
 // TabWidth returns the currently set tab-width in given globals gg.
 func (gg *globals) TabWidth() int { return gg.tabWidth }
 
-// SetTabWidth sets given width w as tab-width and propagates the change
-// if propagation is set and returns given globals gg.  SetTabWidth is
-// an no-op if w not positive.
+// SetTabWidth sets given width w as tab-width globally with propagation
+// or component local.  In the later case future global tab-width
+// updates are ignored by that component.  SetTabWidth is an no-op if w
+// not positive.
 func (gg *globals) SetTabWidth(w int) *globals {
 	if w <= 0 {
 		return gg
@@ -197,6 +207,42 @@ func (gg *globals) prpTabWidth(w int) {
 	gg.tabWidth = w
 	if gg.onUpdate != nil {
 		gg.onUpdate(globalTabWidth, 0, 0)
+	}
+}
+
+// ScrollBarDef returns the default definition for a component's scroll
+// bar.
+func (gg *globals) ScrollBarDef() ScrollBarDef {
+	return gg.scrollBarDef
+}
+
+// SetScrollBarDef sets the scrollbar definition either globally with
+// propagation or component local.  In the later case future global
+// scrollbar definition updates are ignored by that component.
+func (gg *globals) SetScrollBarDef(sbd ScrollBarDef) *globals {
+	gg.scrollBarDef = sbd
+	if gg.updated&globalScrollBarDef == 0 {
+		gg.updated |= globalScrollBarDef
+	}
+	if gg.onUpdate != nil {
+		gg.onUpdate(globalScrollBarDef, 0, 0)
+	}
+	if gg.propagation == nil {
+		return gg
+	}
+	gg.propagation(func(g globaler) {
+		g.globals().prpScrollBarDef(sbd)
+	})
+	return gg
+}
+
+func (gg *globals) prpScrollBarDef(sbd ScrollBarDef) {
+	if gg.updated&globalScrollBarDef != 0 {
+		return
+	}
+	gg.scrollBarDef = sbd
+	if gg.onUpdate != nil {
+		gg.onUpdate(globalScrollBarDef, 0, 0)
 	}
 }
 
@@ -448,6 +494,7 @@ const (
 	globalTabWidth globalsUpdates = 1 << iota
 	globalFmt
 	globalHighlighter
+	globalScrollBarDef
 )
 
 type globalStyleUpdates uint8

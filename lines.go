@@ -298,6 +298,14 @@ func (ll *Lines) WaitForQuit() { ll.backend.WaitForQuit() }
 // either to given listener if not nil or to given componenter if given
 // listener is nil.  Given data will be provided by the reported Update
 // event.  Update is a no-op if componenter and listener are nil.
+//
+// Note if Update is used in a test to retrieve component properties
+// which may be only retrieved in a listener callback then you can not
+// cancel the test-run inside the listener.  "FatalNow" and friends
+// must be only called in the go-routine of the test but the
+// Update-listener callback during testing is done from the go-routine
+// which is running the event-loop and which is different from the
+// go-routine running the test.
 func (ll *Lines) Update(
 	cmp Componenter, data interface{}, l Listener,
 ) error {

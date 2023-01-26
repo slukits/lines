@@ -189,7 +189,7 @@ func (s *_gaps) Prints_reset_gap_filling(t *T) {
 	tt, cmp := s.fx(t, func(c *icmpFX, e *Env) {
 		c.Dim().SetWidth(4).SetHeight(1)
 	})
-	exp := " -- "
+	exp := "----" // no corners if no other gaps
 
 	tt.Lines.Update(tt.Root(), nil, func(e *Env) {
 		Print(cmp.Gaps(0).Top.At(0).Filling(), '-')
@@ -197,7 +197,7 @@ func (s *_gaps) Prints_reset_gap_filling(t *T) {
 
 	t.Eq(exp, tt.ScreenOf(cmp))
 
-	exp = " -  "
+	exp = "-   "
 	tt.Lines.Update(tt.Root(), nil, func(e *Env) {
 		fmt.Fprint(cmp.Gaps(0).Top, "-")
 	})
@@ -271,7 +271,7 @@ func (s *_gaps) At_prints_reset_gap_filling(t *T) {
 	tt, cmp := s.fx(t, func(c *icmpFX, e *Env) {
 		c.Dim().SetWidth(4).SetHeight(1)
 	})
-	exp := " -- "
+	exp := "----"
 
 	tt.Lines.Update(tt.Root(), nil, func(e *Env) {
 		Print(cmp.Gaps(0).Top.At(0).Filling(), '-')
@@ -279,7 +279,7 @@ func (s *_gaps) At_prints_reset_gap_filling(t *T) {
 
 	t.Eq(exp, tt.ScreenOf(cmp))
 
-	exp = " -  "
+	exp = "-   "
 	tt.Lines.Update(tt.Root(), nil, func(e *Env) {
 		Print(cmp.Gaps(0).Top.At(0), '-')
 	})
@@ -290,7 +290,7 @@ func (s *_gaps) Filles_from_given_position_on(t *T) {
 	tt, cmp := s.fx(t, func(c *icmpFX, e *Env) {
 		c.Dim().SetWidth(9).SetHeight(1)
 	})
-	exp, fx := " --top-- ", []rune("top")
+	exp, fx := "---top---", []rune("top")
 
 	tt.Lines.Update(cmp, nil, func(e *Env) {
 		Print(cmp.Gaps(0).Top.At(0).Filling(), '-')
@@ -403,7 +403,7 @@ func (s *_gaps) Have_set_writer_style_in_full_gap_line(t *T) {
 		fmt.Fprint(cmp.Gaps(0).Top.AA(Bold).FG(Yellow).BG(Blue), "top")
 	}))
 	cc := tt.CellsOf(cmp)[0]
-	t.Eq(" top     ", cc)
+	t.Eq("top      ", cc)
 	exp := (Style{}).WithAA(Bold).WithFG(Yellow).WithBG(Blue)
 	for _, c := range cc[1 : len(cc)-1] {
 		t.Eq(c.Style, exp)
@@ -423,7 +423,7 @@ func (s *_gaps) Have_set_at_writer_style(t *T) {
 			AA(Bold).FG(Yellow).BG(Blue), '-')
 	})
 
-	t.Eq(" --top-- ", tt.CellsOf(cmp)[0])
+	t.Eq("---top---", tt.CellsOf(cmp)[0])
 	frame := (Style{}).WithAA(Bold).WithFG(Yellow).WithBG(Blue)
 	title := NewStyle(Blink, Blue, Yellow)
 	for _, c := range tt.CellsOf(cmp)[0] {

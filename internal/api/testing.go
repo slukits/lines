@@ -229,6 +229,19 @@ func (l CellsLine) indentWidth() (int, int) {
 // reported screen area.
 type CellsScreen []CellsLine
 
+// Column returns a column of test-cells from the test screen or nil iff
+// the cells-screen cs is zero or given column i doesnt exist.
+func (cs CellsScreen) Column(i int) []TestCell {
+	if len(cs) == 0 || len(cs[0]) <= i || i < 0 {
+		return nil
+	}
+	c := make([]TestCell, len(cs))
+	for j, l := range cs {
+		c[j] = l[i]
+	}
+	return c
+}
+
 // String returns a string representation of given screen cells cs.
 func (cs CellsScreen) String() string {
 	ll := []string{}

@@ -45,9 +45,10 @@ func (c *component) Sty(s Style) *component {
 	return c
 }
 
-// Len returns the number of lines currently maintained by a component.
-// Note the number of component lines is independent of a component's
-// available screen lines.
+// Len returns the number of lines currently maintained by a component
+// either through its own set of lines or through a source's Liner set
+// of lines.  Note the number of component lines is independent of a
+// component's available screen lines.
 func (c *component) Len() int {
 	if c.Src != nil {
 		if sl, ok := c.Src.Liner.(ScrollableLiner); ok {
@@ -174,6 +175,7 @@ func (c *component) sync(rw runeWriter) {
 		n.sync(rw)
 		return false
 	})
+	c.Scroll.updateBar()
 }
 
 func (c *component) syncContent(rw runeWriter) {
@@ -271,7 +273,19 @@ func (c *component) ContentScreenLines() int {
 	if c.gaps == nil {
 		return sh
 	}
+	if sh == 0 {
+		return 0
+	}
 	return sh - (len(c.gaps.top.ll) + len(c.gaps.bottom.ll))
+}
+
+// GapsLen returns the numbers of lines/columns a gap at the top, right,
+// bottom and left consumes.  Note a gap must have been written in
+// order to be created.  I.e. if gaps are written at OnLayout and
+// gaps-lengths are queried in OnAfterInit then these lengths might not
+// be what is expected.
+func (c *component) GapsLen() (top, right, bottom, left int) {
+	return c.gaps.Len()
 }
 
 // setFirst sets the first displayed line and in case it changes given

@@ -465,31 +465,32 @@ func (s *ASourcedComponent) Scrolls_inside_its_gaps(t *T) {
 	cmp := &srcFX{cmpFX: cmpFX{gaps: true, onInit: func(c *cmpFX, e *Env) {
 		c.Src = &ContentSource{Liner: &focusableLinerFX{}}
 	}}}
-	fx := fx(t, cmp)
+	fx := fx(t, cmp, 20*time.Minute)
 	fx.FireResize(5, 3)
-	exp := "•••••\n•1st•\n•••••"
-	t.Eq(exp, fx.Screen())
+	t.Eq("•••••\n•1st•\n•••••", fx.Screen())
 
-	scrollTest := func(scroll func(), exp string) {
-		fx.Lines.Update(cmp, nil, func(e *Env) {
-			scroll()
-		})
-		t.Eq(exp, fx.Screen())
-	}
-	scrollTest(cmp.Scroll.Down, "•••••\n•2nd•\n•••••")
-	scrollTest(cmp.Scroll.Down, "•••••\n•3rd•\n•••••")
-	scrollTest(cmp.Scroll.Up, "•••••\n•2nd•\n•••••")
-	scrollTest(cmp.Scroll.ToTop, "•••••\n•1st•\n•••••")
-	scrollTest(cmp.Scroll.ToBottom, "•••••\n•8th•\n•••••")
+	fx.Lines.Update(cmp, nil, func(e *Env) { cmp.Scroll.Down() })
+	t.Eq("•••••\n•2nd•\n•••••", fx.Screen())
+	fx.Lines.Update(cmp, nil, func(e *Env) { cmp.Scroll.Down() })
+	t.Eq("•••••\n•3rd•\n•••••", fx.Screen())
+	fx.Lines.Update(cmp, nil, func(e *Env) { cmp.Scroll.Up() })
+	t.Eq("•••••\n•2nd•\n•••••", fx.Screen())
+	fx.Lines.Update(cmp, nil, func(e *Env) { cmp.Scroll.ToTop() })
+	t.Eq("•••••\n•1st•\n•••••", fx.Screen())
+	fx.Lines.Update(cmp, nil, func(e *Env) { cmp.Scroll.ToBottom() })
+	t.Eq("•••••\n•8th•\n•••••", fx.Screen())
 
 	fx.FireResize(5, 5)
-	exp = "•••••\n•6th•\n•7th•\n•8th•\n•••••"
-	t.Eq(exp, fx.Screen())
+	t.Eq("•••••\n•6th•\n•7th•\n•8th•\n•••••", fx.Screen())
 
-	scrollTest(cmp.Scroll.Up, "•••••\n•4th•\n•5th•\n•6th•\n•••••")
-	scrollTest(cmp.Scroll.Up, "•••••\n•2nd•\n•3rd•\n•4th•\n•••••")
-	scrollTest(cmp.Scroll.ToBottom, "•••••\n•6th•\n•7th•\n•8th•\n•••••")
-	scrollTest(cmp.Scroll.ToTop, "•••••\n•1st•\n•2nd•\n•3rd•\n•••••")
+	fx.Lines.Update(cmp, nil, func(e *Env) { cmp.Scroll.Up() })
+	t.Eq("•••••\n•4th•\n•5th•\n•6th•\n•••••", fx.Screen())
+	fx.Lines.Update(cmp, nil, func(e *Env) { cmp.Scroll.Up() })
+	t.Eq("•••••\n•2nd•\n•3rd•\n•4th•\n•••••", fx.Screen())
+	fx.Lines.Update(cmp, nil, func(e *Env) { cmp.Scroll.ToBottom() })
+	t.Eq("•••••\n•6th•\n•7th•\n•8th•\n•••••", fx.Screen())
+	fx.Lines.Update(cmp, nil, func(e *Env) { cmp.Scroll.ToTop() })
+	t.Eq("•••••\n•1st•\n•2nd•\n•3rd•\n•••••", fx.Screen())
 }
 
 func (s *ASourcedComponent) Scrolls_to_next_focusable_within_gaps(
