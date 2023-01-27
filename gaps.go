@@ -54,7 +54,7 @@ func (gg *gaps) forStyler(cb func(styler)) {
 // sync writes the gaps into given area and returns an area reduced by
 // gaps.
 func (gg *gaps) sync(
-	x, y, width, height int, w runeWriter, ggl *globals,
+	x, y, width, height int, w runeWriter, ggl *Globals,
 ) {
 	gglSty := ggl.Style(Default)
 	gg.topLeft.sync(x, y, width, height, w, gglSty)
@@ -68,7 +68,7 @@ func (gg *gaps) sync(
 }
 
 func (gg *gaps) syncTop(
-	x, y, width, height int, rw runeWriter, ggl *globals,
+	x, y, width, height int, rw runeWriter, ggl *Globals,
 ) int {
 	for i, l := range gg.top.ll {
 		if width <= 0 || i == height {
@@ -87,7 +87,7 @@ func (gg *gaps) syncTop(
 }
 
 func (gg *gaps) syncBottom(
-	x, y, width, height int, rw runeWriter, ggl *globals,
+	x, y, width, height int, rw runeWriter, ggl *Globals,
 ) int {
 	for i, l := range gg.bottom.ll {
 		if width <= 0 || i == height {
@@ -106,7 +106,7 @@ func (gg *gaps) syncBottom(
 }
 
 func (gg *gaps) syncLeft(
-	x, y, width, height int, rw runeWriter, ggl *globals,
+	x, y, width, height int, rw runeWriter, ggl *Globals,
 ) int {
 	for i, l := range gg.left.ll {
 		if height <= 0 || i == width {
@@ -125,7 +125,7 @@ func (gg *gaps) syncLeft(
 }
 
 func (gg *gaps) syncRight(
-	x, y, width, height int, rw runeWriter, ggl *globals,
+	x, y, width, height int, rw runeWriter, ggl *Globals,
 ) int {
 	for i, l := range gg.right.ll {
 		if height <= 0 || i == width {

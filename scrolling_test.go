@@ -183,6 +183,35 @@ func (s *AScrollBar) Knows_its_containing_coordinates(t *T) {
 	})
 }
 
+func (s *AScrollBar) Scrolls_down_on_a_left_click(t *T) {
+	cmp := &cmpFX{
+		onInit: func(c *cmpFX, e *Env) {
+			c.FF.Set(Scrollable)
+			c.Scroll.Bar = true
+			Print(c.Gaps(0).Top.At(0).Filling(), ' ')
+			fmt.Fprint(e, "1st\n2nd\n3rd\n4th\n5th\n6th")
+		}}
+	fx := fx(t, cmp).FireResize(4, 4)
+	t.Eq("    \n1st \n2nd \n3rd ", fx.Screen())
+	fx.FireClick(3, 1)
+	t.Eq("    \n3rd \n4th \n5th ", fx.Screen())
+}
+
+func (s *AScrollBar) Scrolls_up_on_a_right_click(t *T) {
+	cmp := &cmpFX{
+		onInit: func(c *cmpFX, e *Env) {
+			c.FF.Set(Scrollable)
+			c.Scroll.Bar = true
+			Print(c.Gaps(0).Top.At(0).Filling(), ' ')
+			fmt.Fprint(e, "1st\n2nd\n3rd\n4th\n5th\n6th")
+		}}
+	fx := fx(t, cmp).FireResize(4, 4)
+	fx.Scroll.ToBottom(cmp)
+	t.Eq("    \n4th \n5th \n6th ", fx.Screen())
+	fx.FireContext(3, 1)
+	t.Eq("    \n2nd \n3rd \n4th ", fx.Screen())
+}
+
 func TestAScrollBar(t *testing.T) {
 	t.Parallel()
 	Run(&AScrollBar{}, t)

@@ -175,6 +175,9 @@ func (s Scroller) updateBar() {
 }
 
 func (s Scroller) BarContains(x, y int) bool {
+	if s.c == nil || s.c.gaps == nil {
+		return false
+	}
 	top, _, bottom, _ := s.c.GapsLen()
 	if y < s.c.dim.Y()+top {
 		return false

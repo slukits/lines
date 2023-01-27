@@ -62,7 +62,7 @@ type Env struct {
 }
 
 type cmpWriter interface {
-	globals() *globals
+	globals() *Globals
 	write(lines []byte, at, cell int, sty *Style) (int, error)
 	writeAt(rr []rune, at, cell int, sty *Style)
 	writeAtFilling(r rune, at, cell int, sty *Style)

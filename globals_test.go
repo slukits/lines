@@ -26,9 +26,9 @@ func (*_globals) Ignore_non_positive_tab_width_update(t *T) {
 	t.Eq(4, gg.TabWidth())
 }
 
-type globalsFX struct{ gg *globals }
+type globalsFX struct{ gg *Globals }
 
-func (gg *globalsFX) globals() *globals { return gg.gg }
+func (gg *globalsFX) globals() *Globals { return gg.gg }
 
 func (*_globals) Propagate_updated_tab_width(t *T) {
 	var g1, g2 globaler
@@ -85,7 +85,7 @@ func (*_globals) Report_a_tab_width_update_through_propagation(t *T) {
 func (*_globals) Default_styles_defaults_to_default_style(t *T) {
 	gg := newGlobals(nil)
 	t.Eq(DefaultStyle, gg.Style(Default))
-	gg = &globals{}
+	gg = &Globals{}
 	t.Eq(DefaultStyle.AA(), gg.AA(Default))
 	t.Eq(DefaultStyle.FG(), gg.FG(Default))
 	t.Eq(DefaultStyle.BG(), gg.BG(Default))

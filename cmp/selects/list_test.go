@@ -381,16 +381,21 @@ func (s *AList) Removes_line_focus_on_focus_lost(t *T) {
 func (s *AList) Reports_clicked_list_item(t *T) {
 	reported := -1
 	cmp := &List{
-		Items:    []string{"12", "1234", "123"},
-		Listener: func(i int) { reported = i },
+		Items: []string{"12", "1234", "123"},
+		Listener: &fx.Cmp{
+			ONUpdate: func(c *fx.Cmp, e *lines.Env, i interface{}) {
+				reported = int(i.(Value))
+			}},
 	}
-	fx := fx.New(t, cmp)
+	fx_ := fx.New(t, (&fx.Chaining{}).Set(
+		cmp, cmp.Listener.(lines.Componenter)))
 	x, y := 0, 0
-	fx.Lines.Update(cmp, nil, func(e *lines.Env) {
+	fx_.Lines.Update(cmp, nil, func(e *lines.Env) {
 		x, y, _, _ = cmp.Dim().Printable()
 	})
 
-	fx.FireClick(x, y) // select the first item
+	fx_.FireClick(x, y) // select the first item
+	t.Eq(1, cmp.Listener.(*fx.Cmp).N(fx.NUpdate))
 	t.Eq(0, reported)
 }
 
@@ -415,11 +420,16 @@ func (s *AList) Reports_clicked_liner_item(t *T) {
 func (s *AList) Reports_selected_list_item(t *T) {
 	reported := -1
 	cmp := &List{
-		Items:    []string{"12", "1234", "123"},
-		Listener: func(i int) { reported = i },
+		Items: []string{"12", "1234", "123"},
+		Listener: &fx.Cmp{
+			ONUpdate: func(c *fx.Cmp, e *lines.Env, i interface{}) {
+				reported = int(i.(Value))
+			}},
 	}
-	fx := fx.New(t, cmp)
-	fx.FireKeys(lines.Down, lines.Enter)
+	fx_ := fx.New(t, (&fx.Chaining{}).Set(
+		cmp, cmp.Listener.(lines.Componenter)))
+	fx_.Lines.Focus(fx_.Root().(*fx.Chaining).CC[0])
+	fx_.FireKeys(lines.Down, lines.Enter)
 	t.Eq(0, reported)
 }
 

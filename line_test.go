@@ -16,7 +16,7 @@ type lineFX struct {
 	api.Displayer
 	Line
 	w, h int
-	gg   *globals
+	gg   *Globals
 }
 
 func (x *lineFX) width() int {

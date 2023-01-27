@@ -204,7 +204,8 @@ func (s *Mouse) SetUp(t *T) { t.Parallel() }
 func (s *Mouse) Move_is_reported_to_focused_component(t *T) {
 	cmp := &mouseCmpFX{}
 	fx := fx(t, cmp)
-	fx.FireMove(1, 1)
+	// we need the first move to 0/0 to not only get OnEnter
+	fx.FireMove(1, 1, 0, 0)
 	t.True(cmp.HasMove())
 }
 

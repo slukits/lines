@@ -37,10 +37,10 @@ const (
 	Highlight
 )
 
-type globaler interface{ globals() *globals }
+type globaler interface{ globals() *Globals }
 
-// globals represents setup/behavior for a component's lines.
-type globals struct {
+// Globals represents setup/behavior for a component's lines.
+type Globals struct {
 	scr          *screen
 	tabWidth     int
 	ss           map[StyleType]Style
@@ -52,8 +52,8 @@ type globals struct {
 	scrollBarDef ScrollBarDef
 }
 
-func newGlobals(propagation func(func(globaler))) *globals {
-	gg := &globals{
+func newGlobals(propagation func(func(globaler))) *Globals {
+	gg := &Globals{
 		tabWidth: 4,
 		ss: map[StyleType]Style{
 			Default:   DefaultStyle,
@@ -68,8 +68,8 @@ func newGlobals(propagation func(func(globaler))) *globals {
 
 // clone makes a copy of given globals gg without the propagation,
 // updated and ssUpdated properties.
-func (gg *globals) clone() *globals {
-	cpy := &globals{
+func (gg *Globals) clone() *Globals {
+	cpy := &Globals{
 		scr:          gg.scr,
 		tabWidth:     gg.tabWidth,
 		ss:           map[StyleType]Style{},
@@ -85,15 +85,15 @@ func (gg *globals) clone() *globals {
 // setCursor sets the cursor in a components given line at given column.
 // Note setCursor's arguments are passed through to screen.setCursor
 // whereas column becomes the x- and line the y-coordinate.
-func (gg *globals) setCursor(line, column int, cs ...CursorStyle) {
+func (gg *Globals) setCursor(line, column int, cs ...CursorStyle) {
 	gg.scr.setCursor(column, line, cs...)
 }
 
 // SetUpdateListener stores given function which is called in case a
 // globals property is updated informing about what was updated.
-func (gg *globals) SetUpdateListener(
+func (gg *Globals) SetUpdateListener(
 	l func(globalsUpdates, StyleType, globalStyleUpdates),
-) *globals {
+) *Globals {
 	gg.onUpdate = l
 	return gg
 }
@@ -102,7 +102,7 @@ func (gg *globals) SetUpdateListener(
 // line.  It does so either globally with propagation or component
 // local.  In the later case further global Highlighter updates are
 // ignored by that component.
-func (gg *globals) SetHighlighter(h func(Style) Style) *globals {
+func (gg *Globals) SetHighlighter(h func(Style) Style) *Globals {
 	if h == nil {
 		return gg.setDefaultHighlighter()
 	}
@@ -122,7 +122,7 @@ func (gg *globals) SetHighlighter(h func(Style) Style) *globals {
 	return gg
 }
 
-func (gg *globals) setDefaultHighlighter() *globals {
+func (gg *Globals) setDefaultHighlighter() *Globals {
 	gg.highlighter = defaultHighlighter(gg)
 	if gg.updated&globalHighlighter == 0 {
 		gg.updated |= globalHighlighter
@@ -139,7 +139,7 @@ func (gg *globals) setDefaultHighlighter() *globals {
 	return gg
 }
 
-func defaultHighlighter(gg *globals) func(s Style) Style {
+func defaultHighlighter(gg *Globals) func(s Style) Style {
 	return func(s Style) Style {
 		h := gg.Style(Highlight)
 		if h.AA() != 0 {
@@ -159,7 +159,7 @@ func defaultHighlighter(gg *globals) func(s Style) Style {
 	}
 }
 
-func (gg *globals) prpHighlighter(h func(Style) Style) {
+func (gg *Globals) prpHighlighter(h func(Style) Style) {
 	if gg.updated&globalHighlighter != 0 {
 		return
 	}
@@ -169,18 +169,18 @@ func (gg *globals) prpHighlighter(h func(Style) Style) {
 	}
 }
 
-func (gg *globals) Highlight(s Style) Style {
+func (gg *Globals) Highlight(s Style) Style {
 	return gg.highlighter(s)
 }
 
 // TabWidth returns the currently set tab-width in given globals gg.
-func (gg *globals) TabWidth() int { return gg.tabWidth }
+func (gg *Globals) TabWidth() int { return gg.tabWidth }
 
 // SetTabWidth sets given width w as tab-width globally with propagation
 // or component local.  In the later case future global tab-width
 // updates are ignored by that component.  SetTabWidth is an no-op if w
 // not positive.
-func (gg *globals) SetTabWidth(w int) *globals {
+func (gg *Globals) SetTabWidth(w int) *Globals {
 	if w <= 0 {
 		return gg
 	}
@@ -200,7 +200,7 @@ func (gg *globals) SetTabWidth(w int) *globals {
 	return gg
 }
 
-func (gg *globals) prpTabWidth(w int) {
+func (gg *Globals) prpTabWidth(w int) {
 	if gg.updated&globalTabWidth != 0 {
 		return
 	}
@@ -212,14 +212,14 @@ func (gg *globals) prpTabWidth(w int) {
 
 // ScrollBarDef returns the default definition for a component's scroll
 // bar.
-func (gg *globals) ScrollBarDef() ScrollBarDef {
+func (gg *Globals) ScrollBarDef() ScrollBarDef {
 	return gg.scrollBarDef
 }
 
 // SetScrollBarDef sets the scrollbar definition either globally with
 // propagation or component local.  In the later case future global
 // scrollbar definition updates are ignored by that component.
-func (gg *globals) SetScrollBarDef(sbd ScrollBarDef) *globals {
+func (gg *Globals) SetScrollBarDef(sbd ScrollBarDef) *Globals {
 	gg.scrollBarDef = sbd
 	if gg.updated&globalScrollBarDef == 0 {
 		gg.updated |= globalScrollBarDef
@@ -236,7 +236,7 @@ func (gg *globals) SetScrollBarDef(sbd ScrollBarDef) *globals {
 	return gg
 }
 
-func (gg *globals) prpScrollBarDef(sbd ScrollBarDef) {
+func (gg *Globals) prpScrollBarDef(sbd ScrollBarDef) {
 	if gg.updated&globalScrollBarDef != 0 {
 		return
 	}
@@ -249,7 +249,7 @@ func (gg *globals) prpScrollBarDef(sbd ScrollBarDef) {
 // AA returns the style attributes mask of given style type st in given
 // globals gg.  If no style for st is found the default style's
 // attributes are returned.
-func (gg *globals) AA(st StyleType) StyleAttributeMask {
+func (gg *Globals) AA(st StyleType) StyleAttributeMask {
 	if gg.ss == nil {
 		return DefaultStyle.AA()
 	}
@@ -261,7 +261,7 @@ func (gg *globals) AA(st StyleType) StyleAttributeMask {
 
 // SetAA sets in given globals gg for given style type st given style
 // attributes aa.
-func (gg *globals) SetAA(st StyleType, aa StyleAttributeMask) *globals {
+func (gg *Globals) SetAA(st StyleType, aa StyleAttributeMask) *Globals {
 	if gg.ss == nil {
 		gg.ss = map[StyleType]Style{}
 	}
@@ -282,7 +282,7 @@ func (gg *globals) SetAA(st StyleType, aa StyleAttributeMask) *globals {
 	return gg
 }
 
-func (gg *globals) prpAA(
+func (gg *Globals) prpAA(
 	st StyleType, aa StyleAttributeMask, sty Style,
 ) {
 	if gg.ss == nil {
@@ -307,7 +307,7 @@ func (gg *globals) prpAA(
 // FG returns the foreground color of given style type st in given
 // globals gg.  If no style for st is found the default style's
 // foreground color is returned.
-func (gg *globals) FG(st StyleType) Color {
+func (gg *Globals) FG(st StyleType) Color {
 	if gg.ss == nil {
 		return DefaultStyle.FG()
 	}
@@ -319,7 +319,7 @@ func (gg *globals) FG(st StyleType) Color {
 
 // SetFG sets in given globals gg for given style type st given color c
 // as foreground color.
-func (gg *globals) SetFG(st StyleType, c Color) *globals {
+func (gg *Globals) SetFG(st StyleType, c Color) *Globals {
 	if gg.ss == nil {
 		gg.ss = map[StyleType]Style{}
 	}
@@ -340,7 +340,7 @@ func (gg *globals) SetFG(st StyleType, c Color) *globals {
 	return gg
 }
 
-func (gg *globals) prpFG(st StyleType, c Color, sty Style) {
+func (gg *Globals) prpFG(st StyleType, c Color, sty Style) {
 	if gg.ss == nil {
 		gg.ss = map[StyleType]Style{}
 	}
@@ -363,7 +363,7 @@ func (gg *globals) prpFG(st StyleType, c Color, sty Style) {
 // BG returns the background color of given style type st in given
 // globals gg.  If no style for st is found the default style's
 // background color is returned.
-func (gg *globals) BG(st StyleType) Color {
+func (gg *Globals) BG(st StyleType) Color {
 	if gg.ss == nil {
 		return DefaultStyle.BG()
 	}
@@ -375,7 +375,7 @@ func (gg *globals) BG(st StyleType) Color {
 
 // SetBG sets in given globals gg for given style type st given color c
 // as background color.
-func (gg *globals) SetBG(st StyleType, c Color) *globals {
+func (gg *Globals) SetBG(st StyleType, c Color) *Globals {
 	if gg.ss == nil {
 		gg.ss = map[StyleType]Style{}
 	}
@@ -396,7 +396,7 @@ func (gg *globals) SetBG(st StyleType, c Color) *globals {
 	return gg
 }
 
-func (gg *globals) prpBG(st StyleType, c Color, sty Style) {
+func (gg *Globals) prpBG(st StyleType, c Color, sty Style) {
 	if gg.ss == nil {
 		gg.ss = map[StyleType]Style{}
 	}
@@ -418,7 +418,7 @@ func (gg *globals) prpBG(st StyleType, c Color, sty Style) {
 
 // SetStyle sets in given globals gg for given style type st given style
 // sty.
-func (gg *globals) SetStyle(st StyleType, sty Style) {
+func (gg *Globals) SetStyle(st StyleType, sty Style) {
 	if gg.ss == nil {
 		gg.ss = map[StyleType]Style{}
 	}
@@ -433,7 +433,7 @@ func (gg *globals) SetStyle(st StyleType, sty Style) {
 	gg.propagation(func(g globaler) { g.globals().prpStyle(st, sty) })
 }
 
-func (gg *globals) setUpdated(st StyleType, gsu globalStyleUpdates) {
+func (gg *Globals) setUpdated(st StyleType, gsu globalStyleUpdates) {
 	if gg.ssUpdated == nil {
 		gg.ssUpdated = map[StyleType]globalStyleUpdates{}
 	}
@@ -443,7 +443,7 @@ func (gg *globals) setUpdated(st StyleType, gsu globalStyleUpdates) {
 // prpStyle merges given style sty for given style type st in to given
 // globals gg styles.  I.e. only aspects of sty which haven't been set
 // differently for gg are updated.
-func (gg *globals) prpStyle(st StyleType, sty Style) {
+func (gg *Globals) prpStyle(st StyleType, sty Style) {
 	if gg.ss == nil {
 		gg.ss = map[StyleType]Style{}
 	}
@@ -476,7 +476,7 @@ func (gg *globals) prpStyle(st StyleType, sty Style) {
 
 // Style returns set style in given globals gg for given style type st.
 // If no style is set the DefaultStyle is returned.
-func (gg *globals) Style(st StyleType) Style {
+func (gg *Globals) Style(st StyleType) Style {
 	if gg.ss == nil {
 		return DefaultStyle
 	}

@@ -9,6 +9,31 @@ import (
 	"github.com/slukits/lines/internal/lyt"
 )
 
+type Dimensions struct {
+	dim *lyt.Dim
+}
+
+// Screen returns the screen area of a component i.e. its area without
+// clippings (including margins).
+func (dd Dimensions) Screen() (x, y, width, height int) {
+	return dd.dim.Screen()
+}
+
+// Printable returns the screen area of a component it can print to i.e.
+// its area without margins and without clippings.
+func (dd Dimensions) Printable() (x, y, width, height int) {
+	return dd.dim.Printable()
+}
+
+// Width of component without margins.
+func (dd Dimensions) Width() int { return dd.dim.Width() }
+
+// Height of component without margins.
+func (dd Dimensions) Height() int { return dd.dim.Height() }
+
+// DD is a function which extracts layout information from a component.
+type DD func(Componenter) Dimensions
+
 // Layouter is implemented by components which want to be notified if
 // their layout has changed.
 type Layouter interface {
@@ -16,6 +41,22 @@ type Layouter interface {
 	// OnLayout is called after the layout manager has changed the
 	// screen area of a component.
 	OnLayout(*Env) (reflow bool)
+}
+
+// AfterLayouter is implemented by components who want to be notified
+// after all OnLayout-events have been reported and processed.
+// Typically these are components nesting other components, i.e. Stacker
+// and Chainer, who want to adjust their layout after their nested
+// components have finished their layout settings.
+type AfterLayouter interface {
+
+	// OnAfterLayout implementations are called after all OnLayout
+	// events have been reported and processed.  Since the typical
+	// use-case is to adjust the layout of stacker and chainer according
+	// to the layout of their nested components a "dimensions function"
+	// DD is passed along which allows to extract layout dimensions for
+	// an arbitrary component of the layout.
+	OnAfterLayout(*Env, DD) (reflow bool)
 }
 
 // Stacker is implemented by components which want to provide nested
@@ -91,7 +132,7 @@ type screen struct {
 	cursor  *cursor
 }
 
-func newScreen(backend api.UIer, cmp Componenter, gg *globals) *screen {
+func newScreen(backend api.UIer, cmp Componenter, gg *Globals) *screen {
 	scr := &screen{backend: backend}
 	if cmp == nil {
 		cmp = &Component{}
@@ -105,7 +146,7 @@ func newScreen(backend api.UIer, cmp Componenter, gg *globals) *screen {
 	return scr
 }
 
-func (s *screen) setRoot(c Componenter, gg *globals) {
+func (s *screen) setRoot(c Componenter, gg *Globals) {
 	if c == nil {
 		return
 	}
@@ -262,6 +303,7 @@ func (s *screen) forBubbling(
 // hardSync reflows the layout and hard-syncs every component.
 func (s *screen) hardSync(ll *Lines) {
 	s.syncReflowLayout(ll, nil)
+	s.syncAfterLayout(ll)
 	s.lyt.Root.(layoutComponenter).wrapped().hardSync(s.backend)
 	s.lyt.Layers.For(func(l *lyt.Layer) (stop bool) {
 		l.Root.(layoutComponenter).wrapped().hardSync(s.backend)
@@ -269,6 +311,27 @@ func (s *screen) hardSync(ll *Lines) {
 	})
 	s.backend.Redraw()
 	s.ensureFocus(ll)
+}
+
+func (s *screen) syncAfterLayout(ll *Lines) {
+	cntx, reflow := &rprContext{ll: ll, scr: s}, false
+	s.lyt.ForDimer(nil, func(d lyt.Dimer) (stop bool) {
+		cmp := d.(layoutComponenter).userComponent()
+		if al, ok := cmp.(AfterLayouter); ok {
+			callback(cmp, cntx, func(e *Env) {
+				reflow = al.OnAfterLayout(e, dimensionsOf)
+			})
+		}
+		return
+	})
+	if reflow {
+		s.lyt.Reflow(nil)
+	}
+}
+
+func dimensionsOf(cmp Componenter) Dimensions {
+	return Dimensions{
+		dim: cmp.embedded().layoutCmp.wrapped().dim}
 }
 
 // softSync reflows the layout and  hard-syncs every component whose

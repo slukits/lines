@@ -79,11 +79,12 @@ func (c *Horizontal) newItems() (ii *items) {
 	if ii.ii == nil {
 		ii.ii = []string{NoItems}
 	}
-	ii.listener = c.setValue
+	ii.listener = c
 	return ii
 }
 
-func (c *Horizontal) setValue(idx int) {
+func (c *Horizontal) OnUpdate(e *lines.Env, data interface{}) {
+	idx := int(data.(Value))
 	if idx == -1 && c.CC[1].(*items).hasDefault() {
 		return
 	}

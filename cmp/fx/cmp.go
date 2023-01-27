@@ -5,6 +5,7 @@
 package fx
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/slukits/lines"
@@ -35,9 +36,9 @@ const (
 // which are not nesting in any lines test.
 type Cmp struct {
 	lines.Component
-	OnInit            func(*Cmp, *lines.Env)
-	OnLayout          func(*Cmp, *lines.Env)
-	OnUpdate          func(*Cmp, *lines.Env, interface{})
+	ONInit            func(*Cmp, *lines.Env)
+	ONLayout          func(*Cmp, *lines.Env)
+	ONUpdate          func(*Cmp, *lines.Env, interface{})
 	OnFocus           func(*Cmp, *lines.Env)
 	OnFocusLost       func(*Cmp, *lines.Env)
 	OnLineFocus       func(_ *Cmp, _ *lines.Env, cIdx, sIdx int)
@@ -52,6 +53,50 @@ type Cmp struct {
 	cc                map[Counter]int
 	tt                map[Counter]time.Time
 	gaps              bool
+}
+
+func (c *Cmp) increment(cn Counter) {
+	if c.cc == nil {
+		c.cc = map[Counter]int{}
+	}
+	if c.tt == nil {
+		c.tt = map[Counter]time.Time{}
+	}
+	c.cc[cn]++
+	c.tt[cn] = time.Now()
+}
+
+func (c *Cmp) N(cn Counter) int { return c.cc[cn] }
+
+func (c *Cmp) T(cn Counter) time.Time { return c.tt[cn] }
+
+func (c *Cmp) OnInit(e *lines.Env) {
+	c.increment(NInit)
+	if c.gaps {
+		lines.Print(c.Gaps(0).Filling(), '•')
+		fmt.Fprint(c.Gaps(0).Corners, "•")
+	}
+	if c.ONInit == nil {
+		return
+	}
+	c.ONInit(c, e)
+}
+
+func (c *Cmp) OnLayout(e *lines.Env) bool {
+	c.increment(NLayout)
+	if c.ONLayout == nil {
+		return false
+	}
+	c.ONLayout(c, e)
+	return false
+}
+
+func (c *Cmp) OnUpdate(e *lines.Env, data interface{}) {
+	c.increment(NUpdate)
+	if c.ONUpdate == nil {
+		return
+	}
+	c.ONUpdate(c, e, data)
 }
 
 // Wraps a comptonenter enabling the user to inject code on certain

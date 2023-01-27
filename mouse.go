@@ -47,7 +47,7 @@ type Mover interface {
 }
 
 // Clicker is implemented by components which want to be informed about
-// a "left"-mouse click event in their "screen area".  If the clicked
+// a "left"-mouse click event in their "content area".  If the clicked
 // component, i.e. the component with the smallest layout area
 // containing the event coordinates, does not have the focus an OnFocus
 // event is reported first if and only if the clicked component has the
@@ -58,15 +58,15 @@ type Clicker interface {
 	// OnClick implementation of a component c gets "left click"-events
 	// reported which is an aggregated mouse event.  I.e. Mouser
 	// implementer will not receive a "left click" event.  x and y
-	// provide the click coordinates translated into the "screen area"
-	// (c.Dim().Rect()) of c.  This event bubbles; use e.StopBubbling()
+	// provide the click coordinates translated into the "content area"
+	// (c.ContentArea) of c.  This event bubbles; use e.StopBubbling()
 	// to suppress further bubbling.  Note e.Evt.(*lines.MouseClick).Mod
 	// provides also the modifiers information.
 	OnClick(e *Env, x, y int)
 }
 
 // Contexter is implemented by components which want to be informed
-// about a mouse "right click" event in their screen area.  If the
+// about a mouse "right click" event in their content area.  If the
 // clicked component, i.e. the component with the smallest layout area
 // containing the event coordinates, does not have the focus an OnFocus
 // event is reported first if and only if the clicked component has the
@@ -80,8 +80,8 @@ type Contexter interface {
 	// OnContext implementation of a component c gets "right click"
 	// events reported which is an aggregated mouse event.  I.e. Mouser
 	// implementer will not receive a "right click" event.  x and y
-	// provide the click coordinates translated into the "screen area"
-	// (c.Dim().Rect()) of c.  This event bubbles; use e.StopBubbling()
+	// provide the click coordinates translated into the "content area"
+	// (c.ContentArea) of c.  This event bubbles; use e.StopBubbling()
 	// to suppress further bubbling.  Note e.Evt.(*lines.MouseClick).Mod
 	// provides also the modifiers information.
 	OnContext(e *Env, x, y int)
@@ -91,6 +91,7 @@ type Contexter interface {
 // mouse movement while a button is pressed.  NOTE reported coordinates
 // are absolute coordinates.
 type Drager interface {
+
 	// OnDrag implementation of a component c gets move movement
 	// reported while a button is pressed.  Given environment provides
 	// the origin of a drag e.Evt(*lines.MouseDrag).Origin().  Reported
@@ -101,6 +102,7 @@ type Drager interface {
 // Dropper is implemented by a component which wants to be informed when
 // a (sequence of) drags ends.
 type Dropper interface {
+
 	// OnDrop implementation of a component c gets reported the absolute
 	// position where a sequence of mouse movements ended while given
 	// button was pressed.
@@ -114,7 +116,7 @@ type Mouser interface {
 
 	// OnMouse implementation of a component c gets any mouse event
 	// reported.  x and y provide the click coordinates translated into
-	// the "screen area" (c.Dim().Rect()) of c.  Mouse events bubble; use
+	// the "screen area" (c.Dim().Screen()) of c.  Mouse events bubble; use
 	// e.StopBubbling() to suppress further bubbling.  Note
 	// e.Evt.(MouseEventer).Mod() provides also the modifiers information and
 	// e.Evt.Source() provides the event object reported by the backend.

@@ -100,7 +100,7 @@ const (
 )
 
 func (c *Component) initialize(
-	userComponent Componenter, backend api.UIer, gg *globals,
+	userComponent Componenter, backend api.UIer, gg *Globals,
 ) layoutComponenter {
 
 	if c.layoutCmp != nil { // already initialized
@@ -214,7 +214,7 @@ func (c *Component) Gaps(level int) *GapsWriter {
 // change such a property globally use the [Lines]-instance ll which
 // layouts c.  ll's Globals-property provides the same Api but
 // propagates manipulations to all components of the layout.
-func (c *Component) Globals() *globals { return c.gg }
+func (c *Component) Globals() *Globals { return c.gg }
 
 // SetCursor of given component c to given line and column with
 // optionally given cursor style within c's content area.  I.e.
@@ -241,7 +241,7 @@ func (c *Component) CursorPosition() (line, column int, _ bool) {
 // component is the actual implementation of a lines-Component.
 type component struct {
 	userCmp     Componenter
-	gg          *globals
+	gg          *Globals
 	dim         *lyt.Dim
 	mod         ComponentMode
 	initialized bool
@@ -274,7 +274,7 @@ type component struct {
 // a type-switch.
 func (c *component) wrapped() *component { return c }
 
-func (c *component) globals() *globals {
+func (c *component) globals() *Globals {
 	if c == nil {
 		return nil
 	}

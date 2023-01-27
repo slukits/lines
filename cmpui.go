@@ -266,6 +266,14 @@ func (c *component) ContentArea() (x, y, w, h int) {
 		h - len(c.gaps.top.ll) - len(c.gaps.bottom.ll)
 }
 
+func (c *component) InContentArea(x, y int) bool {
+	ox, oy, w, h := c.ContentArea()
+	if x < ox || x >= ox+w || y < oy || y >= oy+h {
+		return false
+	}
+	return true
+}
+
 // ContentScreenLines returns a component c's number of screen lines
 // which are not used for gaps.
 func (c *component) ContentScreenLines() int {
@@ -285,6 +293,9 @@ func (c *component) ContentScreenLines() int {
 // gaps-lengths are queried in OnAfterInit then these lengths might not
 // be what is expected.
 func (c *component) GapsLen() (top, right, bottom, left int) {
+	if c.gaps == nil {
+		return 0, 0, 0, 0
+	}
 	return c.gaps.Len()
 }
 

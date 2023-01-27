@@ -25,6 +25,7 @@ following event interfaces with their reported event are defined:
   - [FocusLooser]: OnFocusLost(*Env) see [Lines.Focus], [Env.Focused]
   - [Updater]: OnUpdate(*Env, interface{}): see [Lines.Update]
   - [Layouter]: OnLayout(*Env) bool: after layout change
+  - [AfterLayouter]: OnAfterLayout(*Env, DD) bool: after OnLayout
   - [Keyer]: OnKey(*Env, Key, ModifierMask): special key like Esc
   - [Runer]: OnRune(*Env, rune, ModifierMask)
   - [Enterer]: OnEnter(*Env): mouse-pointer entered component
@@ -153,7 +154,7 @@ type Lines struct {
 	// Globals are properties whose changing is propagated to all its
 	// clones in components who update iff the updated property is still
 	// in sync with the origin.
-	Globals *globals
+	Globals *Globals
 }
 
 func newTerm(cmp Componenter) *Lines {
@@ -231,7 +232,7 @@ type Componenter interface {
 	// initialize sets up the embedded *component instance and wraps it
 	// together with the client-instance in a layoutComponenter which is
 	// returned.
-	initialize(Componenter, api.UIer, *globals) layoutComponenter
+	initialize(Componenter, api.UIer, *Globals) layoutComponenter
 
 	// isInitialized returns true if embedded *component was wrapped
 	// into a layout component.
@@ -246,7 +247,7 @@ type Componenter interface {
 	backend() api.UIer
 
 	// globals returns a components global properties.
-	globals() *globals
+	globals() *Globals
 }
 
 // TermKiosk returns a Lines instance like [Term] but without registered
@@ -258,7 +259,7 @@ func TermKiosk(cmp Componenter) *Lines {
 
 // SetRoot replaces currently used root component by given component.
 func (ll *Lines) SetRoot(c Componenter) error {
-	if c == nil {
+	if ll == nil || c == nil {
 		return nil
 	}
 	return ll.backend.Post(&rootEvent{
@@ -277,6 +278,18 @@ type rootEvent struct {
 func (e *rootEvent) When() time.Time { return e.when }
 
 func (e *rootEvent) Source() interface{} { return e }
+
+func (ll *Lines) Redraw() error {
+	if ll == nil {
+		return nil
+	}
+	return ll.backend.Post(&redrawEvent{when: time.Now()})
+}
+
+type redrawEvent struct{ when time.Time }
+
+func (e *redrawEvent) When() time.Time     { return e.when }
+func (e *redrawEvent) Source() interface{} { return e }
 
 // Quit posts a quit event which consequently closes given Lines
 // instance's backend and unblocks WaitForQuit.
@@ -364,6 +377,8 @@ func (ll *Lines) listen(evt api.Eventer) {
 	switch evt := evt.(type) {
 	case *rootEvent:
 		ll.scr.setRoot(evt.newRoot, ll.Globals)
+		ll.scr.hardSync(ll)
+	case *redrawEvent:
 		ll.scr.hardSync(ll)
 	case resizeEventer:
 		width, height := evt.Size()

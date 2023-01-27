@@ -10,6 +10,8 @@ import (
 	"github.com/slukits/lines"
 )
 
+type Value int
+
 // SelectableLiner is a scrollable liner which can also provide the
 // information about a preferred width for its items.
 type SelectableLiner interface {
@@ -52,8 +54,12 @@ type List struct {
 	// elements.
 	SelectableLiner SelectableLiner
 
-	// Listener is informed about a selected item
-	Listener func(int)
+	// Listener which is either a [lines.Componenter] or a function
+	// taking the item index as argument (func(int)) is informed about a
+	// selected item.  In case of an Componenter the index is to
+	// OnUpdate reported, i.e. given component must implement OnUpdate
+	// to receive the selected item index.
+	Listener interface{}
 
 	// MaxWidth is the number of screen columns a list instance should
 	// occupy at most without gaps
@@ -66,6 +72,8 @@ type List struct {
 	// focus keeps track of the menu-item which is currently hovered by
 	// the mouse pointer.
 	focus int
+
+	onLayout bool
 }
 
 func (l *List) IsZero() bool {
@@ -98,6 +106,13 @@ func (l *List) OnInit(e *lines.Env) {
 }
 
 func (l *List) OnLayout(e *lines.Env) (reflow bool) {
+
+	if l.onLayout {
+		l.onLayout = false
+		return false
+	}
+	l.onLayout = true
+
 	if l.IsZero() {
 		l.zeroPrint(e)
 		return
@@ -117,7 +132,7 @@ func (l *List) OnLayout(e *lines.Env) (reflow bool) {
 		l.Dim().SetHeight(l.maxHeight() + top + bottom)
 		reflow = true
 	}
-	width := l.maxWidth()
+	width := l.Width()
 	if width < w {
 		l.Dim().SetWidth(width)
 		reflow = true
@@ -143,7 +158,7 @@ func (l *List) maxHeight() int {
 	return h
 }
 
-func (c *List) maxWidth() int {
+func (c *List) Width() int {
 	_, right, _, left := c.GapsLen()
 	if c.SelectableLiner != nil {
 		return left + c.SelectableLiner.MaxWidth() + right
@@ -175,10 +190,20 @@ func (l *List) zeroPrint(e *lines.Env) {
 	fmt.Fprint(e, NoItems)
 }
 
+func (l *List) OnEnter(e *lines.Env, x, y int) {
+	if l.IsZero() {
+		return
+	}
+	l.LL.Focus.AtCoordinate(y)
+}
+
 // OnMove takes care of emphasizing the item hovered by the mouse
 // cursor by moving the line-focus to it.
 func (l *List) OnMove(e *lines.Env, x, y int) {
-	if l.IsZero() {
+	if l.IsZero() || x < 0 || y < 0 {
+		return
+	}
+	if l.LL.Focus.Screen() == y {
 		return
 	}
 	l.LL.Focus.AtCoordinate(y)
@@ -209,10 +234,19 @@ func (l *List) report(e *lines.Env, y int) {
 		return
 	}
 	if y > l.len() || y < 0 {
-		l.Listener(-1)
+		l.toListener(e, -1)
 		return
 	}
-	l.Listener(l.First() + y)
+	l.toListener(e, l.First()+y)
+}
+
+func (l *List) toListener(e *lines.Env, idx int) {
+	switch lst := l.Listener.(type) {
+	case func(int):
+		lst(idx)
+	case lines.Componenter:
+		e.Lines.Update(lst, Value(idx), nil)
+	}
 }
 
 func (l *List) len() int {

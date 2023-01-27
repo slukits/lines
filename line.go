@@ -373,7 +373,7 @@ type runeWriter interface {
 // sync writes given line l's expanded and styled runes at coordinates x
 // and y to the screen with given rune writer rw.  Is l wider than given
 // width w it is truncated at w.
-func (l *Line) sync(x, y, width int, rw runeWriter, gg *globals) {
+func (l *Line) sync(x, y, width int, rw runeWriter, gg *Globals) {
 	l.setClean()
 	rr, ss := l.display(width, gg)
 	for i, r := range rr {
@@ -384,7 +384,7 @@ func (l *Line) sync(x, y, width int, rw runeWriter, gg *globals) {
 	}
 }
 
-func (l *Line) vsync(x, y, height int, rw runeWriter, gg *globals) {
+func (l *Line) vsync(x, y, height int, rw runeWriter, gg *Globals) {
 	l.setClean()
 	rr, ss := l.display(height, gg)
 	for i, r := range rr {
@@ -398,7 +398,7 @@ func (l *Line) vsync(x, y, height int, rw runeWriter, gg *globals) {
 // display returns a line's calculated content depending on given width
 // and set filler as well as corresponding style ranges ready to print
 // to the screen.
-func (l *Line) display(width int, gg *globals) ([]rune, styleRanges) {
+func (l *Line) display(width int, gg *Globals) ([]rune, styleRanges) {
 	ss := l.ss.copyWithDefault(gg.Style(Default))
 	if len(l.rr) == 0 {
 		return l.displayEmpty(width, gg, ss)
@@ -422,7 +422,7 @@ func (l *Line) display(width int, gg *globals) ([]rune, styleRanges) {
 
 // displayEmpty returns width many space runes and adjust styles in case
 // given line l is highlighted.
-func (l *Line) displayEmpty(width int, g *globals, ss styleRanges) (
+func (l *Line) displayEmpty(width int, g *Globals, ss styleRanges) (
 	[]rune, styleRanges,
 ) {
 	rr := []rune(strings.Repeat(" ", width))
@@ -435,7 +435,7 @@ func (l *Line) displayEmpty(width int, g *globals, ss styleRanges) (
 // displayOverflowing trims given runes to given width and adjusts given
 // style ranges ss in case given line l is highlighted.
 func (l *Line) displayOverflowing(
-	width int, g *globals, rr []rune, ss styleRanges,
+	width int, g *Globals, rr []rune, ss styleRanges,
 ) ([]rune, styleRanges) {
 	if l.ff&(Highlighted|TrimmedHighlighted) != 0 {
 		ss = l.highlighted(rr, ss, g)
@@ -456,7 +456,7 @@ func (l *Line) displayOverflowing(
 // filler positions is taken into account by evaluating given tag count
 // tc and given globals providing the tab-width.
 func (l *Line) expandFillerAt(
-	rr []rune, width int, ss styleRanges, tc int, gg *globals,
+	rr []rune, width int, ss styleRanges, tc int, gg *Globals,
 ) ([]rune, styleRanges) {
 	fillAt := append([]int{}, l.fillAt...)
 	if tc > 0 { // adjust to tab expansion
@@ -532,7 +532,7 @@ func (l *Line) expandLeadingTabs(
 // style is applied by switching its style attributes and setting
 // non-default colors for each style range.
 func (l *Line) highlighted(
-	rr []rune, ss styleRanges, gg *globals,
+	rr []rune, ss styleRanges, gg *Globals,
 ) styleRanges {
 
 	if l.ff&TrimmedHighlighted != 0 {
@@ -550,7 +550,7 @@ func (l *Line) highlighted(
 // by the global highlight style, i.e. switching its style attributes
 // and setting non-default colors.
 func (l *Line) highlightTrimmed(
-	rr []rune, ss styleRanges, gg *globals,
+	rr []rune, ss styleRanges, gg *Globals,
 ) styleRanges {
 	tl, tr := trim(rr)
 	if tl == len(rr) {

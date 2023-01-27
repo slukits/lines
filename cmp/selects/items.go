@@ -21,7 +21,7 @@ type items struct {
 	styler Styler
 
 	// listener is updated with selected item
-	listener func(int)
+	listener lines.Componenter
 
 	maxWidth int
 
