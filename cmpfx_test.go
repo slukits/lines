@@ -289,7 +289,7 @@ func lineString(no int) string {
 	return fmt.Sprintf("%dth", no)
 }
 
-func (l *linerFX) initLines(n int) *linerFX {
+func nStrings(n int) []string {
 	if n < 0 {
 		panic("new liner fixture: negative number of lines")
 	}
@@ -297,7 +297,11 @@ func (l *linerFX) initLines(n int) *linerFX {
 	for i := 0; i < n; i++ {
 		cc = append(cc, lineString(i+1))
 	}
-	l.cc = cc
+	return cc
+}
+
+func (l *linerFX) initLines(n int) *linerFX {
+	l.cc = nStrings(n)
 	return l
 }
 

@@ -119,7 +119,7 @@ func (c *Component) initialize(
 	}
 	c.FF = &Features{c: c}
 	c.Register = &Listeners{c: c}
-	inner.Scroll = &Scroller{c: c}
+	inner.Scroll = &Scroller{c: c, bar: -1}
 	inner.LL = newComponentLines(c)
 	inner.gg.SetUpdateListener(cmpGlobalsClosure(inner))
 	switch userComponent.(type) {

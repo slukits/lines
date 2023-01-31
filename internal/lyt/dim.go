@@ -191,12 +191,14 @@ func (d *Dim) SetWidth(w int) *Dim {
 }
 
 // SetFilling makes a Dimer filling respectively sets a filling Dimer's
-// minimum width and height.  A none positive width or height is ignored.
+// minimum width and height.  A none positive width or height is
+// ignored.  Zero values turn filling of for the corresponding
+// dimension.
 func (d *Dim) SetFilling(width, height int) {
-	if width > 0 {
+	if width >= 0 {
 		d.fillsWidth = width
 	}
-	if height > 0 {
+	if height >= 0 {
 		d.fillsHeight = height
 	}
 }

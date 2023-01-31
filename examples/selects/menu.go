@@ -54,25 +54,54 @@ type menu struct {
 // OnInit sets up the vertically gapped selection List of the right hand
 // menu bar to choose from the available List-examples.
 func (c *menu) OnInit(e *lines.Env) {
-	c.Items = []string{"empty-List", "example 2", "example 3"}
+	c.Items = []string{
+		lines.Filler + "empty List" + lines.Filler,
+		lines.Filler + "simple  List" + lines.Filler,
+		lines.Filler + "scrolling List" + lines.Filler,
+		lines.Filler + "drop-down List" + lines.Filler,
+		lines.Filler + "drop-up List" + lines.Filler,
+	}
 	c.Listener = c
 	lines.Print(c.Gaps(0).Vertical.At(0).Filling(), ' ')
 	c.List.OnInit(e)
 }
 
 func (c *menu) OnUpdate(e *lines.Env, data interface{}) {
+	exp := &example{}
 	switch int(data.(selects.Value)) {
 	case 0:
-		e.Lines.Update(c.display, emptyList(), nil)
+		exp.explain = []string{
+			"The zero-list 'List{}' is",
+			"usable holding the default",
+			"zero-element 'no items'",
+		}
+		exp.cmp = &selects.List{}
+		e.Lines.Update(c.display, exp, nil)
+	case 1:
+		exp.explain = []string{
+			"A simple list, i.e. one hav-",
+			"ing space for its items,",
+			"reduces its size to its items",
+			"which may be selected by",
+			"keyboard or mouse.",
+		}
+		exp.cmp = &simple{}
+		exp.dontFill = true
+		e.Lines.Update(c.display, exp, nil)
+	case 2:
+		exp.explain = []string{
+			"A list having not enough",
+			"space for its items, shows",
+			"by default a scrollbar and",
+			"is scrollable. Left-click on",
+			"the scrollbar scrolls down",
+			"right-click up.",
+		}
+		exp.cmp = &scrolling{}
+		exp.dontFill = true
+		e.Lines.Update(c.display, exp, nil)
 	default:
-		e.Lines.Update(c.display, blankDefault, nil)
-	}
-}
-
-func (c *menu) dispatcher(i int) {
-	switch i {
-	case 0:
-
+		e.Lines.Update(c.display, BLANK, nil)
 	}
 }
 
@@ -109,7 +138,7 @@ type quit struct {
 // execute the quitting of the example.
 func (c *quit) OnInit(e *lines.Env) {
 	c.Items = []string{
-		lines.Filler + "clear" + lines.Filler,
+		lines.Filler + "revoke" + lines.Filler,
 		lines.Filler + "redraw" + lines.Filler,
 		lines.Filler + "quit" + lines.Filler,
 	}
@@ -139,13 +168,18 @@ func (c *quit) handler(ll *lines.Lines) func(int) {
 	return func(i int) {
 		switch i {
 		case 0:
-			ll.Update(c.display, blankDefault, nil)
+			ll.Update(c.display, BLANK, nil)
+			// we need this redraw since the example place holder
+			// is already initialized and has a layout.  An alternative
+			// would be to create it each time new, e.g.
+			// ll.Update(c.display, &blank{}, nil)
+			ll.Redraw()
 		case 1:
 			ll.Redraw()
 		case 2:
 			ll.Quit()
 		default:
-			ll.Update(c.display, blankDefault, nil)
+			ll.Update(c.display, BLANK, nil)
 		}
 	}
 }

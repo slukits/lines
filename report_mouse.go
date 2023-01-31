@@ -237,6 +237,7 @@ func scroll(d lyt.Dimer, down bool, x, y int) bool {
 		} else {
 			cmp.Scroll.Up()
 		}
+		// cmp.Scroll.updateBar()
 		return true
 	}
 	return false

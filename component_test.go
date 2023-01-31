@@ -290,27 +290,39 @@ func (s *AComponent) Scrolls_to_top_on_reset_all(t *T) {
 	}))
 }
 
-func (s *AComponent) Is_replaceable(t *T) {
-	cmp, long := &stackingFX{}, "a rather long long long line"
-	cmp.CC = append(cmp.CC, &cmpFX{}, &cmpFX{
-		onInit: func(c *cmpFX, e *Env) {
-			c.Dim().SetHeight(1)
-			fmt.Fprint(e, long)
-		}},
-	)
-	cmp.onUpdate = func(_ *cmpFX, _ *Env, data interface{}) {
-		cmp.CC[1] = data.(Componenter)
-	}
-	fx := fx(t, cmp)
-	t.Eq(long, fx.ScreenOf(cmp).Trimmed().String())
+var firstEXP = `
+••••••••••••••••
+•              •
+•   _first_    •
+•              •
+••••••••••••••••
+`
+var secondEXP = `
+••••••••••••••••
+•              •
+•    second    •
+•              •
+••••••••••••••••
+`
 
-	t.FatalOn(fx.Lines.Update(cmp, &cmpFX{
-		onInit: func(c *cmpFX, e *Env) {
-			c.Dim().SetHeight(1)
-			fmt.Fprint(e, "short line")
-		}}, nil))
-	str := fx.ScreenOf(cmp).Trimmed().String()
-	t.Eq("short line", str)
+func (s *AComponent) Is_replaceable(t *T) {
+	cmp, first, second := &stackingFX{}, "_first_", "second"
+	cmp.gaps = true
+	cmp.CC = append(cmp.CC, &cmpFX{onInit: func(c *cmpFX, e *Env) {
+		c.Dim().SetWidth(len(first)).SetHeight(1)
+		fmt.Fprint(e, first)
+	}})
+	fx := fx(t, cmp)
+	fx.FireResize(16, 5)
+	t.Eq(strings.TrimSpace(firstEXP), fx.Screen())
+
+	fx.Lines.Update(cmp, nil, func(e *Env) {
+		cmp.CC[0] = &cmpFX{onInit: func(c *cmpFX, e *Env) {
+			c.Dim().SetWidth(len(second)).SetHeight(1)
+			fmt.Fprint(e, second)
+		}}
+	})
+	t.Eq(strings.TrimSpace(secondEXP), fx.Screen())
 }
 
 func (s *AComponent) Updates_tab_expansions_on_tab_width_change(t *T) {

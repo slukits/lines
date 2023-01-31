@@ -43,20 +43,7 @@ func (x *lineFX) redraw(tt *term.Fixture) api.CellsLine {
 }
 
 func (x *lineFX) highlighted(s Style) Style {
-	if x.gg.Style(Highlight).AA() != 0 {
-		if s.AA()&x.gg.Style(Highlight).AA() == 0 {
-			s = s.WithAdded(x.gg.Style(Highlight).AA())
-		} else {
-			s = s.WithRemoved(x.gg.Style(Highlight).AA())
-		}
-	}
-	if x.gg.Style(Highlight).FG() != DefaultColor {
-		s = s.WithFG(x.gg.Style(Highlight).FG())
-	}
-	if x.gg.Style(Highlight).BG() != DefaultColor {
-		s = s.WithBG(x.gg.Style(Highlight).BG())
-	}
-	return s
+	return x.gg.Style(Highlight)
 }
 
 // NOTE since the point here is to determine what a line provides for

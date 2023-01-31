@@ -29,6 +29,10 @@ func (g *gap) ensureLevel(l int) *Line {
 	return g.ll[l]
 }
 
+func (g *gap) reset(l int, sty *Style) {
+	g.ensureLevel(l).reset(0, sty)
+}
+
 func (g *gap) setDefaultStyle(level int, s Style) {
 	g.ensureLevel(level).setDefaultStyle(s)
 }

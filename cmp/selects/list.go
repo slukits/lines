@@ -97,9 +97,9 @@ func (l *List) OnInit(e *lines.Env) {
 		}
 	}
 	l.Globals().SetStyle(
-		lines.Highlight, l.Globals().Style(lines.Default).Reverse())
+		lines.Highlight, e.Lines.Globals.Style(lines.Default))
 	l.Globals().SetStyle(
-		lines.Default, l.Globals().Style(lines.Default).Reverse())
+		lines.Default, e.Lines.Globals.Style(lines.Highlight))
 	if l.SelectableLiner == nil && l.Highlighter != nil {
 		l.Globals().SetHighlighter(l.Highlighter)
 	}
@@ -114,26 +114,29 @@ func (l *List) OnLayout(e *lines.Env) (reflow bool) {
 	l.onLayout = true
 
 	if l.IsZero() {
-		l.zeroPrint(e)
-		return
+		return l.zeroPrint(e)
 	}
 	_, _, w, h := l.ContentArea()
 	if l.maxHeight() > h {
 		if !l.FF.Has(lines.Scrollable) {
 			l.FF.Set(lines.Scrollable)
+			l.Scroll.Bar = true
 		}
 	} else {
 		if l.FF.Has(lines.Scrollable) {
 			l.FF.Delete(lines.Scrollable)
 		}
+		l.Scroll.Bar = false
 	}
 	if l.maxHeight() < h {
 		top, _, bottom, _ := l.GapsLen()
 		l.Dim().SetHeight(l.maxHeight() + top + bottom)
 		reflow = true
+	} else {
+		l.Dim().SetFilling(0, 0)
 	}
 	width := l.Width()
-	if width < w {
+	if width <= w {
 		l.Dim().SetWidth(width)
 		reflow = true
 	}
@@ -141,6 +144,11 @@ func (l *List) OnLayout(e *lines.Env) (reflow bool) {
 		l.print(e)
 	}
 	return reflow
+}
+
+func (l *List) OnAfterLayout(e *lines.Env, _ lines.DD) bool {
+	l.onLayout = false
+	return false
 }
 
 func (l *List) OnFocusLost(e *lines.Env) {
@@ -183,15 +191,24 @@ func (l *List) print(e *lines.Env) {
 	}
 }
 
-func (l *List) zeroPrint(e *lines.Env) {
+func (l *List) zeroPrint(e *lines.Env) (reflow bool) {
 	top, right, bottom, left := l.GapsLen()
-	l.Dim().SetWidth(right + len([]rune(NoItems)) + left).
-		SetHeight(top + 1 + bottom)
-	fmt.Fprint(e, NoItems)
+	if w := right + len([]rune(NoItems)) + left; w != l.Dim().Width() {
+		reflow = true
+		l.Dim().SetWidth(w)
+	}
+	if h := top + 1 + bottom; h != l.Dim().Height() {
+		reflow = true
+		l.Dim().SetHeight(h)
+	}
+	if reflow {
+		fmt.Fprint(e, NoItems)
+	}
+	return reflow
 }
 
 func (l *List) OnEnter(e *lines.Env, x, y int) {
-	if l.IsZero() {
+	if l.IsZero() || y < 0 || l.First()+y >= l.Len() {
 		return
 	}
 	l.LL.Focus.AtCoordinate(y)
@@ -200,7 +217,7 @@ func (l *List) OnEnter(e *lines.Env, x, y int) {
 // OnMove takes care of emphasizing the item hovered by the mouse
 // cursor by moving the line-focus to it.
 func (l *List) OnMove(e *lines.Env, x, y int) {
-	if l.IsZero() || x < 0 || y < 0 {
+	if l.IsZero() || y < 0 || l.First()+y >= l.Len() {
 		return
 	}
 	if l.LL.Focus.Screen() == y {

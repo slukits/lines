@@ -141,21 +141,7 @@ func (gg *Globals) setDefaultHighlighter() *Globals {
 
 func defaultHighlighter(gg *Globals) func(s Style) Style {
 	return func(s Style) Style {
-		h := gg.Style(Highlight)
-		if h.AA() != 0 {
-			if s.AA()&h.AA() == 0 {
-				s = s.WithAdded(h.AA())
-			} else {
-				s = s.WithRemoved(h.AA())
-			}
-		}
-		if h.FG() != DefaultColor {
-			s = s.WithFG(h.FG())
-		}
-		if h.BG() != DefaultColor {
-			s = s.WithBG(h.BG())
-		}
-		return s
+		return gg.Style(Highlight)
 	}
 }
 

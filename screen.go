@@ -302,7 +302,7 @@ func (s *screen) forBubbling(
 
 // hardSync reflows the layout and hard-syncs every component.
 func (s *screen) hardSync(ll *Lines) {
-	s.syncReflowLayout(ll, nil)
+	s.syncReflowLayout(ll, true, nil)
 	s.syncAfterLayout(ll)
 	s.lyt.Root.(layoutComponenter).wrapped().hardSync(s.backend)
 	s.lyt.Layers.For(func(l *lyt.Layer) (stop bool) {
@@ -339,7 +339,7 @@ func dimensionsOf(cmp Componenter) Dimensions {
 // NOTE reflowing the layout is always necessary because we don't know
 // if the user added/removed any components.
 func (s *screen) softSync(ll *Lines) {
-	s.syncReflowLayout(ll, func(c Componenter) {
+	s.syncReflowLayout(ll, false, func(c Componenter) {
 		c.layoutComponent().wrapped().SetDirty()
 	})
 	if !s.lyt.Root.(layoutComponenter).wrapped().IsDirty() &&
@@ -396,9 +396,15 @@ func (s *screen) haveModal() (lc layoutComponenter) {
 // syncReflowLayout reflows the layout and reports to every component
 // with changed layout implementing Layouter.  It also calls back for
 // every component with changed layout if callback not nil.
-func (s *screen) syncReflowLayout(lines *Lines, cb func(Componenter)) {
+func (s *screen) syncReflowLayout(
+	lines *Lines, hard bool, cb func(Componenter),
+) {
 	cntx, count := &rprContext{ll: lines, scr: s}, 0
-	for reflow := s.lyt.IsDirty(); reflow && count < 10; {
+	reflow := s.lyt.IsDirty()
+	if hard {
+		reflow = true
+	}
+	for reflow && count < 10 {
 		reflow = false
 		ll := s.lyt.Layers
 		s.lyt.Reflow(func(d lyt.Dimer) {

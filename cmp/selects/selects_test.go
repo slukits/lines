@@ -117,24 +117,9 @@ func closeItemList(fx *lines.Fixture, cmp *Horizontal) {
 
 func (s *AHselection) Item_styles_default_to_reversed_globals(t *T) {
 	fx, cmp := hrzCmpFX(t, nil)
-	rvrDflt := fx.Lines.Globals.Style(lines.Default).WithAA(
-		fx.Lines.Globals.Style(lines.Default).AA() | lines.Reverse)
+	rvrDflt := fx.Lines.Globals.Style(lines.Highlight)
 	lyr := extractLayer(t, fx, cmp)
 	lyrScr := fx.CellsOf(lyr)
-	for _, l := range lyrScr {
-		t.True(l[0].Style == rvrDflt)
-	}
-
-	closeItemList(fx, cmp)
-	fx.Lines.Globals.SetAA(
-		lines.Default,
-		fx.Lines.Globals.AA(lines.Default)|lines.Reverse,
-	)
-
-	rvrDflt = fx.Lines.Globals.Style(lines.Default).WithAA(
-		fx.Lines.Globals.Style(lines.Default).AA() &^ lines.Reverse)
-	lyr = extractLayer(t, fx, cmp)
-	lyrScr = fx.CellsOf(lyr)
 	for _, l := range lyrScr {
 		t.True(l[0].Style == rvrDflt)
 	}

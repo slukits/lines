@@ -17,10 +17,10 @@ func newGaps(sty Style) *gaps {
 		right:       gap{gm: right},
 		bottom:      gap{gm: bottom},
 		left:        gap{gm: left},
-		topLeft:     corner{cm: topLeft},
-		topRight:    corner{cm: topRight},
-		bottomRight: corner{cm: bottomRight},
-		bottomLeft:  corner{cm: bottomLeft},
+		topLeft:     corner{cm: topLeft, dirty: true},
+		topRight:    corner{cm: topRight, dirty: true},
+		bottomRight: corner{cm: bottomRight, dirty: true},
+		bottomLeft:  corner{cm: bottomLeft, dirty: true},
 	}
 }
 
@@ -28,8 +28,7 @@ func (gg *gaps) isDirty() bool {
 	if gg == nil {
 		return false
 	}
-	top := gg.top.isDirty()
-	return top || gg.right.isDirty() ||
+	return gg.top.isDirty() || gg.right.isDirty() ||
 		gg.bottom.isDirty() || gg.left.isDirty() ||
 		gg.topLeft.isDirty() || gg.topRight.isDirty() ||
 		gg.bottomRight.isDirty() || gg.bottomLeft.isDirty()

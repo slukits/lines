@@ -5,6 +5,7 @@
 package selects
 
 import (
+	"fmt"
 	"testing"
 
 	. "github.com/slukits/gounit"
@@ -298,16 +299,19 @@ func (s *AList) Liner_supersedes_items_and_styler(t *T) {
 func (s *AList) Highlights_its_first_item_on_down_key(t *T) {
 	cmp := &List{Items: []string{"12", "1234", "123"}}
 	fx_ := fx.New(t, cmp)
+	var hi lines.Style
+	fx_.Lines.Update(cmp, nil, func(e *lines.Env) {
+		hi = cmp.Globals().Style(lines.Highlight)
+	})
 	fx_.FireKey(lines.Down)
-	hi := fx_.Lines.Globals.Style(lines.Default)
-	t.Eq(fx_.CellsOf(cmp)[0][0].Style, hi)
+	t.Eq(hi, fx_.CellsOf(cmp)[0][1].Style)
 
 	cmp = &List{SelectableLiner: &fx.SelectableLiner{}}
 	cmp.SelectableLiner.(*fx.SelectableLiner).II =
 		[]string{"12", "1234", "123"}
 	fx_ = fx.New(t, cmp)
 	fx_.FireKey(lines.Down)
-	t.Eq(fx_.CellsOf(cmp)[0][0].Style, hi)
+	t.Eq(hi, fx_.CellsOf(cmp)[0][0].Style)
 }
 
 func (s *AList) Highlights_a_mouse_hovered_list_item(t *T) {
@@ -497,6 +501,55 @@ func (s *AList) Reports_scrolled_to_source_liner_item(t *T) {
 
 	fx.FireKeys(lines.Down, lines.Down, lines.Down, lines.Enter)
 	t.Eq(2, reported)
+}
+
+type bugList struct {
+	List
+}
+
+func (l *bugList) OnInit(e *lines.Env) {
+	l.Items = fx.NStrings(20)
+	l.List.OnInit(e)
+}
+
+// Scrolling_bug originated in the misconception that an as filling
+// flagged rune fills until the next rune not flagged as filling while
+// the implementation splits remaining space equally over the filler.
+// Anyway its a good test checking if scrolling works.
+func (s *AList) Scrolling_bug(t *T) {
+	cmp := &bugList{}
+	fx := fx.Sized(t, 5, 5, cmp)
+	t.Eq(
+		fx.Lines.Globals.Style(lines.Default),
+		fx.Cells()[0][4].Style,
+	)
+	sl, dflt, hi := 0, lines.DefaultStyle, lines.DefaultStyle
+	fx.Lines.Update(cmp, nil, func(e *lines.Env) {
+		sl = cmp.ContentScreenLines()
+		dflt = cmp.Globals().Style(lines.Default)
+		hi = cmp.Globals().Style(lines.Highlight)
+	})
+	t.Eq(hi, fx.Lines.Globals.Style(lines.Default))
+	t.Eq(dflt, fx.Lines.Globals.Style(lines.Highlight))
+	t.Eq(
+		fx.Lines.Globals.Style(lines.Default),
+		fx.Cells()[0][4].Style,
+	)
+	for i := 0; i < sl; i++ {
+		cc := fx.Cells().Column(4)
+		for j, c := range cc {
+			if j == i && !t.Eq(c.Style, hi) {
+				fmt.Printf("hi: %d: %d\n", i, j)
+			}
+			if j != i && !t.Eq(c.Style, dflt) {
+				fmt.Printf("dflt: %d: %d\n", i, j)
+			}
+		}
+		fx.Lines.Update(cmp, nil, func(e *lines.Env) {
+			t.Eq(i, cmp.Scroll.BarPosition())
+			cmp.Scroll.Down()
+		})
+	}
 }
 
 func TestAList(t *testing.T) {

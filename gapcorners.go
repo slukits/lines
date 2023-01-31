@@ -101,6 +101,9 @@ func (c *corner) ensureLevel(l int) *cornerRune {
 	if len(c.rr) > l {
 		return &c.rr[l]
 	}
+	if !c.dirty {
+		c.dirty = true
+	}
 	for i := len(c.rr); i <= l; i++ {
 		c.rr = append(c.rr, cornerRune{})
 	}
@@ -151,6 +154,9 @@ func (c *corner) set(level int, r rune, s *Style) {
 
 func (c *corner) sync(x, y, width, height int, w runeWriter, sty Style) {
 
+	// if !c.dirty {
+	// 	return
+	// }
 	if c.dirty {
 		c.dirty = false
 	}

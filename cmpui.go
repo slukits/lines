@@ -166,6 +166,9 @@ func (c *component) sync(rw runeWriter) {
 	if c.mod&Tailing == Tailing && c.Len() >= cll {
 		c.setFirst(c.Len() - cll)
 	}
+	if c.Scroll.Bar { // && c.Scroll.bar != c._first
+		c.Scroll.setScrollBar()
+	}
 	if c.dirty {
 		c.syncCleared(rw)
 	} else {
@@ -175,11 +178,10 @@ func (c *component) sync(rw runeWriter) {
 		n.sync(rw)
 		return false
 	})
-	c.Scroll.updateBar()
 }
 
 func (c *component) syncContent(rw runeWriter) {
-	if c.gaps != nil && c.gaps.isDirty() {
+	if c.gaps.isDirty() {
 		gx, gy, gw, gh := c.Dim().Printable()
 		c.gaps.sync(gx, gy, gw, gh, rw, c.gg)
 	}
@@ -294,7 +296,10 @@ func (c *component) ContentScreenLines() int {
 // be what is expected.
 func (c *component) GapsLen() (top, right, bottom, left int) {
 	if c.gaps == nil {
-		return 0, 0, 0, 0
+		if !c.Scroll.Bar {
+			return 0, 0, 0, 0
+		}
+		c.userCmp.embedded().Scroll.setScrollBar()
 	}
 	return c.gaps.Len()
 }

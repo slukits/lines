@@ -377,6 +377,7 @@ func (ll *Lines) listen(evt api.Eventer) {
 	switch evt := evt.(type) {
 	case *rootEvent:
 		ll.scr.setRoot(evt.newRoot, ll.Globals)
+		reportInit(ll, ll.scr)
 		ll.scr.hardSync(ll)
 	case *redrawEvent:
 		ll.scr.hardSync(ll)

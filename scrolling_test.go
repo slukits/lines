@@ -7,6 +7,7 @@ package lines
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	. "github.com/slukits/gounit"
 )
@@ -90,16 +91,43 @@ func (s *AScrollBar) Is_at_zero_position_if_at_top(t *T) {
 		}}
 	fx := fx(t, cmp).FireResize(5, 2)
 	t.FatalIfNot(t.Eq("12   \n3456 ", fx.Screen()))
-	sdb := fx.Scroll.BarDef(cmp)
+	var sbd ScrollBarDef
+	fx.Lines.Update(cmp, nil, func(e *Env) {
+		sbd = cmp.Globals().ScrollBarDef()
+		t.FatalIfNot(cmp.Scroll.IsAtTop())
+	})
 	for i, c := range fx.Cells().Column(4) {
 		switch i {
 		case 0:
-			t.FatalIfNot(t.Eq(c.Style, sdb.Position))
+			t.FatalIfNot(t.Eq(c.Style, sbd.Position))
 		default:
-			t.FatalIfNot(t.Eq(c.Style, sdb.Style))
+			t.FatalIfNot(t.Eq(c.Style, sbd.Style))
 		}
 	}
 }
+
+type dbg struct{ Suite }
+
+func (s *dbg) Dbg(t *T) {
+	cmp := &cmpFX{
+		onInit: func(c *cmpFX, e *Env) {
+			c.Scroll.Bar = true
+			fmt.Fprint(e, "12\n3456\n789")
+		}}
+	fx := fx(t, cmp, 20*time.Minute).FireResize(5, 2)
+	t.FatalIfNot(t.Eq("12   \n3456 ", fx.Screen()))
+	sbd := fx.Scroll.BarDef(cmp)
+	for i, c := range fx.Cells().Column(4) {
+		switch i {
+		case 0:
+			t.FatalIfNot(t.Eq(c.Style, sbd.Position))
+		default:
+			t.FatalIfNot(t.Eq(c.Style, sbd.Style))
+		}
+	}
+}
+
+func TestDBG(t *testing.T) { Run(&dbg{}, t) }
 
 func (s *AScrollBar) Is_at_max_position_if_at_bottom(t *T) {
 	cmp := &cmpFX{
@@ -110,14 +138,14 @@ func (s *AScrollBar) Is_at_max_position_if_at_bottom(t *T) {
 	fx := fx(t, cmp).FireResize(5, 2)
 	t.FatalIfNot(t.Eq("12   \n3456 ", fx.Screen()))
 	fx.Scroll.ToBottom(cmp)
-	sdb := fx.Scroll.BarDef(cmp)
+	sbd := fx.Scroll.BarDef(cmp)
 	max := len(fx.Cells().Column(4)) - 1
 	for i, c := range fx.Cells().Column(4) {
 		switch i {
 		case max:
-			t.FatalIfNot(t.Eq(c.Style, sdb.Position))
+			t.FatalIfNot(t.Eq(c.Style, sbd.Position))
 		default:
-			t.FatalIfNot(t.Eq(c.Style, sdb.Style))
+			t.FatalIfNot(t.Eq(c.Style, sbd.Style))
 		}
 	}
 }
@@ -133,13 +161,13 @@ func (s *AScrollBar) Goes_according_position_down_on_scrolling(t *T) {
 	t.FatalIfNot(t.Eq("1st \n2nd \n3rd ", fx.Screen()))
 	fx.FireKeys(PgDn)
 	t.FatalIfNot(t.Eq("3rd \n4th \n5th ", fx.Screen()))
-	sdb := fx.Scroll.BarDef(cmp)
+	sbd := fx.Scroll.BarDef(cmp)
 	for i, c := range fx.Cells().Column(3) {
 		switch i {
 		case 1:
-			t.FatalIfNot(t.Eq(c.Style, sdb.Position))
+			t.FatalIfNot(t.Eq(c.Style, sbd.Position))
 		default:
-			t.FatalIfNot(t.Eq(c.Style, sdb.Style))
+			t.FatalIfNot(t.Eq(c.Style, sbd.Style))
 		}
 	}
 }
@@ -156,13 +184,13 @@ func (s *AScrollBar) Goes_according_position_up_on_scrolling(t *T) {
 	t.FatalIfNot(t.Eq("4th \n5th \n6th ", fx.Screen()))
 	fx.FireKeys(PgUp)
 	t.FatalIfNot(t.Eq("2nd \n3rd \n4th ", fx.Screen()))
-	sdb := fx.Scroll.BarDef(cmp)
+	sbd := fx.Scroll.BarDef(cmp)
 	for i, c := range fx.Cells().Column(3) {
 		switch i {
 		case 1:
-			t.FatalIfNot(t.Eq(c.Style, sdb.Position))
+			t.FatalIfNot(t.Eq(c.Style, sbd.Position))
 		default:
-			t.FatalIfNot(t.Eq(c.Style, sdb.Style))
+			t.FatalIfNot(t.Eq(c.Style, sbd.Style))
 		}
 	}
 }

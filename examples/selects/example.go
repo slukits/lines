@@ -1,0 +1,38 @@
+// Copyright (c) 2022 Stephan Lukits. All rights reserved.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
+
+package main
+
+import (
+	"fmt"
+	"strings"
+
+	"github.com/slukits/lines"
+)
+
+type example struct {
+	lines.Component
+	lines.Stacking
+	explain  []string
+	cmp      lines.Componenter
+	dontFill bool
+}
+
+func (c *example) OnInit(e *lines.Env) {
+	c.CC = append(c.CC, &msg{txt: c.explain}, c.cmp)
+	if !c.dontFill {
+		c.CC = append(c.CC, &expFiller{})
+	}
+}
+
+type msg struct {
+	lines.Component
+	txt []string
+}
+
+func (c *msg) OnInit(e *lines.Env) {
+	fmt.Fprint(e, strings.Join(c.txt, "\n"))
+}
+
+type expFiller struct{ lines.Component }

@@ -19,6 +19,7 @@ func DefaultScrollbarDef() ScrollBarDef {
 type Scroller struct {
 	c   *Component
 	Bar bool
+	bar int
 }
 
 // IsAtTop returns true if the first screen line is the first component
@@ -131,47 +132,40 @@ func (s Scroller) scrollBarGap(c *component) (
 	return ww.Right, sbd, ww
 }
 
-func (s Scroller) setScrollBar(pos int, c *component) {
+func (s *Scroller) setScrollBar() {
+	c := s.c.layoutCmp.wrapped()
 	gw, sbd, _ := s.scrollBarGap(c)
+	s.bar = c.First()
+	gw.Reset(sbd.Style)
+	pos := s.BarPosition()
 	if pos == -1 {
 		Print(gw.Sty(sbd.Style).At(0).Filling(), ' ')
 		return
 	}
-	if pos == 0 {
-		Print(gw.At(0).Sty(sbd.Position), ' ')
-		Print(gw.At(1).Sty(sbd.Style).Filling(), ' ')
-		return
-	}
-	if pos+1 >= c.ContentScreenLines() {
-		Print(gw.At(0).Sty(sbd.Style).Filling(), ' ')
-		Print(gw.At(c.ContentScreenLines()-1).Sty(sbd.Position), ' ')
-		return
-	}
-	Print(gw.At(0).Sty(sbd.Style).Filling(), ' ')
 	Print(gw.At(pos).Sty(sbd.Position), ' ')
-	Print(gw.At(pos+1).Sty(sbd.Style).Filling(), ' ')
 }
 
-func (s Scroller) updateBar() {
-	if !s.Bar {
-		return
-	}
+func (s Scroller) BarPosition() int {
 	c := s.c.layoutCmp.wrapped()
 	if c.ContentScreenLines() >= c.Len() {
-		s.setScrollBar(-1, c)
-		return
+		return -1
 	}
 	if c.First() == 0 {
-		s.setScrollBar(0, c)
-		return
+		return 0
 	}
 	if c.First()+c.ContentScreenLines() >= c.Len() {
-		s.setScrollBar(c.ContentScreenLines()-1, c)
-		return
+		return c.ContentScreenLines() - 1
 	}
-	s.setScrollBar(
-		(c.First()+c.ContentScreenLines()/2)/
-			(c.Len()/c.ContentScreenLines()), c)
+	height := c.ContentScreenLines()
+	shown := c.First() + c.ContentScreenLines()
+	screens := c.Len() / c.ContentScreenLines()
+	for i := 1; i <= screens; i++ {
+		if i*height < shown {
+			continue
+		}
+		return i - 1
+	}
+	return -1
 }
 
 func (s Scroller) BarContains(x, y int) bool {
