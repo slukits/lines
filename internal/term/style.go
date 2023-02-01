@@ -57,7 +57,7 @@ func apiToTcellStyleClosure() func(api.Style) tcell.Style {
 	apiSty := api.Style{}
 	tclSty := apiToTcellStyle(apiSty)
 	return func(s api.Style) tcell.Style {
-		if apiSty.Equals(s) {
+		if apiSty == s {
 			return tclSty
 		}
 		apiSty = s

@@ -53,9 +53,6 @@ type Component struct {
 	// keyboard listening.
 	Register *Listeners
 
-	// Scroll provides a component's API for scrolling.
-	Scroll *Scroller
-
 	// Edit provides a component's API to control editing its content.
 	Edit *Editor
 
@@ -103,7 +100,7 @@ const (
 )
 
 func (c *Component) initialize(
-	userComponent Componenter, backend api.UIer, gg *globals,
+	userComponent Componenter, backend api.UIer, gg *Globals,
 ) layoutComponenter {
 
 	if c.layoutCmp != nil { // already initialized
@@ -121,8 +118,8 @@ func (c *Component) initialize(
 		dirty:   true,
 	}
 	c.FF = &Features{c: c}
-	c.Scroll = &Scroller{c: c}
 	c.Register = &Listeners{c: c}
+	inner.Scroll = &Scroller{c: c, bar: -1}
 	inner.LL = newComponentLines(c)
 	inner.gg.SetUpdateListener(cmpGlobalsClosure(inner))
 	switch userComponent.(type) {
@@ -212,21 +209,12 @@ func (c *Component) Gaps(level int) *GapsWriter {
 	return newGapsWriter(level, c.gaps)
 }
 
-// GapsLen returns the numbers of lines/columns a gap at the top, right,
-// bottom and left consumes.  Note a gap must have been written in
-// order to be created.  I.e. if gaps are written at OnLayout and
-// gaps-lengths are queried in OnAfterInit then these lengths might not
-// be what is expected.
-func (c *Component) GapsLen() (top, right, bottom, left int) {
-	return c.gaps.Len()
-}
-
 // Globals provides access to the API for manipulating component c
 // specific globally inherited properties like tab-width.  Note to
 // change such a property globally use the [Lines]-instance ll which
 // layouts c.  ll's Globals-property provides the same Api but
 // propagates manipulations to all components of the layout.
-func (c *Component) Globals() *globals { return c.gg }
+func (c *Component) Globals() *Globals { return c.gg }
 
 // SetCursor of given component c to given line and column with
 // optionally given cursor style within c's content area.  I.e.
@@ -253,7 +241,7 @@ func (c *Component) CursorPosition() (line, column int, _ bool) {
 // component is the actual implementation of a lines-Component.
 type component struct {
 	userCmp     Componenter
-	gg          *globals
+	gg          *Globals
 	dim         *lyt.Dim
 	mod         ComponentMode
 	initialized bool
@@ -265,6 +253,9 @@ type component struct {
 	// reported event.
 	LL *ComponentLines
 
+	// Scroll provides a component's API for scrolling.
+	Scroll *Scroller
+
 	lst                *listeners
 	ff                 *features
 	gaps               *gaps
@@ -272,7 +263,7 @@ type component struct {
 
 	Src *ContentSource
 
-	// _first holds the index of the _first displayed line
+	// _first holds the content line index of the _first displayed line
 	_first int
 
 	// slctd hold the index of the currently selected line
@@ -283,7 +274,7 @@ type component struct {
 // a type-switch.
 func (c *component) wrapped() *component { return c }
 
-func (c *component) globals() *globals {
+func (c *component) globals() *Globals {
 	if c == nil {
 		return nil
 	}

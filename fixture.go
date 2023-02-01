@@ -56,6 +56,8 @@ type Fixture struct {
 	// Lines instance created by the fixture constructor reporting
 	// events to Componenter of the layout.
 	Lines *Lines
+
+	Scroll Scroll
 }
 
 // TermFixture returns a Fixture instance with a slightly differently
@@ -94,6 +96,7 @@ func TermFixture(
 		Lines:   ll,
 		t:       t,
 	}
+	tt.Scroll = Scroll{fx: tt}
 	backend.Listen(ll.listen)
 	return tt
 }
@@ -111,34 +114,37 @@ func (fx *Fixture) Root() Componenter {
 // processed.  NOTE this event as such is not reported but it triggers
 // OnInit and OnLayout events of components which are not initialized or
 // whose layout dimensions have changed.
-func (fx *Fixture) FireResize(width, height int) {
+func (fx *Fixture) FireResize(width, height int) *Fixture {
 	fx.t.Helper()
 	if width == 0 && height == 0 {
-		return
+		return fx
 	}
 	fx.PostResize(width, height)
+	return fx
 }
 
 // FireRune posts given run-key-press event and returns after this event
 // has been processed.
-func (fx *Fixture) FireRune(r rune, m ...ModifierMask) {
+func (fx *Fixture) FireRune(r rune, m ...ModifierMask) *Fixture {
 	fx.t.Helper()
 	if len(m) == 0 {
 		fx.PostRune(r, api.ZeroModifier)
 	} else {
 		fx.PostRune(r, m[0])
 	}
+	return fx
 }
 
 // FireKey posts given special-key event and returns after this
 // event has been processed.
-func (fx *Fixture) FireKey(k api.Key, m ...ModifierMask) {
+func (fx *Fixture) FireKey(k api.Key, m ...ModifierMask) *Fixture {
 	fx.t.Helper()
 	if len(m) == 0 {
 		fx.PostKey(k, api.ZeroModifier)
 	} else {
 		fx.PostKey(k, m[0])
 	}
+	return fx
 }
 
 // FireKeys for given keys k_0,...,k_n in given fixture fx is a shortcut
@@ -147,58 +153,63 @@ func (fx *Fixture) FireKey(k api.Key, m ...ModifierMask) {
 //	fx.FireKey(k_0, line.ZeroModifier)
 //	// ...
 //	fx.FireKey(k_n, line.ZeroModifier)
-func (fx *Fixture) FireKeys(kk ...api.Key) {
+func (fx *Fixture) FireKeys(kk ...api.Key) *Fixture {
 	fx.t.Helper()
 	for _, k := range kk {
 		fx.FireKey(k)
 	}
+	return fx
 }
 
 // FireMove posts a mouse move to given coordinates; an other two given
 // ints will be reported as the origin of the mouse move.  Are any given
 // coordinates outside the screen area the call is ignored.
-func (fx *Fixture) FireMove(x, y int, xy ...int) {
+func (fx *Fixture) FireMove(x, y int, xy ...int) *Fixture {
 	fx.t.Helper()
 	if !fx.validCoordinates(x, y, xy...) {
-		return
+		return fx
 	}
 	fx.PostMove(x, y, xy...)
+	return fx
 }
 
 // FireClick posts a first (left) button click at given coordinates and
 // returns after this event has been processed.  Are given coordinates
 // outside the printable screen area the call is ignored.
-func (fx *Fixture) FireClick(x, y int) {
+func (fx *Fixture) FireClick(x, y int) *Fixture {
 	fx.t.Helper()
 	if !fx.validCoordinates(x, y) {
-		return
+		return fx
 	}
 	fx.PostClick(x, y, api.Primary, api.ZeroModifier)
+	return fx
 }
 
 // FireContext posts a secondary (right) button click at given coordinates
 // and returns after this event has been processed.  Are given
 // coordinates outside the screen area the call is ignored.
-func (fx *Fixture) FireContext(x, y int) {
+func (fx *Fixture) FireContext(x, y int) *Fixture {
 	fx.t.Helper()
 	if !fx.validCoordinates(x, y) {
-		return
+		return fx
 	}
 	fx.PostClick(x, y, api.Secondary, api.ZeroModifier)
+	return fx
 }
 
 func (fx *Fixture) FireDragNDrop(
 	x, y int, b ButtonMask, mm ModifierMask, xy ...int,
-) {
+) *Fixture {
 	fx.t.Helper()
 	if !fx.validCoordinates(x, y, xy...) {
-		return
+		return fx
 	}
 	var dx, dy int
 	if len(xy) >= 2 {
 		dx, dy = xy[0], xy[1]
 	}
 	fx.PostDrag(dx, dy, b, mm)(x, y)
+	return fx
 }
 
 // FireMouse posts a mouse event with provided arguments and returns
@@ -206,13 +217,14 @@ func (fx *Fixture) FireDragNDrop(
 // the printable screen area the call is ignored.
 func (fx *Fixture) FireMouse(
 	x, y int, bm api.ButtonMask, mm api.ModifierMask,
-) {
+) *Fixture {
 	fx.t.Helper()
 	if !fx.validCoordinates(x, y) {
-		return
+		return fx
 	}
 
 	fx.PostMouse(x, y, bm, mm)
+	return fx
 }
 
 func (fx *Fixture) validCoordinates(x, y int, xy ...int) bool {
@@ -232,32 +244,36 @@ func (fx *Fixture) validCoordinates(x, y int, xy ...int) bool {
 // relative coordinate in given componenter.  Note if x or y are outside
 // the component's printable screen area or the component is not part of
 // the layout no click will be fired.
-func (fx *Fixture) FireComponentClick(c Componenter, x, y int) {
+func (fx *Fixture) FireComponentClick(c Componenter, x, y int) *Fixture {
 	fx.t.Helper()
 	if !c.hasLayoutWrapper() {
-		return
+		return fx
 	}
 	ox, oy, ok := isInside(c.layoutComponent().wrapped().dim, x, y)
 	if !ok {
-		return
+		return fx
 	}
 	fx.FireClick(ox+x, oy+y)
+	return fx
 }
 
 // FireComponentContext posts an second (right) button click on given
 // relative coordinate in given componenter.  Note if x or y are outside
 // the component's printable screen area or the component is not part of
 // the layout no click will be fired.
-func (fx *Fixture) FireComponentContext(c Componenter, x, y int) {
+func (fx *Fixture) FireComponentContext(
+	c Componenter, x, y int,
+) *Fixture {
 	fx.t.Helper()
 	if !c.hasLayoutWrapper() {
-		return
+		return fx
 	}
 	ox, oy, ok := isInside(c.layoutComponent().wrapped().dim, x, y)
 	if !ok {
-		return
+		return fx
 	}
 	fx.FireContext(ox+x, oy+y)
+	return fx
 }
 
 func isInside(dim *lyt.Dim, x, y int) (ox, oy int, ok bool) {
@@ -306,4 +322,29 @@ func (fx *Fixture) CellsOf(c Componenter) api.CellsScreen {
 		return nil
 	}
 	return fx.CellsArea(dim.Printable())
+}
+
+type Scroll struct{ fx *Fixture }
+
+// BarDef retrieves given Componenter c's scroll bar definition sparing
+// fx.Lines.Update...
+func (s Scroll) BarDef(c Componenter) (sbd ScrollBarDef) {
+	err := s.fx.Lines.Update(c, nil, func(e *Env) {
+		sbd = c.embedded().gg.scrollBarDef
+	})
+	if err != nil {
+		s.fx.t.Fatal(err)
+	}
+	return sbd
+}
+
+// ToBottom scrolls given Componenter c to the bottom sparing
+// fx.Lines.Update...
+func (s Scroll) ToBottom(c Componenter) {
+	err := s.fx.Lines.Update(c, nil, func(e *Env) {
+		c.embedded().Scroll.ToBottom()
+	})
+	if err != nil {
+		s.fx.t.Fatal(err)
+	}
 }

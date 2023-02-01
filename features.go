@@ -399,6 +399,7 @@ func (ff *features) delete(f FeatureMask) {
 		ff.deleteRunesOf(f)
 		ff.have &^= f
 	}
+	ff.have &^= f
 }
 
 func (ff *features) deleteKeysOf(f FeatureMask) {

@@ -27,11 +27,57 @@ type LineFocus struct {
 	eolAfterLastRune bool
 }
 
-// Current returns the content line-index of the currently focused line.
+// Current returns the index associated with the currently focused
+// content from either associated component's content or the content
+// from its content source liner.
 func (s *LineFocus) Current() int { return s.current }
 
-// Screen returns the screen line-index of the currently focused line.
-func (s *LineFocus) Screen() int { return s.idx() }
+// Screen returns the screen line-index of the currently focused line or
+// -1 if no line is focused or it is not on the screen.
+func (s *LineFocus) Screen() int {
+	if s.current < 0 || s.current < s.c.First() ||
+		s.current-s.c.First() >= s.c.ContentScreenLines() {
+		return -1
+	}
+	return s.current - s.c.First()
+}
+
+// Content returns the component's content line index in which the
+// currently focused content is stored or -1 if no line is
+// focused.  (Note this line may not be on the screen if there is no
+// component source and there are more content-lines than screen lines
+// then the first line could be focused and the user scrolls down i.e.
+// the currently focused line is not on the screen anymore)
+func (s *LineFocus) Content() int {
+	if s.c.Src == nil {
+		return s.current
+	}
+	return s.Screen()
+}
+
+// AtCoordinate tries to focus the screen line with given coordinate y.
+func (s *LineFocus) AtCoordinate(y int) {
+	if s.Screen() >= 0 {
+		s.Line().resetLineFocus()
+	}
+	top, _, _, _ := s.c.GapsLen()
+	lineIdx := y - top
+	if s.c.ContentScreenLines() <= lineIdx {
+		return
+	}
+	s.Reset()
+	ln := (*Line)(nil)
+	if s.c.Src != nil {
+		ln = (*s.c.ll)[lineIdx]
+	} else {
+		ln = (*s.c.ll)[s.c.First()+lineIdx]
+	}
+	if ln.ff&NotFocusable != 0 {
+		return
+	}
+	ln.Flag(Highlighted)
+	s.current = s.c.First() + lineIdx
+}
 
 // Next focuses the next focusable line at the currently focused line's
 // cursor position if possible and returns its index as well as the cell
@@ -39,8 +85,8 @@ func (s *LineFocus) Screen() int { return s.idx() }
 // If highlighted is true the highlight of the current line is removed
 // while the next is highlighted.
 func (s *LineFocus) Next() (ln int, cl int) {
-	if s.idx() >= 0 {
-		s.line(s.idx()).resetLineFocus()
+	if s.Screen() >= 0 {
+		s.Line().resetLineFocus()
 	}
 	ln = s.findNextLine()
 	if ln == s.current {
@@ -49,11 +95,11 @@ func (s *LineFocus) Next() (ln int, cl int) {
 		return s.current, -1
 	}
 
+	// the order of the following two lines is significant
 	_, column, _ := s.c.CursorPosition()
 	s.focus(ln)
-
 	if cl = s.adjustLineEndCursor(column, NextCellFocusable); cl >= 0 {
-		s.c.SetCursor(s.idx(), cl)
+		s.c.SetCursor(s.Screen(), cl)
 	}
 
 	return ln, cl
@@ -96,8 +142,8 @@ func (s *LineFocus) nextFromSource(fl FocusableLiner) int {
 // true the highlight of the current line is removed while the previous
 // line is highlighted.
 func (s *LineFocus) Previous() (slIdx int, cl int) {
-	if s.idx() >= 0 {
-		s.line(s.idx()).resetLineFocus()
+	if s.Screen() >= 0 {
+		s.Line().resetLineFocus()
 	}
 	slIdx = s.findPrevious()
 	if slIdx == s.current {
@@ -110,7 +156,7 @@ func (s *LineFocus) Previous() (slIdx int, cl int) {
 	s.focus(slIdx)
 	cl = s.adjustLineEndCursor(column, PreviousCellFocusable)
 	if cl >= 0 {
-		s.c.SetCursor(s.idx(), cl)
+		s.c.SetCursor(s.Screen(), cl)
 	}
 	return slIdx, cl
 }
@@ -154,42 +200,29 @@ func (s *LineFocus) focus(idx int) {
 	} else {
 		s.c.Scroll.To(idx)
 	}
+	s.current = idx
 	hlFlag := s.hlLineFlag()
 	if idx != -1 && hlFlag != ZeroLineFlag {
-		s.line(s.lineIndexOfContent(idx)).Switch(hlFlag)
+		s.Line().Switch(hlFlag)
 	}
 
-	s.current = idx
 }
 
-// line returns the screen line with given index of the component
-// associated with given line focus f.  See f.lineIndexOfContent and
-// f.idx to map (current) content indices to screen line indices.
-func (f *LineFocus) line(idx int) *Line {
-	return (*f.c.ll)[idx]
-}
-
-// idx maps current content-line index *f.current* to its screen line
-// index.
-func (f *LineFocus) idx() int { return f.lineIndexOfContent(f.current) }
-
-// lineIndexOfContent returns the screen line index displaying the
-// content-line with given index idx.
-func (f *LineFocus) lineIndexOfContent(idx int) int {
-	if f.c.Src == nil {
-		return idx
+// Line returns the component's content Line holding the content
+// associated with the currently focused Line which may be from the
+// component's content line or from a content source's Liner-content.
+func (f *LineFocus) Line() *Line {
+	if f.c.Src != nil {
+		return (*f.c.ll)[f.current-f.c.First()]
 	}
-	if idx-f.c.first() < 0 || idx-f.c.first() >= len(*f.c.ll) {
-		return -1
-	}
-	return idx - f.c.first()
+	return (*f.c.ll)[f.current]
 }
 
 func (f *LineFocus) switchScrollingSourcedHighlight(scroll int) {
 	if f.current == -1 {
 		return
 	}
-	idx, hlFlag := f.current-f.c.first(), f.hlLineFlag()
+	idx, hlFlag := f.current-f.c.First(), f.hlLineFlag()
 	if idx >= 0 && idx < f.c.ContentScreenLines() {
 		_, clm, crsr := f.c.CursorPosition()
 		if crsr {
@@ -201,7 +234,7 @@ func (f *LineFocus) switchScrollingSourcedHighlight(scroll int) {
 			l.Switch(hlFlag)
 		}
 	}
-	start := f.c.first() + scroll
+	start := f.c.First() + scroll
 	end := start + f.c.ContentScreenLines()
 	if f.current < start || f.current >= end {
 		return
@@ -224,7 +257,7 @@ func (s *LineFocus) Reset() {
 		return
 	}
 	if s.c.Src == nil || s.onDisplay(s.current) {
-		s.line(s.idx()).Unflag(Highlighted | TrimmedHighlighted)
+		s.Line().Unflag(Highlighted | TrimmedHighlighted)
 	}
 	s.current = -1
 	if cc := s.c.gg.scr.cursorComponent(); cc != nil {
@@ -235,6 +268,6 @@ func (s *LineFocus) Reset() {
 }
 
 func (s *LineFocus) onDisplay(idx int) bool {
-	return idx >= s.c.first() &&
-		idx < s.c.first()+s.c.ContentScreenLines()
+	return idx >= s.c.First() &&
+		idx < s.c.First()+s.c.ContentScreenLines()
 }

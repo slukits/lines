@@ -22,7 +22,9 @@ const (
 	ZeroStyle StyleAttributeMask = 0
 )
 
-// Style represents what a print to the screen should look like.  A new
+type StyleSemantic uint8
+
+// Style represents what a print to the screen should look like.  A zero
 // Style instance has fore- and background color set to black.  Use its
 // With* methods to create a style with desired properties:
 //
@@ -36,6 +38,8 @@ type Style struct {
 
 	// BG provides a style's background color
 	bg Color
+
+	sm StyleSemantic
 }
 
 // DefaultStyle has no attributes and "default" colors.  The semantics
@@ -52,39 +56,61 @@ func NewStyle(aa StyleAttributeMask, fg, bg Color) Style {
 func (s Style) AA() StyleAttributeMask { return s.aa }
 func (s Style) FG() Color              { return s.fg }
 func (s Style) BG() Color              { return s.bg }
+func (s Style) SMN() StyleSemantic     { return s.sm }
 
-// Equals returns true if receiving style has the attributes and colors
-// as given other style; false otherwise
-func (s Style) Equals(other Style) bool {
-	return s.aa == other.AA() && s.fg == other.FG() && s.bg == other.BG()
+// IsDefault returns true if given Style s is the DefaultStyle.
+func (s Style) IsDefault() bool { return s == DefaultStyle }
+
+// Reverse returns given Style s reversed, i.e. with the Reverse-bit set
+// if s has it not set or with the Reverse-bit unset otherwise.
+func (s Style) Reverse() Style {
+	if s.aa&Reverse == Reverse {
+		return Style{fg: s.fg, bg: s.bg, aa: s.aa &^ Reverse, sm: s.sm}
+	}
+	return Style{fg: s.fg, bg: s.bg, aa: s.aa | Reverse, sm: s.sm}
+}
+
+// Invert returns a style having given Style s foreground color as
+// background color and its background color as foreground color.
+func (s Style) Invert() Style {
+	return Style{fg: s.bg, bg: s.fg, aa: s.aa, sm: s.sm}
 }
 
 // WithAdded returns given style with given attribute mask added.
 func (s Style) WithAdded(aa StyleAttributeMask) Style {
-	return Style{fg: s.fg, bg: s.bg, aa: s.aa | aa}
+	return Style{fg: s.fg, bg: s.bg, aa: s.aa | aa, sm: s.sm}
 }
 
 // WithRemoved returns given style without given attribute mask.
 func (s Style) WithRemoved(aa StyleAttributeMask) Style {
-	return Style{fg: s.fg, bg: s.bg, aa: s.aa &^ aa}
+	return Style{fg: s.fg, bg: s.bg, aa: s.aa &^ aa, sm: s.sm}
 }
 
 // WithAA returns given style with its attributes set to given attribute
 // mask.
 func (s Style) WithAA(aa StyleAttributeMask) Style {
-	return Style{fg: s.fg, bg: s.bg, aa: aa}
+	return Style{fg: s.fg, bg: s.bg, aa: aa, sm: s.sm}
 }
 
 // WithFG returns given style with its foreground color set to given
 // color.
 func (s Style) WithFG(c Color) Style {
-	return Style{fg: c, bg: s.bg, aa: s.aa}
+	return Style{fg: c, bg: s.bg, aa: s.aa, sm: s.sm}
 }
 
 // WithBG returns given style with its background color set to given
 // color.
 func (s Style) WithBG(c Color) Style {
-	return Style{fg: s.fg, bg: c, aa: s.aa}
+	return Style{fg: s.fg, bg: c, aa: s.aa, sm: s.sm}
+}
+
+// WithSemantics returns given style s with given semantics (ID) set.
+// Note the lines package doesn't define any semantics (yet).  The sole
+// purpose of the semantics property is to give the user an option to
+// discriminate two semantics which might accidentally have the same
+// colors and attributes but have two different meanings.
+func (s Style) WithSemantics(sm StyleSemantic) Style {
+	return Style{fg: s.fg, bg: s.bg, aa: s.aa, sm: sm}
 }
 
 // Displayer implementation provides the screen/a window as a set of

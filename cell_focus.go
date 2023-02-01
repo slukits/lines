@@ -25,11 +25,11 @@ func (s *LineFocus) EolAtLastRune() *LineFocus {
 // current line's content.
 func (f *LineFocus) Eol() bool {
 	// grab screen-line and screen-cell indices
-	slIdx, scIdx, hasCursor := f.c.wrapped().cursorPosition()
+	_, scIdx, hasCursor := f.c.wrapped().cursorPosition()
 	if !hasCursor {
 		return false
 	}
-	return f.isEol(f.line(slIdx), scIdx)
+	return f.isEol(f.Line(), scIdx)
 }
 
 func (f *LineFocus) isEol(line *Line, columnIdx int) bool {
@@ -49,11 +49,11 @@ func (s *LineFocus) NextCell() (slIdx, scIdx int, moved bool) {
 	if s.current < 0 || !haveCursorPos {
 		return -1, -1, false
 	}
-	if slIdx != s.idx() {
+	if slIdx != s.Screen() {
 		panic("lines: line-focus: last cell: cursor-line is not " +
 			"focused line")
 	}
-	line := s.line(slIdx)
+	line := s.Line()
 	if s.isEol(line, scIdx) {
 		return slIdx, scIdx, false
 	}
@@ -80,11 +80,11 @@ func (s *LineFocus) LastCell() (slIdx, scIdx int, moved bool) {
 	if s.current < 0 || scIdx < 0 {
 		return -1, -1, false
 	}
-	if slIdx != s.idx() {
+	if slIdx != s.Screen() {
 		panic("lines: line-focus: last cell: cursor-line is not " +
 			"focused line")
 	}
-	line := s.line(slIdx)
+	line := s.Line()
 	if s.isEol(line, scIdx) {
 		return slIdx, scIdx, false
 	}
@@ -121,7 +121,7 @@ func (s *LineFocus) adjustLineEndCursor(
 		return 0
 	}
 
-	l := s.line(s.idx())
+	l := s.Line()
 	if l.Len() <= lastColumn {
 		return l.Len() - 1
 	}
@@ -139,8 +139,8 @@ func (s *LineFocus) FirstCell() (slIdx, cl int, moved bool) {
 	if cl != 0 {
 		moved = true
 	}
-	slIdx, cl, _ = s.c.SetCursor(s.idx(), 0).CursorPosition()
-	s.line(s.idx()).resetLineFocus()
+	slIdx, cl, _ = s.c.SetCursor(s.Screen(), 0).CursorPosition()
+	s.Line().resetLineFocus()
 	return slIdx, cl, moved
 }
 
@@ -169,8 +169,8 @@ func (s *LineFocus) PreviousCell() (slIdx, cl int, moved bool) {
 		return -1, -1, false
 	}
 	if cl > 0 {
-		return s.c.SetCursor(s.idx(), cl-1).CursorPosition()
+		return s.c.SetCursor(s.Screen(), cl-1).CursorPosition()
 	}
-	s.line(s.idx()).decrementStart()
+	s.Line().decrementStart()
 	return slIdx, cl, false
 }

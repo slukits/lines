@@ -123,7 +123,7 @@ func (c *mouseFX) OnMouse(e *Env, bm ButtonMask, x, y int) {
 	}
 }
 
-func (c *mouseFX) OnEnter(e *Env) {
+func (c *mouseFX) OnEnter(e *Env, x, y int) {
 	c.reported.append(onEnter, 0, 0)
 }
 
@@ -204,7 +204,8 @@ func (s *Mouse) SetUp(t *T) { t.Parallel() }
 func (s *Mouse) Move_is_reported_to_focused_component(t *T) {
 	cmp := &mouseCmpFX{}
 	fx := fx(t, cmp)
-	fx.FireMove(1, 1)
+	// we need the first move to 0/0 to not only get OnEnter
+	fx.FireMove(1, 1, 0, 0)
 	t.True(cmp.HasMove())
 }
 

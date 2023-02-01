@@ -229,6 +229,19 @@ func (l CellsLine) indentWidth() (int, int) {
 // reported screen area.
 type CellsScreen []CellsLine
 
+// Column returns a column of test-cells from the test screen or nil iff
+// the cells-screen cs is zero or given column i doesnt exist.
+func (cs CellsScreen) Column(i int) []TestCell {
+	if len(cs) == 0 || len(cs[0]) <= i || i < 0 {
+		return nil
+	}
+	c := make([]TestCell, len(cs))
+	for j, l := range cs {
+		c[j] = l[i]
+	}
+	return c
+}
+
 // String returns a string representation of given screen cells cs.
 func (cs CellsScreen) String() string {
 	ll := []string{}
@@ -297,6 +310,53 @@ func (cs CellsScreen) Trimmed() CellsScreen {
 		hTrimmed = append(hTrimmed, s[start:end])
 	}
 	return hTrimmed
+}
+
+func (cs CellsScreen) Equals(other CellsScreen) bool {
+	for i, l := range cs {
+		for j, c := range l {
+			if len(other) <= i {
+				return false
+			}
+			if len(other[i]) <= j {
+				return false
+			}
+			oc := other[i][j]
+			if oc.Style != c.Style || oc.Rune != c.Rune {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+type CellScreenDiff struct {
+	LinesCount int
+	CellsCount int
+	Line, Cell int
+}
+
+func (cs CellsScreen) FirstDiff(other CellsScreen) CellScreenDiff {
+	d := CellScreenDiff{
+		LinesCount: -1, CellsCount: -1, Line: -1, Cell: -1}
+	for i, l := range cs {
+		for j, c := range l {
+			if len(other) <= i {
+				d.LinesCount = i
+				return d
+			}
+			if len(other[i]) <= j {
+				d.LinesCount, d.CellsCount = i, j
+				return d
+			}
+			oc := other[i][j]
+			if oc.Style != c.Style || oc.Rune != c.Rune {
+				d.Line, d.Cell = i, j
+				return d
+			}
+		}
+	}
+	return d
 }
 
 func (cs CellsScreen) len() int { return len(cs) }

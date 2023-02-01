@@ -329,9 +329,7 @@ func (s *Layer) Gets_out_of_bounds_move_reported_if_modal(t *T) {
 		cmp.Layered(e, mdlLyr, nil)
 	})
 
-	// omitting 1, 1 arguments would result in a move from (0,0) to
-	// (0,0) which would not be reported.
-	fx.FireMove(0, 0, 1, 1)
+	fx.FireMove(0, 0)
 	t.Eq(1, mdlLyr.N(onOutOfBoundMove))
 }
 

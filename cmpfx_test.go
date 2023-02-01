@@ -289,7 +289,7 @@ func lineString(no int) string {
 	return fmt.Sprintf("%dth", no)
 }
 
-func (l *linerFX) initLines(n int) *linerFX {
+func nStrings(n int) []string {
 	if n < 0 {
 		panic("new liner fixture: negative number of lines")
 	}
@@ -297,7 +297,11 @@ func (l *linerFX) initLines(n int) *linerFX {
 	for i := 0; i < n; i++ {
 		cc = append(cc, lineString(i+1))
 	}
-	l.cc = cc
+	return cc
+}
+
+func (l *linerFX) initLines(n int) *linerFX {
+	l.cc = nStrings(n)
 	return l
 }
 
@@ -325,10 +329,6 @@ func (l *scrollableLinerFX) Len() int {
 
 type focusableLinerFX struct {
 	scrollableLinerFX
-	// highlighted and trimmed are provided by the Highlighted interface
-	// method indicating if a focused line is highlighted and if that
-	// highlight should be trimmed.  Both properties default to false.
-	highlighted, trimmed bool
 	// returns to a given line index if the line is focusable or not.
 	// focusable defaults to func(_ int) bool { return true }
 	focusable func(idx int) bool
@@ -344,10 +344,6 @@ func (l *focusableLinerFX) IsFocusable(idx int) bool {
 		return true
 	}
 	return l.focusable(idx)
-}
-
-func (l *focusableLinerFX) Highlighted() (highlighted, trimmed bool) {
-	return l.highlighted, l.trimmed
 }
 
 type srcFX struct {

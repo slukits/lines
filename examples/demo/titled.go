@@ -10,11 +10,41 @@ import (
 	"github.com/slukits/lines"
 )
 
-type Titled struct{ Title []rune }
+type Gapper interface{ Gaps(int) *lines.GapsWriter }
 
-type gapper interface{ Gaps(int) *lines.GapsWriter }
+type Titled struct {
+	Title []rune
+	Gapper
+}
 
-func (f *Titled) Default(g gapper, e *lines.Env) {
+func (tt *Titled) Single(e *lines.Env) *Titled {
+	lines.Print(tt.Gaps(0).Vertical.At(0).Filling(), '│')
+	lines.Print(tt.Gaps(0).Horizontal.At(0).Filling(), '─')
+	fmt.Fprintf(tt.Gaps(0).Corners, "┌┐┘└")
+	lines.Print(tt.Gaps(0).Top.At(1), tt.Title)
+	lines.Print(tt.Gaps(0).Top.At(1+len(tt.Title)).Filling(), '─')
+	return tt
+}
+
+func (tt *Titled) Double(e *lines.Env) *Titled {
+	lines.Print(tt.Gaps(0).Vertical.At(0).Filling(), '║')
+	lines.Print(tt.Gaps(0).Horizontal.At(0).Filling(), '═')
+	fmt.Fprintf(tt.Gaps(0).Corners, "╔╗╝╚")
+	lines.Print(tt.Gaps(0).Top.At(1).AA(lines.Bold), tt.Title)
+	lines.Print(tt.Gaps(0).Top.At(1+len(tt.Title)).Filling(), '═')
+	return tt
+}
+
+func (tt *Titled) Styled(e *lines.Env, sty lines.Style) *Titled {
+	lines.Print(tt.Gaps(0).Sty(sty).Vertical.At(0).Filling(), '│')
+	lines.Print(tt.Gaps(0).Horizontal.At(0).Filling(), '─')
+	fmt.Fprintf(tt.Gaps(0).Corners, "┌┐┘└")
+	lines.Print(tt.Gaps(0).Top.At(1), tt.Title)
+	lines.Print(tt.Gaps(0).Top.At(1+len(tt.Title)).Filling(), '─')
+	return tt
+}
+
+func (f *Titled) Default(g Gapper, e *lines.Env) {
 	lines.Print(g.Gaps(0).Vertical.At(0).Filling(), '│')
 	lines.Print(g.Gaps(0).Horizontal.At(0).Filling(), '─')
 	fmt.Fprintf(g.Gaps(0).Corners, "┌┐┘└")
@@ -22,7 +52,7 @@ func (f *Titled) Default(g gapper, e *lines.Env) {
 	lines.Print(g.Gaps(0).Top.At(1+len(f.Title)).Filling(), '─')
 }
 
-func (f *Titled) Focused(g gapper, e *lines.Env) {
+func (f *Titled) Focused(g Gapper, e *lines.Env) {
 	lines.Print(g.Gaps(0).Vertical.At(0).Filling(), '║')
 	lines.Print(g.Gaps(0).Horizontal.At(0).Filling(), '═')
 	fmt.Fprintf(g.Gaps(0).Corners, "╔╗╝╚")

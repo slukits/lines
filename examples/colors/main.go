@@ -15,7 +15,3 @@ func (c *cmp) OnInit(e *lines.Env) {
 	lines.Print(e.LL(0).At(10), []rune("  "))
 	lines.Print(e.LL(0).At(12).FG(lines.Yellow).BG(lines.Blue), blue)
 }
-
-func main() {
-	lines.Term(&cmp{}).WaitForQuit()
-}

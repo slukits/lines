@@ -45,9 +45,10 @@ func (c *component) Sty(s Style) *component {
 	return c
 }
 
-// Len returns the number of lines currently maintained by a component.
-// Note the number of component lines is independent of a component's
-// available screen lines.
+// Len returns the number of lines currently maintained by a component
+// either through its own set of lines or through a source's Liner set
+// of lines.  Note the number of component lines is independent of a
+// component's available screen lines.
 func (c *component) Len() int {
 	if c.Src != nil {
 		if sl, ok := c.Src.Liner.(ScrollableLiner); ok {
@@ -165,6 +166,9 @@ func (c *component) sync(rw runeWriter) {
 	if c.mod&Tailing == Tailing && c.Len() >= cll {
 		c.setFirst(c.Len() - cll)
 	}
+	if c.Scroll.Bar { // && c.Scroll.bar != c._first
+		c.Scroll.setScrollBar()
+	}
 	if c.dirty {
 		c.syncCleared(rw)
 	} else {
@@ -177,7 +181,7 @@ func (c *component) sync(rw runeWriter) {
 }
 
 func (c *component) syncContent(rw runeWriter) {
-	if c.gaps != nil && c.gaps.isDirty() {
+	if c.gaps.isDirty() {
 		gx, gy, gw, gh := c.Dim().Printable()
 		c.gaps.sync(gx, gy, gw, gh, rw, c.gg)
 	}
@@ -199,7 +203,7 @@ func (c *component) syncContent(rw runeWriter) {
 
 // clear fills the receiving component's printable area with spaces.
 func (c *component) syncCleared(rw runeWriter) {
-	if c.first()+c.ContentScreenLines() > c.Len() {
+	if c.First()+c.ContentScreenLines() > c.Len() {
 		c.setFirst(ints.Max(0, c.Len()-c.ContentScreenLines()))
 	}
 	cx, cy, cw, ch := c.dim.Screen()
@@ -264,12 +268,40 @@ func (c *component) ContentArea() (x, y, w, h int) {
 		h - len(c.gaps.top.ll) - len(c.gaps.bottom.ll)
 }
 
+func (c *component) InContentArea(x, y int) bool {
+	ox, oy, w, h := c.ContentArea()
+	if x < ox || x >= ox+w || y < oy || y >= oy+h {
+		return false
+	}
+	return true
+}
+
+// ContentScreenLines returns a component c's number of screen lines
+// which are not used for gaps.
 func (c *component) ContentScreenLines() int {
 	_, _, _, sh := c.dim.Printable()
 	if c.gaps == nil {
 		return sh
 	}
+	if sh == 0 {
+		return 0
+	}
 	return sh - (len(c.gaps.top.ll) + len(c.gaps.bottom.ll))
+}
+
+// GapsLen returns the numbers of lines/columns a gap at the top, right,
+// bottom and left consumes.  Note a gap must have been written in
+// order to be created.  I.e. if gaps are written at OnLayout and
+// gaps-lengths are queried in OnAfterInit then these lengths might not
+// be what is expected.
+func (c *component) GapsLen() (top, right, bottom, left int) {
+	if c.gaps == nil {
+		if !c.Scroll.Bar {
+			return 0, 0, 0, 0
+		}
+		c.userCmp.embedded().Scroll.setScrollBar()
+	}
+	return c.gaps.Len()
 }
 
 // setFirst sets the first displayed line and in case it changes given
@@ -292,9 +324,9 @@ func (c *component) setFirst(f int) {
 	c.dirty = true
 }
 
-// first returns the index of the first line displayed taking an
-// optionally set component source into account.
-func (c *component) first() int {
+// First returns the content index of the content displayed in the
+// components first screen line.
+func (c *component) First() int {
 	if c.Src != nil {
 		return c.Src.first
 	}
