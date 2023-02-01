@@ -147,6 +147,12 @@ type quitEvent struct {
 func (e *quitEvent) When() time.Time     { return e.when }
 func (e *quitEvent) Source() interface{} { return e }
 
+// Colors provide the number of available (ANSI) colors.  In case of
+// a monochrome screen 0 is returned.
+func (u *UI) Colors() int {
+	return u.lib.Colors()
+}
+
 func (u *UI) poll() {
 	defer func() {
 		r := recover()

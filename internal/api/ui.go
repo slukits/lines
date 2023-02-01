@@ -149,6 +149,10 @@ type Displayer interface {
 	//  - if x and y are inside the screen and a non-zero cursor style
 	//    is given the arguments are returned as received.
 	SetCursor(x, y int, cs ...CursorStyle) (int, int, CursorStyle)
+
+	// Colors provide the number of available (ANSI) colors.  In case of
+	// a monochrome screen 0 is returned.
+	Colors() int
 }
 
 // EventProcessor provides user input events and programmatically posted

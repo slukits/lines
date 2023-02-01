@@ -231,8 +231,8 @@ func (s *env) Prints_filling_to_component_line(t *T) {
 		Print(e.LL(0).At(2).FG(White).BG(Red), red)
 		Print(e.LL(0).At(2+len(red)).Filling(), '_')
 		Print(e.LL(0).At(2+len(red)+1).FG(Yellow).BG(Blue), blue)
-		Print(e.LL(0).At(2+len(red)+1+len(blue)).BG(Brown).FG(Salmon).
-			Filling(), '_')
+		Print(e.LL(0).At(2+len(red)+1+len(blue)).BG(RosyBrown).
+			FG(Salmon1).Filling(), '_')
 		Print(e.LL(0).At(2+len(red)+1+len(blue)+1).FG(Black).BG(Green),
 			green)
 	}})
@@ -255,7 +255,7 @@ func (s *env) Prints_filling_to_component_line(t *T) {
 				WithFG(Yellow).WithBG(Blue))
 		case 25, 26, 27, 28, 29, 30, 31, 32, 33, 34:
 			t.Eq(c.Style, fx.Lines.Globals.Style(Default).
-				WithFG(Salmon).WithBG(Brown))
+				WithFG(Salmon1).WithBG(RosyBrown))
 		case 35, 36, 37, 38, 39:
 			t.Eq(c.Style, fx.Lines.Globals.Style(Default).
 				WithFG(Black).WithBG(Green))

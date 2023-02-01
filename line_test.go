@@ -298,7 +298,7 @@ func (s *ALine) Is_highlighted_if_highlight_flag_set(t *T) {
 	fx.Switch(Highlighted)
 	fx.gg.SetStyle(Default, fx.gg.Style(Default).WithAA(Dim))
 	fx.gg.SetStyle(Highlight,
-		NewStyle(Dim, RebeccaPurple, DarkGoldenrod))
+		NewStyle(Dim, Purple, DarkGoldenrod))
 	l, hStyle := fx.redraw(tt), fx.highlighted(fx.gg.Style(Default))
 	t.Not.Eq(fx.gg.Style(Default), hStyle)
 	for _, c := range l {

@@ -210,7 +210,7 @@ func (*_globals) Propagate_set_highlighter(t *T) {
 	h2 := g2.globals().Highlight(gg.Style(Default))
 	t.Eq(h1, h2)
 
-	sty := DefaultStyle.WithBG(Green).WithFG(Salmon).WithAA(Blink)
+	sty := DefaultStyle.WithBG(Green).WithFG(Salmon1).WithAA(Blink)
 	gg.SetHighlighter(func(_ Style) Style { return sty })
 	h1 = g1.globals().Highlight(gg.Style(Default))
 	h2 = g2.globals().Highlight(gg.Style(Default))
@@ -224,7 +224,7 @@ func (*_globals) Default_highlighter_uses_propagated_highlight_style(
 	var g globaler
 	gg := newGlobals(func(f func(globaler)) { f(g) })
 	g = &globalsFX{gg: gg.clone()}
-	sty := DefaultStyle.WithBG(Green).WithFG(Salmon).WithAA(Blink)
+	sty := DefaultStyle.WithBG(Green).WithFG(Salmon1).WithAA(Blink)
 	gg.SetStyle(Highlight, sty)
 	t.Eq(g.globals().Highlight(gg.Style(Default)), sty)
 }
@@ -233,12 +233,12 @@ func (*_globals) Propagate_default_if_zero_highlighter_set(t *T) {
 	var g globaler
 	gg := newGlobals(func(f func(globaler)) { f(g) })
 	g = &globalsFX{gg: gg.clone()}
-	hiSty := DefaultStyle.WithBG(LightBlue).WithFG(Black).WithAA(Dim)
+	hiSty := DefaultStyle.WithBG(LightSlateBlue).WithFG(Black).WithAA(Dim)
 	g.globals().SetStyle(Highlight, hiSty)
 	h := g.globals().Highlight(gg.Style(Default))
 	t.Eq(h, hiSty)
 
-	sty := DefaultStyle.WithBG(Green).WithFG(Salmon).WithAA(Blink)
+	sty := DefaultStyle.WithBG(Green).WithFG(Salmon1).WithAA(Blink)
 	gg.SetHighlighter(func(_ Style) Style { return sty })
 	t.Not.Eq(h, g.globals().Highlight(gg.Style(Default)))
 	t.Eq(sty, g.globals().Highlight(gg.Style(Default)))
@@ -251,7 +251,7 @@ func (*_globals) Ignore_propagation_if_highlighter_has_been_set(t *T) {
 	var g globaler
 	gg := newGlobals(func(f func(globaler)) { f(g) })
 	g = &globalsFX{gg: gg.clone()}
-	hiSty := DefaultStyle.WithBG(LightBlue).WithFG(Black).WithAA(Dim)
+	hiSty := DefaultStyle.WithBG(LightSteelBlue).WithFG(Black).WithAA(Dim)
 	g.globals().SetHighlighter(func(s Style) Style { return hiSty })
 	h := g.globals().Highlight(gg.Style(Default))
 
@@ -279,7 +279,7 @@ func (*_globals) Report_highlighter_update(t *T) {
 		},
 	)
 
-	hiSty := DefaultStyle.WithBG(LightBlue).WithFG(Black).WithAA(Dim)
+	hiSty := DefaultStyle.WithBG(LightSteelBlue).WithFG(Black).WithAA(Dim)
 	gg.SetHighlighter(func(s Style) Style { return hiSty })
 	t.Eq(2, hlReported)
 	gg.SetHighlighter(nil)
