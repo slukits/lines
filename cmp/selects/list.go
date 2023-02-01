@@ -34,6 +34,8 @@ type Highlighter func(lines.Style) lines.Style
 type List struct {
 	component
 
+	pos *lines.LayerPos
+
 	// Items are the items of a selection list.  Note items are
 	// superseded by a scrollable liner.
 	Items []string
@@ -68,6 +70,8 @@ type List struct {
 	// MaxHeight is the number of screen lines a list instance should
 	// occupy at most without gaps
 	MaxHeight int
+
+	MinWidth int
 
 	// focus keeps track of the menu-item which is currently hovered by
 	// the mouse pointer.
@@ -116,34 +120,32 @@ func (l *List) OnLayout(e *lines.Env) (reflow bool) {
 	if l.IsZero() {
 		return l.zeroPrint(e)
 	}
-	_, _, w, h := l.ContentArea()
-	if l.maxHeight() > h {
-		if !l.FF.Has(lines.Scrollable) {
-			l.FF.Set(lines.Scrollable)
-			l.Scroll.Bar = true
-		}
-	} else {
+
+	height := l.Height()
+	top, _, bottom, _ := l.GapsLen()
+	vGaps := top + bottom
+	_, _, _, h := l.ContentArea()
+	if height <= h+vGaps {
+		l.Dim().SetHeight(height)
 		if l.FF.Has(lines.Scrollable) {
 			l.FF.Delete(lines.Scrollable)
 		}
 		l.Scroll.Bar = false
-	}
-	if l.maxHeight() < h {
-		top, _, bottom, _ := l.GapsLen()
-		l.Dim().SetHeight(l.maxHeight() + top + bottom)
-		reflow = true
 	} else {
-		l.Dim().SetFilling(0, 0)
+		l.Dim().SetHeight(h + vGaps)
+		if !l.FF.Has(lines.Scrollable) {
+			l.FF.Set(lines.Scrollable)
+		}
+		l.Scroll.Bar = true
 	}
-	width := l.Width()
-	if width <= w {
-		l.Dim().SetWidth(width)
-		reflow = true
-	}
+
+	// width needs to be treated after height since adding a scrollbar
+	// may change the width.
+	l.Dim().SetWidth(l.Width())
 	if l.SelectableLiner == nil {
 		l.print(e)
 	}
-	return reflow
+	return true
 }
 
 func (l *List) OnAfterLayout(e *lines.Env, _ lines.DD) bool {
@@ -151,25 +153,35 @@ func (l *List) OnAfterLayout(e *lines.Env, _ lines.DD) bool {
 	return false
 }
 
-func (l *List) OnFocusLost(e *lines.Env) {
-	if l.IsZero() {
+func (c *List) OnFocusLost(e *lines.Env) {
+	if c.IsZero() {
 		return
 	}
-	l.LL.Focus.Reset()
+	c.LL.Focus.Reset()
 }
 
-func (l *List) maxHeight() int {
-	h := l.len()
-	if l.MaxHeight > 0 && l.MaxHeight < h {
-		return l.MaxHeight
+func (c *List) Height() int {
+	top, _, bottom, _ := c.GapsLen()
+	gaps := top + bottom
+	h := c.len() + gaps
+	if c.MaxHeight > 0 && c.MaxHeight < h {
+		return c.MaxHeight
 	}
 	return h
 }
 
 func (c *List) Width() int {
+	if c.pos != nil {
+		return c.pos.Width()
+	}
 	_, right, _, left := c.GapsLen()
+	hGaps := right + left
 	if c.SelectableLiner != nil {
-		return left + c.SelectableLiner.MaxWidth() + right
+		width := c.SelectableLiner.MaxWidth() + hGaps
+		if c.MinWidth > width {
+			return c.MinWidth
+		}
+		return width
 	}
 	maxWdth := 0
 	for _, i := range c.Items {
@@ -178,13 +190,17 @@ func (c *List) Width() int {
 		}
 		maxWdth = len(i)
 	}
-	return left + maxWdth + right
+	width := maxWdth + hGaps
+	if c.MinWidth > width {
+		return c.MinWidth
+	}
+	return width
 }
 
-func (l *List) print(e *lines.Env) {
-	for i, itm := range l.Items {
-		if l.Styler != nil {
-			fmt.Fprint(e.Sty(l.Styler(i)).LL(i), itm)
+func (c *List) print(e *lines.Env) {
+	for i, itm := range c.Items {
+		if c.Styler != nil {
+			fmt.Fprint(e.Sty(c.Styler(i)).LL(i), itm)
 			continue
 		}
 		fmt.Fprint(e.LL(i), itm)
@@ -278,15 +294,6 @@ type ModalList struct {
 
 	// close a items-layer
 	close func(*lines.Lines)
-
-	// MaxWidth is the maximum width which defaults to the list element
-	// with maximum width
-	MaxWidth int
-
-	// MaxHeight is the maximum height which defaults to the
-	MaxHeight int
-
-	pos *lines.LayerPos
 }
 
 // OnOutOfBoundClick reports a zero selection.

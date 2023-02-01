@@ -53,10 +53,14 @@ instead of bytes.  Setting width and height is not necessary.  Left out
 in above example "hello world" is printed to the screen starting in the
 upper left corner.
 <p align="center">
-  <img width="480" src="layers.gif">
+  <img width="470" src="selects.gif">
 </p>
-Note lines doesn't come with menu, context-menu or tool-tip components
-but with the means to implement them as intricate and complex as needed.
+Note lines doesn't come for example with menu, context-menu or tool-tip
+components but with the means to implement them as intricate and complex 
+as needed.  In the cmp/selects-package you can find the List and DropDown
+components used to implement the components for above demonstration.
+I.e. lines has a sufficient feature set to build complex components and
+the code in cmp shows you by example how to do so.
 
 
 # Concurrency safety

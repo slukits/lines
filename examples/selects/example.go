@@ -14,13 +14,15 @@ import (
 type example struct {
 	lines.Component
 	lines.Stacking
-	explain  []string
-	cmp      lines.Componenter
-	dontFill bool
+	explain       []string
+	expNotFilling bool
+	cmp           lines.Componenter
+	dontFill      bool
 }
 
 func (c *example) OnInit(e *lines.Env) {
-	c.CC = append(c.CC, &msg{txt: c.explain}, c.cmp)
+	c.CC = append(c.CC, &msg{
+		txt: c.explain, notFilling: c.expNotFilling}, c.cmp)
 	if !c.dontFill {
 		c.CC = append(c.CC, &expFiller{})
 	}
@@ -28,11 +30,15 @@ func (c *example) OnInit(e *lines.Env) {
 
 type msg struct {
 	lines.Component
-	txt []string
+	notFilling bool
+	txt        []string
 }
 
 func (c *msg) OnInit(e *lines.Env) {
 	fmt.Fprint(e, strings.Join(c.txt, "\n"))
+	if c.notFilling {
+		c.Dim().SetHeight(len(c.txt) + 1)
+	}
 }
 
 type expFiller struct{ lines.Component }

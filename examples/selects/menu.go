@@ -6,7 +6,15 @@ package main
 
 import (
 	"github.com/slukits/lines"
+	"github.com/slukits/lines/cmp/fx"
 	"github.com/slukits/lines/cmp/selects"
+)
+
+var (
+	even   = lines.NewStyle(lines.ZeroStyle, lines.LightGreen, lines.DarkRed)
+	hiEven = lines.NewStyle(lines.Bold, lines.DarkRed, lines.LightGreen)
+	odd    = lines.NewStyle(lines.ZeroStyle, lines.Yellow, lines.DarkBlue)
+	hiOdd  = lines.NewStyle(lines.Bold, lines.DarkBlue, lines.Yellow)
 )
 
 type menuBar struct {
@@ -58,10 +66,12 @@ func (c *menu) OnInit(e *lines.Env) {
 		lines.Filler + "empty List" + lines.Filler,
 		lines.Filler + "simple  List" + lines.Filler,
 		lines.Filler + "scrolling List" + lines.Filler,
+		lines.Filler + "empty DropDown" + lines.Filler,
 		lines.Filler + "drop-down List" + lines.Filler,
 		lines.Filler + "drop-up List" + lines.Filler,
 	}
 	c.Listener = c
+	c.Dim().SetHeight(len(c.Items))
 	lines.Print(c.Gaps(0).Vertical.At(0).Filling(), ' ')
 	c.List.OnInit(e)
 }
@@ -98,6 +108,55 @@ func (c *menu) OnUpdate(e *lines.Env, data interface{}) {
 			"right-click up.",
 		}
 		exp.cmp = &scrolling{}
+		exp.dontFill = true
+		e.Lines.Update(c.display, exp, nil)
+	case 3:
+		exp.explain = []string{
+			"An empty drop-down List",
+			"without label gets the de-",
+			"fault label, has the default",
+			"item and nothing to drop.",
+		}
+		exp.cmp = &selects.DropDownHrz{}
+		e.Lines.Update(c.display, exp, nil)
+	case 4:
+		exp.explain = []string{
+			"A drop-down List shows its",
+			"values on click.",
+		}
+		exp.cmp = &selects.DropDownVrt{
+			Items:       fx.NStrings(20),
+			Label:       "DropDown",
+			MaxHeight:   5,
+			DefaultItem: selects.NoDefault,
+		}
+		exp.expNotFilling = true
+		e.Lines.Update(c.display, exp, nil)
+	case 5:
+		exp.explain = []string{
+			"A drop List at the bottom",
+			"may show its items upwards.",
+		}
+		sty := func(idx int) lines.Style {
+			if idx%2 == 0 {
+				return even
+			}
+			return odd
+		}
+		hi := func(sty lines.Style) lines.Style {
+			if sty == even {
+				return hiEven
+			}
+			return hiOdd
+		}
+		exp.cmp = &selects.DropDownHrz{
+			Items:       fx.NStrings(20),
+			Label:       "Drop-Up",
+			MaxHeight:   5,
+			Orientation: selects.Up,
+			Styler:      sty,
+			Highlighter: hi,
+		}
 		exp.dontFill = true
 		e.Lines.Update(c.display, exp, nil)
 	default:

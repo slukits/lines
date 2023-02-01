@@ -10,22 +10,25 @@ import (
 	"github.com/slukits/lines"
 )
 
+type defaulter interface {
+	dfltItems() []string
+	dfltStyler() Styler
+	dfltHighlighter() Highlighter
+	dfltItem() int
+	dfltMaxWidth() int
+	dfltMinWidth() int
+	dfltMaxHeight() int
+	dfltOrientation() Orientation
+}
+
 // items represents a selection's items-items layer.
 type items struct {
 	component
 
-	// ii are the items-labels
-	ii []string
-
-	// styler returns for each item its corresponding styler iff set
-	styler Styler
+	dd defaulter
 
 	// listener is updated with selected item
 	listener lines.Componenter
-
-	maxWidth int
-
-	defaultItem int
 }
 
 // OnInit prints the list items to the printable area.
@@ -36,46 +39,74 @@ func (ii *items) OnInit(e *lines.Env) {
 
 func (ii *items) resetItemsLabel(e *lines.Env) {
 	if !ii.hasDefault() {
-		fmt.Fprint(e, lines.Filler+Drop)
+		fmt.Fprint(e, lines.Filler+string(ii.dd.dfltOrientation()))
 		return
 	}
-	fmt.Fprint(e, ii.ii[ii.defaultItem]+lines.Filler+Drop)
+	fmt.Fprint(e, ii.dd.dfltItems()[ii.dd.dfltItem()]+lines.Filler+
+		string(ii.dd.dfltOrientation()))
 }
 
 func (ii *items) hasDefault() bool {
-	return ii.defaultItem >= 0 && ii.defaultItem < len(ii.ii)
+	i := ii.dd.dfltItem()
+	return i >= 0 && i < len(ii.dd.dfltItems())
 }
 
 func (c *items) width(respectMax bool) int {
 	maxWdth, decoration := 0, len([]rune(Drop))+1
-	for _, i := range c.ii {
+	for _, i := range c.dd.dfltItems() {
 		if maxWdth >= len(i)+decoration {
 			continue
 		}
 		maxWdth = len(i) + decoration
 	}
 	if !respectMax {
+		if c.dd.dfltMinWidth() > maxWdth {
+			return c.dd.dfltMinWidth()
+		}
 		return maxWdth
 	}
-	if c.maxWidth == 0 || c.maxWidth+decoration >= maxWdth {
+	dfltMaxWidth := c.dd.dfltMaxWidth()
+	if dfltMaxWidth == 0 || dfltMaxWidth+decoration >= maxWdth {
+		if c.dd.dfltMinWidth() > maxWdth {
+			return c.dd.dfltMinWidth()
+		}
 		return maxWdth
 	}
-	return c.maxWidth + decoration
+	if c.dd.dfltMinWidth() > dfltMaxWidth+decoration {
+		return c.dd.dfltMinWidth()
+	}
+	return dfltMaxWidth + decoration
 }
 
 func (c *items) OnClick(e *lines.Env, x, y int) {
+	if len(c.dd.dfltItems()) == 1 && c.dd.dfltItems()[0] == NoItems {
+		return
+	}
 	l := &ModalList{
 		List: List{
-			Items:    c.ii,
-			Listener: c.listener,
-			Styler:   c.styler,
+			Items:       c.dd.dfltItems(),
+			Listener:    c.listener,
+			Styler:      c.dd.dfltStyler(),
+			Highlighter: c.dd.dfltHighlighter(),
 		},
 		close: c.close,
 	}
-	l.pos = lines.NewLayerPos(
-		c.Dim().X(), c.Dim().Y()+1,
-		c.width(false), len(c.ii),
-	)
+	maxHeight := c.dd.dfltMaxHeight()
+	if maxHeight == 0 || maxHeight > len(c.dd.dfltItems()) {
+		maxHeight = len(c.dd.dfltItems())
+	}
+	if c.dd.dfltOrientation() == Drop {
+		l.pos = lines.NewLayerPos(
+			c.Dim().X(), c.Dim().Y()+1,
+			c.width(false), maxHeight,
+		)
+	}
+	if c.dd.dfltOrientation() == Up {
+		l.pos = lines.NewLayerPos(
+			c.Dim().X(), c.Dim().Y()-maxHeight,
+			c.width(false), maxHeight,
+		)
+	}
 	if !c.hasDefault() {
 		c.resetItemsLabel(e)
 	}
@@ -90,9 +121,12 @@ func (c *items) close(ll *lines.Lines) {
 }
 
 func (c *items) OnUpdate(e *lines.Env, data interface{}) {
+	c.RemoveLayer(e)
 	if data.(int) == -1 {
 		c.resetItemsLabel(e)
 		return
 	}
-	fmt.Fprint(e, c.ii[data.(int)]+lines.Filler+"▼")
+	fmt.Fprint(e,
+		c.dd.dfltItems()[data.(int)]+lines.Filler+
+			string(c.dd.dfltOrientation()))
 }
