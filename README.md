@@ -211,22 +211,23 @@ FF-property of the embedded Component instance.
 type MyComponent { lines.Component }
 
 func (c *MyComponent) OnInit(_ *lines.Env) {
-    c.FF.Add(lines.Scrollable)
+    c.FF.Set(lines.Scrollable)
 }
 ```
 
 Now our component will react on page up/down key-presses if its content
-doesn't fit (vertically) into c's screen area.  But we don't need to set
-each feature for each component separately:
+doesn't fit (vertically) into c's screen area.  Since most features
+don't make sens for nesting components setting features at a stacker or
+chainer will set this feature to a all nested components.  E.g.:
 
 ```go
 func (ws *Workspace) OnInit(e *lines.Env) {
-    ws.FF.AddRecursively(lines.Focusable)
+    ws.FF.Set(lines.Focusable)
 }
 ```
 
-The above line makes all descendants of the workspace focusable, i.e.
-they receive the focus if clicked with the mouse on them.
+makes all descendants of the workspace focusable, i.e.  they receive the
+focus if clicked with the mouse on them.
 
 An other way to acquire features without fuss is to set a components
 content source which needs to have a Liner-implementation.  According to

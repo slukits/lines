@@ -352,10 +352,9 @@ func (ff *features) runesOf(f FeatureMask) FeatureRunes {
 }
 
 // setRunesOf deletes all set runes for given feature an binds given
-// runes to it instead.  If recursive is true the feature becomes
-// applicable for nested components.  The call is ignored if given
-// feature is not a power of two i.e. a single feature.  NOTE providing
-// no runes simply removes all runes-bindings for given feature.
+// runes to it instead.  The call is ignored if given feature is not a
+// power of two i.e. a single feature.  NOTE providing no runes simply
+// removes all runes-bindings for given feature.
 func (ff *features) setRunesOf(f FeatureMask, rr ...FeatureRune) {
 	if ff == nil || f == 0 || f&(f-1) != 0 { // f is not a power of two
 		return

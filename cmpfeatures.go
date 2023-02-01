@@ -42,7 +42,7 @@ bound to the zero-rune.  A component's associated Features-instance is
 used to add (comprised) features, e.g.:
 
     func (c *Cmp) OnInit(_ lines.Env) {
-        c.FF.Add(Scrollable|LinesFocusable)
+        c.FF.Set(Scrollable|LinesFocusable)
     }
 
 Finally the "execute" function is used by key, rune or button-reporter
@@ -167,7 +167,7 @@ const (
 //	type Cmp { lines.Component }
 //
 //	func (c *Cmp) OnInit(_ *lines.Env) {
-//		c.FF.Add(lines.LinesFocusable)
+//		c.FF.Set(lines.LinesFocusable)
 //	}
 //
 // adds the feature "selectable lines" to a component. I.e. if the
@@ -231,7 +231,7 @@ func (ff *Features) KeysOf(f FeatureMask) FeatureKeys {
 }
 
 // SetKeysOf deletes all set keys for given feature and binds given keys
-// to it instead.  Set*Of may be used instead of Add to bind features
+// to it instead.  Set*Of may be used instead of Set to bind features
 // initially to other Runes/Keys/Buttons than default.  The call is
 // ignored if given feature is not a power of two i.e. a single feature.
 // Providing no keys simply removes all key-bindings for given feature.
@@ -246,7 +246,7 @@ func (ff *Features) ButtonsOf(f FeatureMask) FeatureButtons {
 }
 
 // SetButtonsOf deletes all set buttons for given feature and binds
-// given buttons to it instead.  Set*Of may be used instead of Add to
+// given buttons to it instead.  Set*Of may be used instead of Set to
 // bind features initially to other Runes/Keys/Buttons than default.
 // The call is ignored if given feature is not a power of two i.e. a
 // single feature.  Providing no button simply removes all
@@ -262,7 +262,7 @@ func (ff *Features) RunesOf(f FeatureMask) FeatureRunes {
 }
 
 // SetRunesOf deletes all set runes for given feature and binds given
-// runes to it instead.  Set*Of may be used instead of Add to bind
+// runes to it instead.  Set*Of may be used instead of Set to bind
 // features initially to other Runes/Keys/Buttons than default.  The
 // call is ignored if given feature is not a power of two i.e. a single
 // feature.  Providing no runes simply removes all runes-bindings for
