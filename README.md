@@ -53,7 +53,7 @@ instead of bytes.  Setting width and height is not necessary.  Left out
 in above example "hello world" is printed to the screen starting in the
 upper left corner.
 <p align="center">
-  <img width="470" src="selects.gif">
+  <img width="450" src="selects.gif">
 </p>
 Note lines doesn't come for example with menu, context-menu or tool-tip
 components but with the means to implement them as intricate and complex 
@@ -134,6 +134,10 @@ a component or by implementing either the Stacker or Chainer interface.
 Finally components can be layered by other components which makes it
 possible to implement tooltip, context menu, menu bar or modal dialogs.
 See [examples/layers](examples/layers) for how to work with layers.
+
+<p align="center">
+  <img width="450" src="layers.gif">
+</p>
 
 # Content and format handling
 
