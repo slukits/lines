@@ -58,11 +58,11 @@ type contextMenu struct {
 	demo.Titled
 
 	// close since a context menu is modal it is the only component which
-	// can trigger its closeing.  The functionality is provided by
+	// can trigger its closing.  The functionality is provided by
 	// associated component.
 	close func(ll *lines.Lines)
 
-	// focus keeps track of the contet menu item currently hovered by
+	// focus keeps track of the context menu item currently hovered by
 	// the mouse cursor.
 	focus int
 
@@ -70,12 +70,12 @@ type contextMenu struct {
 	// menu item.
 	reporter lines.Componenter
 
-	// pos is the layer position of a conetxt menu allowing to move it
+	// pos is the layer position of a context menu allowing to move it
 	// around.
 	pos *lines.LayerPos
 
 	// dragDelta is the distance of drag-starting x-coordinate to the
-	// context-menu's origing x-coordinate.
+	// context-menu's origin x-coordinate.
 	dragDelta int
 }
 
@@ -120,7 +120,7 @@ func (c *contextMenu) resetFocus(e *lines.Env) {
 }
 
 // OnDrag starting in context menu's title-line moves the context menu
-// to draged coordinates.  Note we also increase the context-menu
+// to dragged coordinates.  Note we also increase the context-menu
 // layer's z-level to overlay the layers of the stacked-demo.
 func (c *contextMenu) OnDrag(e *lines.Env, b lines.ButtonMask, x, y int) {
 	ox, oy := e.Evt.(*lines.MouseDrag).Origin()
@@ -144,7 +144,7 @@ func (c *contextMenu) OnDrop(e *lines.Env, b lines.ButtonMask, x, y int) {
 	c.pos.SetZ(0)
 }
 
-// OnMove is leveraged to emphasize context-menu items which are hoverd
+// OnMove is leveraged to emphasize context-menu items which are hovered
 // by the mouse.
 func (c *contextMenu) OnMove(e *lines.Env, x, y int) {
 	if c.focus >= 0 && c.focus != y-1 {
@@ -155,7 +155,7 @@ func (c *contextMenu) OnMove(e *lines.Env, x, y int) {
 		return
 	}
 	c.focus = y - 1
-	fmt.Fprint(e.LL(c.focus).BG(lines.Cornsilk).
+	fmt.Fprint(e.LL(c.focus).BG(lines.LightCoral).
 		AA(lines.Reverse|lines.Bold), cntxItems[c.focus])
 }
 
