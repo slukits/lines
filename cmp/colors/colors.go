@@ -21,6 +21,8 @@ const (
 
 var MonoColors = []Mono{BlackM, WhiteM}
 
+// MonoForeground provides the possible foreground color to given
+// background color bg.
 func MonoForeground(bg Mono) []lines.Style {
 	if bg == BlackM {
 		return []lines.Style{lines.NewStyle(
@@ -30,6 +32,8 @@ func MonoForeground(bg Mono) []lines.Style {
 		lines.ZeroStyle, lines.Black, lines.White)}
 }
 
+// MonoBackground provides the possible background color to given
+// foreground color fg.
 func MonoBackground(fg Mono) []lines.Style {
 	if fg == BlackM {
 		return []lines.Style{lines.NewStyle(
@@ -52,6 +56,39 @@ const (
 	Teal8   System8 = System8(lines.Teal)
 	Silver8 System8 = System8(lines.Silver)
 )
+
+var System8Colors = []System8{
+	Black8, Maroon8, Green8, Olive8, Navy8, Purple8, Teal8, Silver8}
+
+// System8Foregrounds provides the possible foreground combinations with
+// given background color bg.  A possible foreground combination is any
+// System8 color which is not bg.
+func System8Foregrounds(bg System8) (ss []lines.Style) {
+	for _, c := range System8Colors {
+		if c == bg {
+			continue
+		}
+		sty := lines.NewStyle(
+			lines.ZeroStyle, lines.Color(c), lines.Color(bg))
+		ss = append(ss, sty)
+	}
+	return ss
+}
+
+// System8Backgrounds provides the possible background combinations with
+// given foreground color fg.  A possible background combination is any
+// System8 color which is not fg.
+func System8Backgrounds(fg System8) (ss []lines.Style) {
+	for _, c := range System8Colors {
+		if c == fg {
+			continue
+		}
+		sty := lines.NewStyle(
+			lines.ZeroStyle, lines.Color(fg), lines.Color(c))
+		ss = append(ss, sty)
+	}
+	return ss
+}
 
 // LinuxBG types the linux-background colors which are the eight system
 // colors.
