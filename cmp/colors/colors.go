@@ -105,6 +105,34 @@ const (
 	SilverBG LinuxBG = LinuxBG(lines.Silver)
 )
 
+var linuxBGs = []LinuxBG{
+	BlackBG, MaroonBG, GreenBG, OliveBG, NavyBG, PurpleBG, TealBG,
+	SilverBG,
+}
+
+// LinuxBackgrounds provides the possible background combinations with
+// given foreground color fg.  A possible background combination is any
+// LinuxBG color which is not fg.  Note since we have more foreground
+// colors than background colors we may get seven or eight combination
+// depending if fg is a background color or not.
+func LinuxBackgrounds(fg LinuxFG) (ss []lines.Style) {
+	for _, c := range linuxBGs {
+		if LinuxFG(c) == fg {
+			continue
+		}
+		var sty lines.Style
+		if bfg, ok := linuxFGsBold[fg]; ok {
+			sty = lines.NewStyle(
+				lines.Bold, lines.Color(bfg), lines.Color(c))
+		} else {
+			sty = lines.NewStyle(
+				lines.ZeroStyle, lines.Color(fg), lines.Color(c))
+		}
+		ss = append(ss, sty)
+	}
+	return ss
+}
+
 // LinuxFG types the linux-foreground color which are the sixteen system
 // colors whereas the "upper" eight system-colors are the eight system
 // colors with the style-attribute bold.
@@ -129,10 +157,102 @@ const (
 	WhiteFG   LinuxFG = LinuxFG(lines.White)
 )
 
+var linuxFGs = []LinuxFG{
+	BlackFG, MaroonFG, GreenFG, OliveFG, NavyFG, PurpleFG, TealFG,
+	SilverFG, GreyFG, RedFG, LimeFG, YellowFG, BlueFG, FuchsiaFG, AquaFG,
+	WhiteFG,
+}
+var linuxFGsBold = map[LinuxFG]LinuxBG{
+	GreyFG:    BlackBG,
+	RedFG:     MaroonBG,
+	LimeFG:    GreenBG,
+	YellowFG:  OliveBG,
+	BlueFG:    NavyBG,
+	FuchsiaFG: PurpleBG,
+	AquaFG:    TealBG,
+	WhiteFG:   SilverBG,
+}
+
+// LinuxForegrounds provides the possible foreground combinations with
+// given background color bg.  A possible foreground combination is any
+// LinuxFG color which is not bg.  Note eight of the linux foreground
+// colors are the corresponding background colors (e.g. GreyFG ->
+// BlackBG) having the style attribute set to bold.
+func LinuxForegrounds(bg LinuxBG) (ss []lines.Style) {
+	bgfg := LinuxFG(bg)
+	for _, c := range linuxFGs {
+		if c == bgfg {
+			continue
+		}
+		var sty lines.Style
+		if bg, ok := linuxFGsBold[c]; ok {
+			sty = lines.NewStyle(
+				lines.Bold, lines.Color(bg), lines.Color(bgfg))
+		} else {
+			sty = lines.NewStyle(
+				lines.ZeroStyle, lines.Color(c), lines.Color(bgfg))
+		}
+		ss = append(ss, sty)
+	}
+	return ss
+}
+
 // System types the sixteen terminal system colors.
 type System int32
 
-const ()
+const (
+	Black16   System = System(lines.Black)
+	Maroon16  System = System(lines.Maroon)
+	Green16   System = System(lines.Green)
+	Olive16   System = System(lines.Olive)
+	Navy16    System = System(lines.Navy)
+	Purple16  System = System(lines.Purple)
+	Teal16    System = System(lines.Teal)
+	Silver16  System = System(lines.Silver)
+	Grey16    System = System(lines.Grey)
+	Red16     System = System(lines.Red)
+	Lime16    System = System(lines.Lime)
+	Yellow16  System = System(lines.Yellow)
+	Blue16    System = System(lines.Blue)
+	Fuchsia16 System = System(lines.Fuchsia)
+	Aqua16    System = System(lines.Aqua)
+	White16   System = System(lines.White)
+)
+
+var system16Colors = []System{
+	Black16, Maroon16, Green16, Olive16, Navy16, Purple16, Teal16,
+	Silver16, Grey16, Red16, Lime16, Yellow16, Blue16, Fuchsia16,
+	Aqua16, White16}
+
+// System16Foregrounds provides the possible foreground combinations with
+// given background color bg.  A possible foreground combination is any
+// System color which is not bg.
+func System16Foregrounds(bg System) (ss []lines.Style) {
+	for _, c := range system16Colors {
+		if c == bg {
+			continue
+		}
+		sty := lines.NewStyle(
+			lines.ZeroStyle, lines.Color(c), lines.Color(bg))
+		ss = append(ss, sty)
+	}
+	return ss
+}
+
+// System16Backgrounds provides the possible background combinations with
+// given foreground color fg.  A possible background combination is any
+// System color which is not fg.
+func System16Backgrounds(fg System) (ss []lines.Style) {
+	for _, c := range system16Colors {
+		if c == fg {
+			continue
+		}
+		sty := lines.NewStyle(
+			lines.ZeroStyle, lines.Color(fg), lines.Color(c))
+		ss = append(ss, sty)
+	}
+	return ss
+}
 
 // Ansi types all 256 ANSI colors.
 type ANSI int32
@@ -395,3 +515,83 @@ const (
 	Grey89            ANSI = ANSI(lines.Grey89)
 	Grey93            ANSI = ANSI(lines.Grey93)
 )
+
+var ansiColors = []ANSI{
+	Black, Maroon, Green, Olive, Navy, Purple, Teal, Silver, Grey, Red,
+	Lime, Yellow, Blue, Fuchsia, Aqua, White, Grey0, NavyBlue, DarkBlue,
+	Blue3, Blue3_2, Blue1, DarkGreen, DeepSkyBlue4, DeepSkyBlue4_2,
+	DeepSkyBlue4_3, DodgerBlue3, DodgerBlue2, Green4, SpringGreen4,
+	Turquoise4, DeepSkyBlue3, DeepSkyBlue3_2, DodgerBlue1, Green3,
+	SpringGreen3, DarkCyan, LightSeaGreen, DeepSkyBlue2, DeepSkyBlue1,
+	Green3_2, SpringGreen3_2, SpringGreen2, Cyan3, DarkTurquoise,
+	Turquoise2, Green1, SpringGreen2_2, SpringGreen1, MediumSpringGreen,
+	Cyan2, Cyan1, DarkRed, DeepPink4_3, Purple4, Purple4_2, Purple3,
+	BlueViolet, Orange4, Grey37, MediumPurple4, SlateBlue3,
+	SlateBlue3_2, RoyalBlue1, Chartreuse4, DarkSeaGreen4,
+	PaleTurquoise4, SteelBlue, SteelBlue3, CornflowerBlue, Chartreuse3,
+	DarkSeaGreen4_2, CadetBlue, CadetBlue_2, SkyBlue3, SteelBlue1,
+	Chartreuse3_2, PaleGreen3, SeaGreen3, Aquamarine3, MediumTurquoise,
+	SteelBlue1_2, Chartreuse2, SeaGreen2, SeaGreen1, SeaGreen1_2,
+	Aquamarine1, DarkSlateGray2, DarkRed_2, DeepPink4_2, DarkMagenta,
+	DarkMagenta_2, DarkViolet, Purple_1, Orange4_2, LightPink4, Plum4,
+	MediumPurple3, MediumPurple3_2, SlateBlue1, Yellow4, Wheat4, Grey53,
+	LightSlateGrey, MediumPurple, LightSlateBlue, Yellow4_2,
+	DarkOliveGreen3, DarkSeaGreen, LightSkyBlue3, LightSkyBlue3_2,
+	SkyBlue2, Chartreuse2_2, DarkOliveGreen3_2, PaleGreen3_2,
+	DarkSeaGreen3, DarkSlateGray3, SkyBlue1, Chartreuse1, LightGreen,
+	LightGreen_2, PaleGreen1, Aquamarine1_2, DarkSlateGray1, Red3,
+	DeepPink4, MediumVioletRed, Magenta3, DarkViolet_2, Purple_2,
+	DarkOrange3, IndianRed, HotPink3, MediumOrchid3, MediumOrchid,
+	MediumPurple2, DarkGoldenrod, LightSalmon3, RosyBrown, Grey63,
+	MediumPurple2_2, MediumPurple1, Gold3, DarkKhaki, NavajoWhite3,
+	Grey69, LightSteelBlue3, LightSteelBlue, Yellow3, DarkOliveGreen3_3,
+	DarkSeaGreen3_2, DarkSeaGreen2, LightCyan3, LightSkyBlue1,
+	GreenYellow, DarkOliveGreen2, PaleGreen1_2, DarkSeaGreen2_2,
+	DarkSeaGreen1, PaleTurquoise1, Red3_2, DeepPink3, DeepPink3_2,
+	Magenta3_2, Magenta3_3, Magenta2, DarkOrange3_2, IndianRed_2,
+	HotPink3_2, HotPink2, Orchid, MediumOrchid1, Orange3,
+	LightSalmon3_2, LightPink3, Pink3, Plum3, Violet, Gold3_2,
+	LightGoldenrod3, Tan, MistyRose3, Thistle3, Plum2, Yellow3_2,
+	Khaki3, LightGoldenrod2, LightYellow3, Grey84, LightSteelBlue1,
+	Yellow2, DarkOliveGreen1, DarkOliveGreen1_2, DarkSeaGreen1_2,
+	Honeydew2, LightCyan1, Red1, DeepPink2, DeepPink1, DeepPink1_2,
+	Magenta2_2, Magenta1, OrangeRed1, IndianRed1, IndianRed1_2, HotPink,
+	HotPink_2, MediumOrchid1_2, DarkOrange, Salmon1, LightCoral,
+	PaleVioletRed1, Orchid2, Orchid1, Orange1, SandyBrown, LightSalmon1,
+	LightPink1, Pink1, Plum1, Gold1, LightGoldenrod2_2,
+	LightGoldenrod2_3, NavajoWhite1, MistyRose1, Thistle1, Yellow1,
+	LightGoldenrod1, Khaki1, Wheat1, Cornsilk1, Grey100, Grey3, Grey7,
+	Grey11, Grey15, Grey19, Grey23, Grey27, Grey30, Grey35, Grey39,
+	Grey42, Grey46, Grey50, Grey54, Grey58, Grey62, Grey66, Grey70,
+	Grey74, Grey78, Grey82, Grey85, Grey89, Grey93,
+}
+
+// ANSIForegrounds provides the possible foreground combinations with
+// given background color bg.  A possible foreground combination is any
+// ANSI color which is not bg.
+func ANSIForegrounds(bg ANSI) (ss []lines.Style) {
+	for _, c := range ansiColors {
+		if c == bg {
+			continue
+		}
+		sty := lines.NewStyle(
+			lines.ZeroStyle, lines.Color(c), lines.Color(bg))
+		ss = append(ss, sty)
+	}
+	return ss
+}
+
+// ANSIBackgrounds provides the possible background combinations with
+// given foreground color fg.  A possible background combination is any
+// ANSI color which is not fg.
+func ANSIBackgrounds(fg ANSI) (ss []lines.Style) {
+	for _, c := range ansiColors {
+		if c == fg {
+			continue
+		}
+		sty := lines.NewStyle(
+			lines.ZeroStyle, lines.Color(fg), lines.Color(c))
+		ss = append(ss, sty)
+	}
+	return ss
+}
