@@ -241,9 +241,9 @@ func (fx *Fixture) validCoordinates(x, y int, xy ...int) bool {
 }
 
 // FireComponentClick posts an first (left) button click on given
-// relative coordinate in given componenter.  Note if x or y are outside
-// the component's printable screen area or the component is not part of
-// the layout no click will be fired.
+// relative coordinate in the printable area of given componenter.  Note
+// if x or y are outside the printable area of c or c is not part of the
+// layout no click will be fired.
 func (fx *Fixture) FireComponentClick(c Componenter, x, y int) *Fixture {
 	fx.t.Helper()
 	if !c.hasLayoutWrapper() {
@@ -258,9 +258,9 @@ func (fx *Fixture) FireComponentClick(c Componenter, x, y int) *Fixture {
 }
 
 // FireComponentContext posts an second (right) button click on given
-// relative coordinate in given componenter.  Note if x or y are outside
-// the component's printable screen area or the component is not part of
-// the layout no click will be fired.
+// relative coordinate in to printable area of given componenter c.
+// Note if x or y are outside the printable area of c or c is not part
+// of the layout no click will be fired.
 func (fx *Fixture) FireComponentContext(
 	c Componenter, x, y int,
 ) *Fixture {
@@ -280,14 +280,14 @@ func isInside(dim *lyt.Dim, x, y int) (ox, oy int, ok bool) {
 	if x < 0 || y < 0 || dim.IsOffScreen() {
 		return 0, 0, false
 	}
-	_, _, width, height := dim.Printable()
+	ox, oy, width, height := dim.Printable()
 	if x >= width {
 		return 0, 0, false
 	}
 	if y >= height {
 		return 0, 0, false
 	}
-	return dim.X(), dim.Y(), true
+	return ox, oy, true
 }
 
 // ScreenOf provides a string representation of given component's
