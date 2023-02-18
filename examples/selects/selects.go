@@ -26,7 +26,7 @@ var title = []rune(" selects demo ")
 func (c *selectsDemo) OnInit(e *lines.Env) {
 	c.titled = (&demo.Titled{Gapper: c, Title: title}).Single(e)
 	c.CC = append(c.CC, &display{}, &menuBar{})
-	c.Dim().SetWidth(50).SetHeight(16)
+	c.Dim().SetWidth(56).SetHeight(16)
 }
 
 // OnAfterInit can set it self as display to the menu

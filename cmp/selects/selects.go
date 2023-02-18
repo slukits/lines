@@ -2,6 +2,8 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+/* selects.go provides APIs for the *items* see items.go */
+
 package selects
 
 import "github.com/slukits/lines"
@@ -24,6 +26,101 @@ const (
 )
 
 const NoDefault = -1
+
+type DropDown struct {
+	items
+
+	fireUpdate func(lines.Componenter, interface{}, lines.Listener) error
+
+	// Items of a selection list
+	Items []string
+
+	// Styler defines optionally the styles of given Items.  Note a
+	// Styler is superseded by a selectable liner. An Item's default
+	// style is the reversed component's default style.
+	Styler Styler
+
+	// Highlighter maps optionally a given style to its highlighted
+	// version.  Note a highlighter provided by a selectable liner
+	// supersedes this highlighter.  The highlighted default style is a
+	// component's default style.
+	Highlighter Highlighter
+
+	// DefaultItem is the index of the item which is selected if no item
+	// is selected.  Note set DefaultItem to NoDefault if a zero input
+	// is allowed.
+	DefaultItem int
+
+	// MaxWidth sets the maximum items-label width which defaults to the
+	// width of the widest item.
+	MaxWidth int
+
+	MinWidth int
+
+	// MaxHeight may be used to restrict the hight of dropped selection
+	// list.
+	MaxHeight int
+
+	// Orientation indicates if DropDown actually drops down or if it
+	// drops up.
+	Orientation Orientation
+
+	value int
+}
+
+func (c *DropDown) dfltItems() []string { return c.Items }
+func (c *DropDown) dfltStyler() Styler  { return c.Styler }
+func (c *DropDown) dfltHighlighter() Highlighter {
+	return c.Highlighter
+}
+func (c *DropDown) dfltItem() int      { return c.DefaultItem }
+func (c *DropDown) dfltMaxWidth() int  { return c.MaxWidth }
+func (c *DropDown) dfltMinWidth() int  { return c.MinWidth }
+func (c *DropDown) dfltMaxHeight() int { return c.MaxHeight }
+func (c *DropDown) dfltOrientation() Orientation {
+	return c.Orientation
+}
+
+func (c *DropDown) OnInit(e *lines.Env) {
+	c.dd = c
+	c.value = c.DefaultItem
+	if c.Orientation == "" {
+		c.Orientation = Drop
+	}
+	if c.MaxWidth < 0 {
+		c.MaxWidth = 0
+	}
+	if c.Items == nil {
+		c.Items = []string{NoItems}
+	}
+	c.listener = c
+	c.Dim().SetHeight(1).SetWidth(c.width(true))
+	c.fireUpdate = e.Lines.Update
+	c.items.OnInit(e)
+}
+
+func (c *DropDown) newItems() (ii *items) {
+	if c.MaxWidth < 0 {
+		c.MaxWidth = 0
+	}
+	ii = &items{dd: c}
+	if c.Items == nil {
+		c.Items = []string{NoItems}
+	}
+	ii.listener = c
+	return ii
+}
+
+func (c *DropDown) OnUpdate(e *lines.Env, data interface{}) {
+	idx := int(data.(Value))
+	if idx == -1 && c.hasDefault() {
+		return
+	}
+	c.value = idx
+	c.items.OnUpdate(e, idx)
+}
+
+func (c *DropDown) Value() int { return c.value }
 
 // DropDownHrz is a horizontally labeled drop down selection list.
 // While the zero-value is ready to use it's not very useful.  Usually

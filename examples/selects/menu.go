@@ -69,6 +69,7 @@ func (c *menu) OnInit(e *lines.Env) {
 		lines.Filler + "empty DropDown" + lines.Filler,
 		lines.Filler + "drop-down List" + lines.Filler,
 		lines.Filler + "drop-up List" + lines.Filler,
+		lines.Filler + "unlabeled DropDown" + lines.Filler,
 	}
 	c.Listener = c
 	c.Dim().SetHeight(len(c.Items))
@@ -159,6 +160,20 @@ func (c *menu) OnUpdate(e *lines.Env, data interface{}) {
 		}
 		exp.dontFill = true
 		e.Lines.Update(c.display, exp, nil)
+	case 6:
+		exp.explain = []string{
+			"A drop-down list without label",
+			"whose item-labels greater 10",
+			"don't fit into the available",
+			"width.",
+		}
+		exp.cmp = &selects.DropDown{
+			Items:     fx.NStrings(20),
+			MaxHeight: 8,
+			MaxWidth:  3,
+		}
+		e.Lines.Update(c.display, exp, nil)
+		exp.expNotFilling = true
 	default:
 		e.Lines.Update(c.display, BLANK, nil)
 	}

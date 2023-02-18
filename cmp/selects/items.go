@@ -42,8 +42,8 @@ func (ii *items) resetItemsLabel(e *lines.Env) {
 		fmt.Fprint(e, lines.Filler+string(ii.dd.dfltOrientation()))
 		return
 	}
-	fmt.Fprint(e, ii.dd.dfltItems()[ii.dd.dfltItem()]+lines.Filler+
-		string(ii.dd.dfltOrientation()))
+	lbl := ii.calculateLabel([]rune(ii.dd.dfltItems()[ii.dd.dfltItem()]))
+	fmt.Fprint(e, lbl+lines.Filler+string(ii.dd.dfltOrientation()))
 }
 
 func (ii *items) hasDefault() bool {
@@ -95,15 +95,16 @@ func (c *items) OnClick(e *lines.Env, x, y int) {
 	if maxHeight == 0 || maxHeight > len(c.dd.dfltItems()) {
 		maxHeight = len(c.dd.dfltItems())
 	}
+	px, py, _, _ := c.Dim().Printable()
 	if c.dd.dfltOrientation() == Drop {
 		l.pos = lines.NewLayerPos(
-			c.Dim().X(), c.Dim().Y()+1,
+			px, py+1,
 			c.width(false), maxHeight,
 		)
 	}
 	if c.dd.dfltOrientation() == Up {
 		l.pos = lines.NewLayerPos(
-			c.Dim().X(), c.Dim().Y()-maxHeight,
+			px, py-maxHeight,
 			c.width(false), maxHeight,
 		)
 	}
@@ -120,13 +121,25 @@ func (c *items) close(ll *lines.Lines) {
 	})
 }
 
-func (c *items) OnUpdate(e *lines.Env, data interface{}) {
-	c.RemoveLayer(e)
+func (ii *items) OnUpdate(e *lines.Env, data interface{}) {
+	ii.RemoveLayer(e)
 	if data.(int) == -1 {
-		c.resetItemsLabel(e)
+		ii.resetItemsLabel(e)
 		return
 	}
-	fmt.Fprint(e,
-		c.dd.dfltItems()[data.(int)]+lines.Filler+
-			string(c.dd.dfltOrientation()))
+	lbl := ii.calculateLabel([]rune(ii.dd.dfltItems()[data.(int)]))
+	fmt.Fprint(e, lbl+lines.Filler+string(ii.dd.dfltOrientation()))
+}
+
+// calculateLabel returns given label possibly shortened if it doesn't
+// fit together with the orientation into the printable width
+func (ii *items) calculateLabel(lbl []rune) string {
+	orientationWidth := len([]rune(ii.dd.dfltOrientation()))
+	lblWidth := len(lbl)
+	_, _, pw, _ := ii.Dim().Printable()
+	maxLblWidth := pw - 1 - orientationWidth
+	if maxLblWidth < lblWidth {
+		return string(append(lbl[:maxLblWidth-1], '…'))
+	}
+	return string(lbl)
 }
