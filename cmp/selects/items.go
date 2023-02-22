@@ -10,11 +10,16 @@ import (
 	"github.com/slukits/lines"
 )
 
+// LabelStyle is used to query from a Styler the style for a items'
+// component label.
+const LabelStyle = -1
+
 type defaulter interface {
 	dfltItems() []string
 	dfltStyler() Styler
 	dfltHighlighter() Highlighter
 	dfltItem() int
+	dfltZeroLabel() string
 	dfltMaxWidth() int
 	dfltMinWidth() int
 	dfltMaxHeight() int
@@ -38,12 +43,29 @@ func (ii *items) OnInit(e *lines.Env) {
 }
 
 func (ii *items) resetItemsLabel(e *lines.Env) {
+	if ii.dd.dfltStyler() != nil {
+		ii.resetStyledItemsLabel(e)
+		return
+	}
 	if !ii.hasDefault() {
-		fmt.Fprint(e, lines.Filler+string(ii.dd.dfltOrientation()))
+		fmt.Fprint(e, ii.dd.dfltZeroLabel()+
+			lines.Filler+string(ii.dd.dfltOrientation()))
 		return
 	}
 	lbl := ii.calculateLabel([]rune(ii.dd.dfltItems()[ii.dd.dfltItem()]))
 	fmt.Fprint(e, lbl+lines.Filler+string(ii.dd.dfltOrientation()))
+}
+
+func (ii *items) resetStyledItemsLabel(e *lines.Env) {
+	sty := ii.dd.dfltStyler()(LabelStyle)
+	if !ii.hasDefault() {
+		fmt.Fprint(e.Sty(sty), ii.dd.dfltZeroLabel()+
+			lines.Filler+string(ii.dd.dfltOrientation()))
+		return
+	}
+	lbl := ii.calculateLabel([]rune(ii.dd.dfltItems()[ii.dd.dfltItem()]))
+	fmt.Fprint(e.Sty(sty),
+		lbl+lines.Filler+string(ii.dd.dfltOrientation()))
 }
 
 func (ii *items) hasDefault() bool {
@@ -58,6 +80,9 @@ func (c *items) width(respectMax bool) int {
 			continue
 		}
 		maxWdth = len(i) + decoration
+	}
+	if len([]rune(c.dd.dfltZeroLabel()))+decoration > maxWdth {
+		maxWdth = len([]rune(c.dd.dfltZeroLabel())) + decoration
 	}
 	if !respectMax {
 		if c.dd.dfltMinWidth() > maxWdth {
@@ -123,11 +148,19 @@ func (c *items) close(ll *lines.Lines) {
 
 func (ii *items) OnUpdate(e *lines.Env, data interface{}) {
 	ii.RemoveLayer(e)
-	if data.(int) == -1 {
+	idx := int(data.(Value))
+	if idx == -1 {
 		ii.resetItemsLabel(e)
 		return
 	}
-	lbl := ii.calculateLabel([]rune(ii.dd.dfltItems()[data.(int)]))
+	lbl := ii.calculateLabel([]rune(ii.dd.dfltItems()[idx]))
+	if ii.dd.dfltStyler() != nil {
+		fmt.Fprint(
+			e.Sty(ii.dd.dfltStyler()(idx)),
+			lbl+lines.Filler+string(ii.dd.dfltOrientation()),
+		)
+		return
+	}
 	fmt.Fprint(e, lbl+lines.Filler+string(ii.dd.dfltOrientation()))
 }
 

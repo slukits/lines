@@ -70,6 +70,14 @@ func (s Style) Reverse() Style {
 	return Style{fg: s.fg, bg: s.bg, aa: s.aa | Reverse, sm: s.sm}
 }
 
+// Switch removes given attribute a if it is set or adds it otherwise.
+func (s Style) Switch(a StyleAttributeMask) Style {
+	if s.aa&a == a {
+		return Style{fg: s.fg, bg: s.bg, aa: s.aa &^ a, sm: s.sm}
+	}
+	return Style{fg: s.fg, bg: s.bg, aa: s.aa | a, sm: s.sm}
+}
+
 // Invert returns a style having given Style s foreground color as
 // background color and its background color as foreground color.
 func (s Style) Invert() Style {

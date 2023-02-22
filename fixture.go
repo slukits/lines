@@ -110,6 +110,13 @@ func (fx *Fixture) Root() Componenter {
 	return fx.Lines.scr.root().userComponent()
 }
 
+func (fx *Fixture) Dim(c Componenter) (d *lyt.Dim) {
+	fx.Lines.Update(c, nil, func(e *Env) {
+		d = c.layoutComponent().Dim()
+	})
+	return d
+}
+
 // FireResize posts a resize event and returns after this event has been
 // processed.  NOTE this event as such is not reported but it triggers
 // OnInit and OnLayout events of components which are not initialized or

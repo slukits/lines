@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-/* selects.go provides APIs for the *items* see items.go */
+/* selects.go provides APIs for the *items* type see items.go */
 
 package selects
 
@@ -27,6 +27,7 @@ const (
 
 const NoDefault = -1
 
+// DropDown provides a full-featured drop-down item list component.
 type DropDown struct {
 	items
 
@@ -51,10 +52,16 @@ type DropDown struct {
 	// is allowed.
 	DefaultItem int
 
-	// MaxWidth sets the maximum items-label width which defaults to the
+	// ZeroLabel is set if a zero input is allowed and no item is
+	// selected.
+	ZeroLabel string
+
+	// MaxWidth sets the maximum items-list-width which defaults to the
 	// width of the widest item.
 	MaxWidth int
 
+	// MinWidth sets the minimal expected items-list-width which
+	// defaults to zero
 	MinWidth int
 
 	// MaxHeight may be used to restrict the hight of dropped selection
@@ -65,6 +72,8 @@ type DropDown struct {
 	// drops up.
 	Orientation Orientation
 
+	// value is the index of the currently selected item; -1 means no
+	// element is selected.
 	value int
 }
 
@@ -73,10 +82,11 @@ func (c *DropDown) dfltStyler() Styler  { return c.Styler }
 func (c *DropDown) dfltHighlighter() Highlighter {
 	return c.Highlighter
 }
-func (c *DropDown) dfltItem() int      { return c.DefaultItem }
-func (c *DropDown) dfltMaxWidth() int  { return c.MaxWidth }
-func (c *DropDown) dfltMinWidth() int  { return c.MinWidth }
-func (c *DropDown) dfltMaxHeight() int { return c.MaxHeight }
+func (c *DropDown) dfltItem() int         { return c.DefaultItem }
+func (c *DropDown) dfltZeroLabel() string { return c.ZeroLabel }
+func (c *DropDown) dfltMaxWidth() int     { return c.MaxWidth }
+func (c *DropDown) dfltMinWidth() int     { return c.MinWidth }
+func (c *DropDown) dfltMaxHeight() int    { return c.MaxHeight }
 func (c *DropDown) dfltOrientation() Orientation {
 	return c.Orientation
 }
@@ -117,7 +127,7 @@ func (c *DropDown) OnUpdate(e *lines.Env, data interface{}) {
 		return
 	}
 	c.value = idx
-	c.items.OnUpdate(e, idx)
+	c.items.OnUpdate(e, data)
 }
 
 func (c *DropDown) Value() int { return c.value }
@@ -153,6 +163,10 @@ type DropDownHrz struct {
 	// is allowed.
 	DefaultItem int
 
+	// ZeroLabel is set if a zero input is allowed and no item is
+	// selected.
+	ZeroLabel string
+
 	// MaxWidth sets the maximum items-label width which defaults to the
 	// width of the widest item.
 	MaxWidth int
@@ -175,10 +189,11 @@ func (c *DropDownHrz) dfltStyler() Styler  { return c.Styler }
 func (c *DropDownHrz) dfltHighlighter() Highlighter {
 	return c.Highlighter
 }
-func (c *DropDownHrz) dfltItem() int      { return c.DefaultItem }
-func (c *DropDownHrz) dfltMaxWidth() int  { return c.MaxWidth }
-func (c *DropDownHrz) dfltMinWidth() int  { return c.MinWidth }
-func (c *DropDownHrz) dfltMaxHeight() int { return c.MaxHeight }
+func (c *DropDownHrz) dfltItem() int         { return c.DefaultItem }
+func (c *DropDownHrz) dfltZeroLabel() string { return c.ZeroLabel }
+func (c *DropDownHrz) dfltMaxWidth() int     { return c.MaxWidth }
+func (c *DropDownHrz) dfltMinWidth() int     { return c.MinWidth }
+func (c *DropDownHrz) dfltMaxHeight() int    { return c.MaxHeight }
 func (c *DropDownHrz) dfltOrientation() Orientation {
 	return c.Orientation
 }
@@ -220,7 +235,7 @@ func (c *DropDownHrz) OnUpdate(e *lines.Env, data interface{}) {
 		return
 	}
 	c.value = idx
-	c.fireUpdate(c.CC[1].(*items), idx, nil)
+	c.fireUpdate(c.CC[1].(*items), data, nil)
 }
 
 func (c *DropDownHrz) Value() int { return c.value }
@@ -256,6 +271,10 @@ type DropDownVrt struct {
 	// is allowed.
 	DefaultItem int
 
+	// ZeroLabel is set if a zero input is allowed and no item is
+	// selected.
+	ZeroLabel string
+
 	// MaxWidth sets the maximum items-label width which defaults to the
 	// width of the widest item.
 	MaxWidth int
@@ -278,10 +297,11 @@ func (c *DropDownVrt) dfltStyler() Styler  { return c.Styler }
 func (c *DropDownVrt) dfltHighlighter() Highlighter {
 	return c.Highlighter
 }
-func (c *DropDownVrt) dfltItem() int      { return c.DefaultItem }
-func (c *DropDownVrt) dfltMaxWidth() int  { return c.MaxWidth }
-func (c *DropDownVrt) dfltMinWidth() int  { return c.MinWidth }
-func (c *DropDownVrt) dfltMaxHeight() int { return c.MaxHeight }
+func (c *DropDownVrt) dfltItem() int         { return c.DefaultItem }
+func (c *DropDownVrt) dfltZeroLabel() string { return c.ZeroLabel }
+func (c *DropDownVrt) dfltMaxWidth() int     { return c.MaxWidth }
+func (c *DropDownVrt) dfltMinWidth() int     { return c.MinWidth }
+func (c *DropDownVrt) dfltMaxHeight() int    { return c.MaxHeight }
 func (c *DropDownVrt) dfltOrientation() Orientation {
 	return c.Orientation
 }
@@ -331,7 +351,7 @@ func (c *DropDownVrt) OnUpdate(e *lines.Env, data interface{}) {
 		return
 	}
 	c.value = idx
-	c.fireUpdate(c.CC[1].(*items), idx, nil)
+	c.fireUpdate(c.CC[1].(*items), data, nil)
 }
 
 func (c *DropDownVrt) Value() int { return c.value }

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-package colors
+package selects
 
 import (
 	"testing"
@@ -11,42 +11,42 @@ import (
 	"github.com/slukits/lines"
 )
 
-type Monochrome struct{ Suite }
+type monochrome struct{ Suite }
 
-func (s *Monochrome) SetUp(t *T) { t.Parallel() }
+func (s *monochrome) SetUp(t *T) { t.Parallel() }
 
-func (s *Monochrome) Has_two_colors(t *T) { t.Eq(2, len(MonoColors)) }
+func (s *monochrome) Has_two_colors(t *T) { t.Eq(2, len(MonoColors)) }
 
-func (s *Monochrome) Offers_one_foreground_to_choose_from(t *T) {
+func (s *monochrome) Offers_one_foreground_to_choose_from(t *T) {
 	t.Eq(1, len(MonoForeground(BlackM)))
 	t.Eq(1, len(MonoForeground(WhiteM)))
 }
 
-func (s *Monochrome) Offers_white_foreground_to_black_background(t *T) {
+func (s *monochrome) Offers_white_foreground_to_black_background(t *T) {
 	t.Eq(lines.White, MonoForeground(BlackM)[0].FG())
 }
 
-func (s *Monochrome) Offers_black_foreground_to_white_background(t *T) {
+func (s *monochrome) Offers_black_foreground_to_white_background(t *T) {
 	t.Eq(lines.Black, MonoForeground(WhiteM)[0].FG())
 }
 
-func (s *Monochrome) Offers_white_background_to_black_foreground(t *T) {
+func (s *monochrome) Offers_white_background_to_black_foreground(t *T) {
 	t.Eq(lines.White, MonoBackground(BlackM)[0].BG())
 }
 
-func (s *Monochrome) Offers_black_background_to_white_foreground(t *T) {
+func (s *monochrome) Offers_black_background_to_white_foreground(t *T) {
 	t.Eq(lines.Black, MonoBackground(WhiteM)[0].BG())
 }
 
 func TestMonochrome(t *testing.T) {
 	t.Parallel()
-	Run(&Monochrome{}, t)
+	Run(&monochrome{}, t)
 }
 
 type system8 struct{ Suite }
 
 func (s *system8) Has_eight_colors(t *T) {
-	t.Eq(8, len(System8Colors))
+	t.Eq(8, len(system8Colors))
 }
 
 func (s *system8) Provides_seven_foreground_combinations(t *T) {

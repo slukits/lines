@@ -31,6 +31,12 @@ func (s *ADropDown) Displays_a_default_item_if_none_set(t *T) {
 	t.Contains(fx.ScreenOf(fx.Root()), NoItems)
 }
 
+func (s *ADropDown) Displays_zero_label_without_default_item(t *T) {
+	fx := fx.New(t, &DropDown{DefaultItem: NoDefault,
+		ZeroLabel: "zero label"})
+	t.Contains(fx.ScreenOf(fx.Root()), "zero label")
+}
+
 const maxItem = "1234"
 
 var lblFX = "label:"
@@ -52,6 +58,10 @@ func (s *ADropDown) Width_defaults_to_max_items_width_and_two(t *T) {
 	})
 }
 
+func (s *ADropDown) Shows_its_zero_label_if_no_item_selected(t *T) {
+
+}
+
 func (s *ADropDown) Shows_initially_set_default_item(t *T) {
 	fx := fx.New(t, &DropDown{Items: iiFX, DefaultItem: 1})
 	t.Contains(fx.ScreenOf(fx.Root()), maxItem)
@@ -71,7 +81,7 @@ func (s *ADropDown) Shortens_not_fitting_item_label(t *T) {
 }
 
 func extractDropDownLayer(
-	t *T, fx *lines.Fixture, cmp *DropDown,
+	t *T, fx *lines.Fixture, cmp lines.Componenter,
 ) *ModalList {
 	fx.FireComponentClick(cmp, 0, 0)
 	lyr, ok := (*ModalList)(nil), true

@@ -70,6 +70,7 @@ func (c *menu) OnInit(e *lines.Env) {
 		lines.Filler + "drop-down List" + lines.Filler,
 		lines.Filler + "drop-up List" + lines.Filler,
 		lines.Filler + "unlabeled DropDown" + lines.Filler,
+		lines.Filler + "style  picker" + lines.Filler,
 	}
 	c.Listener = c
 	c.Dim().SetHeight(len(c.Items))
@@ -162,16 +163,23 @@ func (c *menu) OnUpdate(e *lines.Env, data interface{}) {
 		e.Lines.Update(c.display, exp, nil)
 	case 6:
 		exp.explain = []string{
-			"A drop-down list without label",
-			"whose item-labels greater 10",
-			"don't fit into the available",
-			"width.",
+			"A drop-down list without label whose",
+			"item-labels greater 10 don't fit into",
+			"the available width.",
 		}
 		exp.cmp = &selects.DropDown{
 			Items:     fx.NStrings(20),
 			MaxHeight: 8,
 			MaxWidth:  3,
 		}
+		e.Lines.Update(c.display, exp, nil)
+		exp.expNotFilling = true
+	case 7:
+		exp.explain = []string{
+			"Two combined drop-downs letting a user",
+			"select a style.",
+		}
+		exp.cmp = &styleSelection{}
 		e.Lines.Update(c.display, exp, nil)
 		exp.expNotFilling = true
 	default:
@@ -197,6 +205,16 @@ func (c *filler) OnInit(e *lines.Env) {
 	c.Globals().SetStyle(
 		lines.Default, c.Globals().Style(lines.Highlight))
 	c.Globals().SetStyle(lines.Highlight, dflt)
+}
+
+type styleSelection struct {
+	lines.Component
+	lines.Chaining
+}
+
+func (c *styleSelection) OnInit(e *lines.Env) {
+	ss := &selects.Styles{}
+	c.CC = append(c.CC, &selects.StyleProperty{Styles: ss}, ss)
 }
 
 // quit provides the bottom list of our right hand menu-list which

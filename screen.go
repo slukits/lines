@@ -475,7 +475,11 @@ func (s Stacking) ForStacked(cb func(Componenter) (stop bool)) {
 //			c.CC = append(c.CC, &chainedCmp{})
 //		}
 //	}
-type Chaining struct{ CC []Componenter }
+type Chaining struct {
+
+	// CC holds the chained components
+	CC []Componenter
+}
 
 // ForChained calls back for each component of this Chainer respectively
 // until the callback asks to stop.

@@ -7,9 +7,20 @@ Package colors provides helper functions for dealing with colors in
 context of lines.  I.e. it its mainly about coloring text.  This effort
 cumulates in a color-scheme picker.
 */
-package colors
+package selects
 
 import "github.com/slukits/lines"
+
+type ColorRange uint8
+
+const (
+	Monochrome ColorRange = iota
+	System8Colors
+	System8LinuxColors
+	System16Colors
+	ANSIColors
+	TrueTypeColor
+)
 
 // Mono types the colors of a monochrome display.
 type Mono int32
@@ -20,6 +31,11 @@ const (
 )
 
 var MonoColors = []Mono{BlackM, WhiteM}
+
+var monoColors = map[lines.Color]bool{
+	lines.Black: true,
+	lines.White: true,
+}
 
 // MonoForeground provides the possible foreground color to given
 // background color bg.
@@ -57,14 +73,14 @@ const (
 	Silver8 System8 = System8(lines.Silver)
 )
 
-var System8Colors = []System8{
+var system8Colors = []System8{
 	Black8, Maroon8, Green8, Olive8, Navy8, Purple8, Teal8, Silver8}
 
 // System8Foregrounds provides the possible foreground combinations with
 // given background color bg.  A possible foreground combination is any
 // System8 color which is not bg.
 func System8Foregrounds(bg System8) (ss []lines.Style) {
-	for _, c := range System8Colors {
+	for _, c := range system8Colors {
 		if c == bg {
 			continue
 		}
@@ -79,7 +95,7 @@ func System8Foregrounds(bg System8) (ss []lines.Style) {
 // given foreground color fg.  A possible background combination is any
 // System8 color which is not fg.
 func System8Backgrounds(fg System8) (ss []lines.Style) {
-	for _, c := range System8Colors {
+	for _, c := range system8Colors {
 		if c == fg {
 			continue
 		}

@@ -16,6 +16,7 @@ import (
 
 var Factory = lines.TermFixture
 
+// New creates new lines terminal test fixture.
 func New(
 	t *gounit.T, cmp lines.Componenter, timeout ...time.Duration,
 ) *lines.Fixture {
