@@ -179,7 +179,7 @@ func (c *menu) OnUpdate(e *lines.Env, data interface{}) {
 			"Two combined drop-downs letting a user",
 			"select a style.",
 		}
-		exp.cmp = &styleSelection{}
+		exp.cmp = &styleSelections{}
 		e.Lines.Update(c.display, exp, nil)
 		exp.expNotFilling = true
 	default:
@@ -210,11 +210,28 @@ func (c *filler) OnInit(e *lines.Env) {
 type styleSelection struct {
 	lines.Component
 	lines.Chaining
+	Colors selects.ColorRange
 }
 
 func (c *styleSelection) OnInit(e *lines.Env) {
-	ss := &selects.Styles{}
+	ss := &selects.Styles{Colors: c.Colors}
 	c.CC = append(c.CC, &selects.StyleProperty{Styles: ss}, ss)
+}
+
+type styleSelections struct {
+	lines.Component
+	lines.Stacking
+}
+
+var colorRanges = []selects.ColorRange{
+	selects.Monochrome, selects.System8, // selects.System8LinuxColors,
+	// selects.System16Colors, selects.ANSIColors,
+}
+
+func (c *styleSelections) OnInit(e *lines.Env) {
+	for _, r := range colorRanges {
+		c.CC = append(c.CC, &styleSelection{Colors: r})
+	}
 }
 
 // quit provides the bottom list of our right hand menu-list which

@@ -29,6 +29,7 @@ const (
 
 var monoPP = []uint8{
 	ReverseFgBgProperty, StyleAttributeProperty, ResetProperties}
+
 var pp = []uint8{
 	ForegroundProperty, BackgroundProperty,
 	ReverseFgBgProperty, StyleAttributeProperty, ResetProperties,
@@ -52,18 +53,29 @@ type dropdown = DropDown
 
 // StyleProperty is a drop-down-box for selecting the style aspect which
 // should be set in associated *Styles* drop-down-box.
+//
+// NOTE this implementation of StyleProperty and Styles assumes that
+// StyleProperty is initialized by lines before an associated Styles
+// instanced is initialized.  I.e. it must come before in a wrapping
+// Stacker or Chainer.
 type StyleProperty struct {
 	dropdown
 
 	// Styles references the Styles drop-down-box a StyleProperty
 	// instance is operating on.
 	Styles *Styles
+
+	value Value
 }
 
 // OnInit sets up the property items and passes initialization through.
 func (p *StyleProperty) OnInit(e *lines.Env) {
 	p.listener = p
-	if p.Styles != nil && p.Styles.Colors == Monochrome {
+	if p.Styles == nil {
+		p.items.OnInit(e)
+		return
+	}
+	if p.Styles.Colors == Monochrome {
 		p.DefaultItem = NoDefault
 		p.ZeroLabel = PropertyNames[Properties]
 		for _, pn := range monoPP {
@@ -80,6 +92,7 @@ func (p *StyleProperty) OnInit(e *lines.Env) {
 
 func (p *StyleProperty) OnUpdate(e *lines.Env, data interface{}) {
 	if p.Styles == nil {
+		p.value = data.(Value)
 		p.items.OnUpdate(e, data)
 		return
 	}
@@ -87,22 +100,34 @@ func (p *StyleProperty) OnUpdate(e *lines.Env, data interface{}) {
 	case 0:
 		if p.Styles.Colors == Monochrome {
 			p.reverseMonochrome(e)
+			break
 		}
+		p.Styles.setForegroundSelection()
+		p.items.OnUpdate(e, data)
 	case 1:
 		if p.Styles.Colors == Monochrome {
 			p.Styles.setAttributeSelection()
 			p.items.OnUpdate(e, data)
+			break
 		}
+		p.Styles.setBackgroundSelection()
+		p.items.OnUpdate(e, data)
 	case 2:
 		if p.Styles.Colors == Monochrome {
 			p.resetMonochrome(e)
+			break
 		}
+		p.invertColored(e)
+	case 3:
+		p.Styles.setAttributeSelection()
+		p.items.OnUpdate(e, data)
 	default: // zero selection
 		if p.Styles.Colors == Monochrome && p.Styles.attrSelection {
 			p.Styles.removeAttributeSelection()
 			p.items.OnUpdate(e, data)
 		}
 	}
+	p.value = data.(Value)
 }
 
 func (p *StyleProperty) reverseMonochrome(e *lines.Env) {
@@ -112,6 +137,11 @@ func (p *StyleProperty) reverseMonochrome(e *lines.Env) {
 	p.Styles.updateValue(e.Lines, sty)
 	p.Styles.ss = p.Styles.calculateMonochromeStyles()
 	p.items.OnUpdate(e, Value(NoDefault))
+}
+
+func (p *StyleProperty) invertColored(e *lines.Env) {
+	p.Styles.invert(e.Lines)
+	p.items.OnUpdate(e, p.value)
 }
 
 func (p *StyleProperty) resetMonochrome(e *lines.Env) {
@@ -149,9 +179,15 @@ type Styles struct {
 
 	ss []lines.Style
 
+	global lines.Style // intermediate solution which should be removed
+
 	initialized bool
 
-	attrSelection bool
+	attrSelection bool // offer style-attributes for (un)setting
+
+	fgSelection bool // offer foreground colors for selection
+
+	bgSelection bool // offer background colors for selection
 }
 
 // SetInitial sets the initially set style of given Styles selection ss
@@ -164,83 +200,183 @@ func (ss *Styles) SetInitial(lines.Style) {
 
 // OnInit calculates and sets the available fore- and background
 // combinations or style-attributes according to SetProperty's value.
-func (p *Styles) OnInit(e *lines.Env) {
-	p.Styler = p.itemStyle
-	p.Highlighter = p.itemHighlight
-	p.value = p.initialValue()
-	if !p.initialized {
-		p.initial = p.value
+func (ss *Styles) OnInit(e *lines.Env) {
+	ss.Styler = ss.itemStyle
+	ss.Highlighter = ss.itemHighlight
+	ss.value = ss.initialValue()
+	if !ss.initialized {
+		ss.initial = ss.value
 	}
-	p.Items = p.calculateItems()
-	p.ss = p.calculateStyles()
-	p.MinWidth = p.calculateMinWidth()
-	p.dropdown.OnInit(e)
+	ss.MinWidth = ss.calculateMinWidth()
+	ss.setForegroundSelection()
+	ss.global = ss.Globals().Style(lines.Highlight)
+	ss.dropdown.OnInit(e)
 }
 
-func (p *Styles) itemStyle(idx int) lines.Style {
+func (ss *Styles) itemStyle(idx int) lines.Style {
 	if idx == LabelStyle {
-		return p.value
+		return ss.value
 	}
-	if p.Colors == Monochrome {
-		return p.value.WithAA(lines.ZeroStyle)
+	if ss.Colors == Monochrome {
+		return ss.value.WithAA(lines.ZeroStyle)
 	}
-	return lines.DefaultStyle // TODO: implement item style
+	if ss.fgSelection || ss.bgSelection {
+		return ss.ss[idx]
+	}
+	return ss.value.Invert().WithAA(lines.ZeroStyle)
 }
 
-func (p *Styles) OnUpdate(e *lines.Env, data interface{}) {
-	if p.attrSelection && data.(Value) != -1 {
-		p.updateAttribute(e, int(data.(Value)))
-		return
-	}
-	p.items.OnUpdate(e, data)
-}
-
-func (p *Styles) updateAttribute(e *lines.Env, idx int) {
-	p.value = p.value.Switch(aa[idx])
-	if !strings.HasSuffix(p.Items[idx], SelectedAttr) {
-		p.Items[idx] = p.Items[idx] + lines.Filler + SelectedAttr
-	} else {
-		p.Items[idx] = lines.StyleAttributeNames[aa[idx]]
-	}
-	p.items.OnUpdate(e, Value(NoDefault))
-}
-
-func (p *Styles) updateValue(ll *lines.Lines, s lines.Style) {
-	p.value = s
-	ll.Update(&p.items, nil, func(e *lines.Env) {
-		p.resetItemsLabel(e)
-	})
-}
-
-func (p *Styles) itemHighlight(sty lines.Style) lines.Style {
-	return sty.WithFG(sty.BG()).WithBG(sty.FG())
+func (ss *Styles) itemHighlight(sty lines.Style) lines.Style {
+	return sty.Invert()
 }
 
 // Value returns currently selected style.
-func (p *Styles) Value() lines.Style {
-	return p.value
+func (ss *Styles) Value() lines.Style {
+	return ss.value
 }
 
-func (p *Styles) initialValue() lines.Style {
-	switch p.Colors {
+// SelectingForeground returns true iff given Styles ss offers
+// foreground colors for selection.
+func (ss *Styles) SelectingForeground() bool { return ss.fgSelection }
+
+// SelectingBackground returns true iff given Styles ss offers
+// background colors for selection.
+func (ss *Styles) SelectingBackground() bool { return ss.bgSelection }
+
+// SelectingStyleAttributes return true iff given Styles ss offers style
+// attributes for selection.
+func (ss *Styles) SelectingStyleAttributes() bool {
+	return ss.attrSelection
+}
+
+func (ss *Styles) updateValue(ll *lines.Lines, s lines.Style) {
+	ss.value = s
+	ll.Update(&ss.items, nil, func(e *lines.Env) {
+		ss.resetItemsLabel(e)
+	})
+}
+
+func (ss *Styles) OnUpdate(e *lines.Env, data interface{}) {
+	if ss.attrSelection && data.(Value) != -1 {
+		ss.updateAttribute(e, int(data.(Value)))
+		return
+	}
+	if ss.fgSelection && data.(Value) != -1 {
+		ss.updateFG(e, int(data.(Value)))
+		return
+	}
+	if ss.bgSelection && data.(Value) != -1 {
+		ss.updateBG(e, int(data.(Value)))
+		return
+	}
+	ss.items.OnUpdate(e, data)
+}
+
+func (ss *Styles) updateAttribute(e *lines.Env, idx int) {
+	ss.value = ss.value.Switch(aa[idx])
+	if !strings.HasSuffix(ss.Items[idx], SelectedMark) {
+		ss.Items[idx] = ss.Items[idx] + lines.Filler + SelectedMark
+	} else {
+		ss.Items[idx] = lines.StyleAttributeNames[aa[idx]]
+	}
+	ss.items.OnUpdate(e, Value(NoDefault))
+}
+
+func (ss *Styles) updateFG(e *lines.Env, idx int) {
+	var currentIdx int
+	for i, s := range ss.ss {
+		if s.FG() != ss.value.FG() {
+			continue
+		}
+		currentIdx = i
+		break
+	}
+	ss.value = ss.value.WithFG(ss.ss[idx].FG())
+	ss.Items[currentIdx] = lines.ColorNames[ss.ss[currentIdx].FG()]
+	ss.Items[idx] = lines.ColorNames[ss.ss[idx].FG()] +
+		lines.Filler + SelectedMark
+	ss.items.OnUpdate(e, Value(NoDefault))
+}
+
+func (ss *Styles) updateBG(e *lines.Env, idx int) {
+	var currentIdx int
+	for i, s := range ss.ss {
+		if s.BG() != ss.value.BG() {
+			continue
+		}
+		currentIdx = i
+		break
+	}
+	ss.value = ss.value.WithBG(ss.ss[idx].BG())
+	ss.Items[currentIdx] = lines.ColorNames[ss.ss[currentIdx].BG()]
+	ss.Items[idx] = lines.ColorNames[ss.ss[idx].BG()] +
+		lines.Filler + SelectedMark
+	ss.items.OnUpdate(e, Value(NoDefault))
+}
+
+func (ss *Styles) initialValue() lines.Style {
+	switch ss.Colors {
+	case System8:
+		return lines.NewStyle(lines.ZeroStyle, lines.Silver,
+			lines.Black)
 	default:
 		return lines.NewStyle(lines.ZeroStyle, lines.White,
 			lines.Black)
 	}
 }
 
-func (p *Styles) calculateItems() []string {
-	switch p.Colors {
+func (ss *Styles) calculateStyles() []lines.Style {
+	switch ss.Colors {
+	case System8:
+		if ss.attrSelection {
+			return nil
+		}
+		if ss.fgSelection {
+			return System8Foregrounds(ss.value.BG())
+		}
+		return System8Backgrounds(ss.value.FG())
 	default:
-		return []string{lines.ColorNames[p.value.FG()]}
+		return ss.calculateMonochromeStyles()
 	}
 }
 
-func (p *Styles) calculateStyles() []lines.Style {
-	if p.Colors == Monochrome {
-		return p.calculateMonochromeStyles()
+func (ss *Styles) calculateItems() (ii []string) {
+	switch ss.Colors {
+	case System8:
+		if ss.attrSelection {
+			return aa.Labels()
+		}
+		if ss.fgSelection {
+			return ss.calculateFGItems()
+		}
+		return ss.calculateBGItems()
+	default:
+		return []string{lines.ColorNames[ss.value.FG()]}
 	}
-	return nil
+}
+
+func (ss *Styles) calculateFGItems() (ii []string) {
+	for _, s := range ss.ss {
+		if s.FG() != ss.Value().FG() {
+			ii = append(ii, lines.ColorNames[s.FG()])
+			continue
+		}
+		ii = append(ii, lines.ColorNames[s.FG()]+
+			lines.Filler+SelectedMark)
+	}
+	return ii
+}
+
+func (ss *Styles) calculateBGItems() (ii []string) {
+	for _, s := range ss.ss {
+		if s.BG() != ss.Value().BG() {
+			ii = append(ii, lines.ColorNames[s.BG()])
+			continue
+		}
+		ii = append(ii, lines.ColorNames[s.BG()]+
+			lines.Filler+SelectedMark)
+	}
+	return ii
 }
 
 func (p *Styles) calculateMonochromeStyles() []lines.Style {
@@ -256,7 +392,7 @@ func (aa attributes) Labels() (ll []string) {
 	return ll
 }
 
-const SelectedAttr = "✓"
+const SelectedMark = "✓"
 
 var aa = attributes{
 	lines.Bold,
@@ -269,8 +405,8 @@ var aa = attributes{
 	lines.Blink,
 }
 
-func (p *Styles) calculateMinWidth() int {
-	decorator := len([]rune(SelectedAttr)) + 1
+func (ss *Styles) calculateMinWidth() int {
+	decorator := len([]rune(SelectedMark)) + 1
 	width := decorator
 	for _, n := range lines.StyleAttributeNames {
 		rr := []rune(n)
@@ -279,16 +415,16 @@ func (p *Styles) calculateMinWidth() int {
 		}
 		width = len(rr) + decorator
 	}
-	clrWidth := p.calculateColorsWidth()
+	clrWidth := ss.calculateColorsWidth()
 	if clrWidth+decorator > width {
 		width = clrWidth + decorator
 	}
 	return width
 }
 
-func (p *Styles) calculateColorsWidth() int {
+func (ss *Styles) calculateColorsWidth() int {
 	var cc map[lines.Color]bool
-	switch p.Colors {
+	switch ss.Colors {
 	case Monochrome:
 		cc = monoColors
 	}
@@ -303,15 +439,41 @@ func (p *Styles) calculateColorsWidth() int {
 	return width
 }
 
-func (p *Styles) setAttributeSelection() {
-	p.attrSelection = true
-	p.ZeroLabel = lines.ColorNames[p.value.FG()]
-	p.Items = aa.Labels()
-	p.DefaultItem = NoDefault
+func (ss *Styles) setAttributeSelection() {
+	ss.attrSelection, ss.bgSelection, ss.fgSelection = true, false, false
+	ss.Items = aa.Labels()
+	ss.DefaultItem = NoDefault
 }
 
-func (p *Styles) removeAttributeSelection() {
-	p.attrSelection = false
-	p.ZeroLabel, p.DefaultItem = "", 0
-	p.Items = p.calculateItems()
+func (ss *Styles) setForegroundSelection() {
+	ss.fgSelection, ss.bgSelection, ss.attrSelection = true, false, false
+	ss.fgSelection = true
+	ss.ZeroLabel = RangeNames[ss.Colors]
+	ss.ss = ss.calculateStyles()
+	// NOTE item-calculation depends on preceding styles-calculation
+	ss.Items = ss.calculateItems()
+	ss.DefaultItem = NoDefault
+}
+
+func (ss *Styles) setBackgroundSelection() {
+	ss.bgSelection, ss.fgSelection, ss.attrSelection = true, false, false
+	ss.ss = ss.calculateStyles()
+	// NOTE item-calculation depends on preceding styles-calculation
+	ss.Items = ss.calculateItems()
+}
+
+func (ss *Styles) removeAttributeSelection() {
+	ss.attrSelection = false
+	ss.ZeroLabel, ss.DefaultItem = "", 0
+	ss.Items = ss.calculateItems()
+}
+
+func (ss *Styles) invert(ll *lines.Lines) {
+	ll.Update(ss, nil, func(e *lines.Env) {
+		ss.value = ss.value.Invert()
+		ss.ss = ss.calculateStyles()
+		// NOTE item-calculation depends on preceding styles-calculation
+		ss.Items = ss.calculateItems()
+		ss.resetItemsLabel(e)
+	})
 }

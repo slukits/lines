@@ -50,24 +50,32 @@ func (s *system8) Has_eight_colors(t *T) {
 }
 
 func (s *system8) Provides_seven_foreground_combinations(t *T) {
-	t.Eq(7, len(System8Foregrounds(Black8)))
+	t.Eq(7, len(System8Foregrounds(lines.Black)))
+}
+
+func (s *system8) Provides_no_fg_combinations_if_bg_not_system8(t *T) {
+	t.Eq(0, len(System8Foregrounds(lines.Salmon1)))
 }
 
 func (s *system8) Background_is_not_in_provided_foregrounds(t *T) {
-	ff := System8Foregrounds(Black8)
+	ff := System8Foregrounds(lines.Black)
 	for _, s := range ff {
-		t.FatalIfNot(s.FG() != lines.Color(Black8))
+		t.FatalIfNot(s.FG() != lines.Color(lines.Black))
 	}
 }
 
 func (s *system8) Provides_seven_background_combinations(t *T) {
-	t.Eq(7, len(System8Backgrounds(Black8)))
+	t.Eq(7, len(System8Backgrounds(lines.Black)))
+}
+
+func (s *system8) Provides_no_bg_combinations_if_fg_not_system8(t *T) {
+	t.Eq(0, len(System8Backgrounds(lines.Salmon1)))
 }
 
 func (s *system8) Foreground_is_not_in_provided_backgrounds(t *T) {
-	ff := System8Backgrounds(Black8)
+	ff := System8Backgrounds(lines.Black)
 	for _, s := range ff {
-		t.FatalIfNot(s.BG() != lines.Color(Black8))
+		t.FatalIfNot(s.BG() != lines.Color(lines.Black))
 	}
 }
 

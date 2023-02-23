@@ -15,12 +15,21 @@ type ColorRange uint8
 
 const (
 	Monochrome ColorRange = iota
-	System8Colors
+	System8
 	System8LinuxColors
 	System16Colors
 	ANSIColors
-	TrueTypeColor
+	// TrueColor
 )
+
+var RangeNames = map[ColorRange]string{
+	Monochrome:         "Monochrome",
+	System8:            "System8",
+	System8LinuxColors: "System8-Linux",
+	System16Colors:     "System16",
+	ANSIColors:         "ANSI",
+	// TrueColor:          "true-color",
+}
 
 // Mono types the colors of a monochrome display.
 type Mono int32
@@ -59,33 +68,36 @@ func MonoBackground(fg Mono) []lines.Style {
 		lines.ZeroStyle, lines.White, lines.Black)}
 }
 
-// System8 types the eight system colors.
-type System8 int32
+var system8Colors = Colors{
+	lines.Black, lines.Maroon, lines.Green, lines.Olive, lines.Navy,
+	lines.Purple, lines.Teal, lines.Silver,
+}
 
-const (
-	Black8  System8 = System8(lines.Black)
-	Maroon8 System8 = System8(lines.Maroon)
-	Green8  System8 = System8(lines.Green)
-	Olive8  System8 = System8(lines.Olive)
-	Navy8   System8 = System8(lines.Navy)
-	Purple8 System8 = System8(lines.Purple)
-	Teal8   System8 = System8(lines.Teal)
-	Silver8 System8 = System8(lines.Silver)
-)
+// System8Colors types the eight system colors.
+type Colors []lines.Color
 
-var system8Colors = []System8{
-	Black8, Maroon8, Green8, Olive8, Navy8, Purple8, Teal8, Silver8}
+func (cc *Colors) IsSystem8(c lines.Color) bool {
+	for _, c_ := range system8Colors {
+		if c_ != c {
+			continue
+		}
+		return true
+	}
+	return false
+}
 
 // System8Foregrounds provides the possible foreground combinations with
 // given background color bg.  A possible foreground combination is any
 // System8 color which is not bg.
-func System8Foregrounds(bg System8) (ss []lines.Style) {
+func System8Foregrounds(bg lines.Color) (ss []lines.Style) {
+	if !system8Colors.IsSystem8(bg) {
+		return ss
+	}
 	for _, c := range system8Colors {
 		if c == bg {
 			continue
 		}
-		sty := lines.NewStyle(
-			lines.ZeroStyle, lines.Color(c), lines.Color(bg))
+		sty := lines.NewStyle(lines.ZeroStyle, c, bg)
 		ss = append(ss, sty)
 	}
 	return ss
@@ -94,13 +106,15 @@ func System8Foregrounds(bg System8) (ss []lines.Style) {
 // System8Backgrounds provides the possible background combinations with
 // given foreground color fg.  A possible background combination is any
 // System8 color which is not fg.
-func System8Backgrounds(fg System8) (ss []lines.Style) {
+func System8Backgrounds(fg lines.Color) (ss []lines.Style) {
+	if !system8Colors.IsSystem8(fg) {
+		return ss
+	}
 	for _, c := range system8Colors {
 		if c == fg {
 			continue
 		}
-		sty := lines.NewStyle(
-			lines.ZeroStyle, lines.Color(fg), lines.Color(c))
+		sty := lines.NewStyle(lines.ZeroStyle, fg, c)
 		ss = append(ss, sty)
 	}
 	return ss
