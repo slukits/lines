@@ -72,7 +72,7 @@ func (l StringLine) indentWidth() (int, int) {
 	if indent == len(l) {
 		return len(l), 0
 	}
-	return indent, len(strings.TrimSpace(string(l)))
+	return indent, len([]rune(strings.TrimSpace(string(l))))
 }
 
 // StringScreen is the string representation of the screen lines at a
@@ -125,7 +125,6 @@ func (ss StringScreen) Trimmed() StringScreen {
 }
 
 func (ss StringScreen) len() int { return len(ss) }
-
 func (ss StringScreen) forLine(cb func(l liner) (stop bool)) {
 	for _, l := range ss {
 		if cb(StringLine(l)) {
