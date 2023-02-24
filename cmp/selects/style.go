@@ -145,18 +145,18 @@ func (p *StyleProperty) invertMonochrome(e *lines.Env) {
 
 func (p *StyleProperty) invertColored(e *lines.Env) {
 	if p.Styles.Colors == System8Linux {
+		v := p.Styles.Value().WithRemoved(lines.Bold)
 		if _, ok := linuxFGBold[p.Styles.Value().FG()]; !ok {
-			p.Styles.UpdateValue(e.Lines, p.Styles.Value().Invert())
+			p.Styles.UpdateValue(e.Lines, v.Invert())
 			p.items.OnUpdate(e, p.value)
 			return
 		}
-		fgBg := linuxFGBold[p.Styles.Value().FG()]
-		if fgBg == p.Styles.Value().BG() {
+		fgBg := linuxFGBold[v.FG()]
+		if fgBg == v.BG() {
 			p.items.OnUpdate(e, p.value)
 			return
 		}
-		p.Styles.UpdateValue(e.Lines, p.Styles.Value().WithBG(fgBg).
-			WithFG(p.Styles.Value().BG()))
+		p.Styles.UpdateValue(e.Lines, v.WithBG(fgBg).WithFG(v.BG()))
 		p.items.OnUpdate(e, p.value)
 		return
 	}
