@@ -341,6 +341,9 @@ func (ss *Styles) initialValue() lines.Style {
 	case System8:
 		return lines.NewStyle(lines.ZeroStyle, lines.Silver,
 			lines.Black)
+	case System8Linux:
+		return lines.NewStyle(lines.Bold, lines.Silver,
+			lines.Black)
 	default:
 		return lines.NewStyle(lines.ZeroStyle, lines.White,
 			lines.Black)
@@ -467,8 +470,15 @@ func (ss *Styles) calculateCurrentStyleIndex() int {
 }
 
 func (ss *Styles) calculateFGItems() (ii []string) {
+	isLinux := ss.Colors == System8Linux
+	valueIsBold := ss.value.AA()&lines.Bold != 0
+	hasFg := func(sty lines.Style) bool {
+		return (ss.value.FG() == sty.FG() && !isLinux) ||
+			(ss.value.FG() == sty.FG() &&
+				(valueIsBold == (sty.AA()&lines.Bold != 0)))
+	}
 	for _, s := range ss.ss {
-		if ss.Colors == System8Linux && s.AA()&lines.Bold != 0 {
+		if isLinux && s.AA()&lines.Bold != 0 {
 			name := lines.ColorNames[linuxBoldFG[s.FG()]]
 			if s.FG() != ss.Value().FG() || ss.Value().AA()&lines.Bold == 0 {
 				ii = append(ii, name)
@@ -477,12 +487,12 @@ func (ss *Styles) calculateFGItems() (ii []string) {
 			ii = append(ii, name+lines.Filler+SelectedMark)
 			continue
 		}
-		if s.FG() != ss.Value().FG() {
-			ii = append(ii, lines.ColorNames[s.FG()])
+		if hasFg(s) {
+			ii = append(ii, lines.ColorNames[s.FG()]+
+				lines.Filler+SelectedMark)
 			continue
 		}
-		ii = append(ii, lines.ColorNames[s.FG()]+
-			lines.Filler+SelectedMark)
+		ii = append(ii, lines.ColorNames[s.FG()])
 	}
 	return ii
 }
