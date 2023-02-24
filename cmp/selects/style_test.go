@@ -194,17 +194,27 @@ func (s *property) Switches_styles_to_attribute_selection(t *T) {
 	t.True(pp.Styles.SelectingStyleAttributes())
 }
 
-func (s *property) Colored_reverse_switches_fg_and_bg(t *T) {
+func (s *property) Colored_invert_switches_fg_and_bg(t *T) {
 	fx, pp := fxPPSty(t, System8)
 	stylesLabelStyle := fx.CellsOf(pp.Styles).Trimmed()[0][0].Style
 	selectProperty(t, PropertyNames[ReverseFgBgProperty], fx, pp)
-	reversedLabelStyle := fx.CellsOf(pp.Styles).Trimmed()[0][0].Style
-	t.Eq(stylesLabelStyle.FG(), reversedLabelStyle.BG())
-	t.Eq(stylesLabelStyle.BG(), reversedLabelStyle.FG())
+	invertedLabelStyle := fx.CellsOf(pp.Styles).Trimmed()[0][0].Style
+	t.Eq(stylesLabelStyle.FG(), invertedLabelStyle.BG())
+	t.Eq(stylesLabelStyle.BG(), invertedLabelStyle.FG())
 	selectProperty(t, PropertyNames[ReverseFgBgProperty], fx, pp)
-	reversedLabelStyle = fx.CellsOf(pp.Styles).Trimmed()[0][0].Style
-	t.Eq(stylesLabelStyle.FG(), reversedLabelStyle.FG())
-	t.Eq(stylesLabelStyle.BG(), reversedLabelStyle.BG())
+	invertedLabelStyle = fx.CellsOf(pp.Styles).Trimmed()[0][0].Style
+	t.Eq(stylesLabelStyle.FG(), invertedLabelStyle.FG())
+	t.Eq(stylesLabelStyle.BG(), invertedLabelStyle.BG())
+}
+
+func (s *property) Colored_reset_sets_initial_style(t *T) {
+	fx, pp := fxPPSty(t, System8)
+	initLabelStyle := fx.CellsOf(pp.Styles).Trimmed()[0][0].Style
+	selectProperty(t, PropertyNames[ReverseFgBgProperty], fx, pp)
+	selectProperty(t, PropertyNames[ResetProperties], fx, pp)
+	resetLabelStyle := fx.CellsOf(pp.Styles).Trimmed()[0][0].Style
+	t.Eq(initLabelStyle.FG(), resetLabelStyle.FG())
+	t.Eq(initLabelStyle.BG(), resetLabelStyle.BG())
 }
 
 func TestPropertySelect(t *testing.T) {
