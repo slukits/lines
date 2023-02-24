@@ -428,6 +428,16 @@ func (ss *Styles) calculateStyles() []lines.Style {
 			return LinuxForegrounds(ss.value.BG())
 		}
 		return LinuxBackgrounds(ss.value.FG())
+	case System16:
+		if ss.fgSelection {
+			return System16Foregrounds(ss.value.BG())
+		}
+		return System16Backgrounds(ss.value.FG())
+	case ANSI:
+		if ss.fgSelection {
+			return ANSIForegrounds(ss.value.BG())
+		}
+		return ANSIBackgrounds(ss.value.FG())
 	default:
 		return ss.calculateMonochromeStyles()
 	}

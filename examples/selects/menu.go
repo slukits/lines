@@ -181,7 +181,6 @@ func (c *menu) OnUpdate(e *lines.Env, data interface{}) {
 		}
 		exp.cmp = &styleSelections{}
 		e.Lines.Update(c.display, exp, nil)
-		exp.expNotFilling = true
 	default:
 		e.Lines.Update(c.display, BLANK, nil)
 	}
@@ -215,6 +214,7 @@ type styleSelection struct {
 
 func (c *styleSelection) OnInit(e *lines.Env) {
 	ss := &selects.Styles{Colors: c.Colors}
+	ss.MaxHeight = 8
 	c.CC = append(c.CC, &selects.StyleProperty{Styles: ss}, ss)
 }
 
@@ -225,7 +225,7 @@ type styleSelections struct {
 
 var colorRanges = []selects.ColorRange{
 	selects.Monochrome, selects.System8, selects.System8Linux,
-	// selects.System16Colors, selects.ANSIColors,
+	selects.System16, selects.ANSI,
 }
 
 func (c *styleSelections) OnInit(e *lines.Env) {

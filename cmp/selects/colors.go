@@ -17,17 +17,17 @@ const (
 	Monochrome ColorRange = iota
 	System8
 	System8Linux
-	System16Colors
-	ANSIColors
+	System16
+	ANSI
 	// TrueColor
 )
 
 var RangeNames = map[ColorRange]string{
-	Monochrome:     "Monochrome",
-	System8:        "System8",
-	System8Linux:   "System8-Linux",
-	System16Colors: "System16",
-	ANSIColors:     "ANSI",
+	Monochrome:   "Monochrome",
+	System8:      "System8",
+	System8Linux: "System8-Linux",
+	System16:     "System16",
+	ANSI:         "ANSI",
 	// TrueColor:          "true-color",
 }
 
