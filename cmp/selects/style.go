@@ -22,22 +22,22 @@ const (
 	Properties uint8 = iota
 	ForegroundProperty
 	BackgroundProperty
-	ReverseFgBgProperty
+	InvertFgBgProperty
 	StyleAttributeProperty
 	ResetProperties
 )
 
 var monoPP = []uint8{
-	ReverseFgBgProperty, StyleAttributeProperty, ResetProperties}
+	InvertFgBgProperty, StyleAttributeProperty, ResetProperties}
 
 var pp = []uint8{
 	ForegroundProperty, BackgroundProperty,
-	ReverseFgBgProperty, StyleAttributeProperty, ResetProperties,
+	InvertFgBgProperty, StyleAttributeProperty, ResetProperties,
 }
 
 var PropertyNames = map[uint8]string{
 	Properties: "properties", ForegroundProperty: "foreground",
-	BackgroundProperty: "background", ReverseFgBgProperty: "reverse",
+	BackgroundProperty: "background", InvertFgBgProperty: "reverse",
 	StyleAttributeProperty: "attributes", ResetProperties: "reset",
 }
 

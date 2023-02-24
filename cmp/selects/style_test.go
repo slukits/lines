@@ -26,7 +26,7 @@ func (s *property) Has_properties_as_zero_label_if_monochrome(t *T) {
 func (s *property) Offers_background_foreground_reverse_if_mono(t *T) {
 	fx := fx.New(t, &StyleProperty{Styles: &Styles{}})
 	lry := extractDropDownLayer(t, fx, fx.Root().(*StyleProperty))
-	t.Contains(fx.ScreenOf(lry), PropertyNames[ReverseFgBgProperty])
+	t.Contains(fx.ScreenOf(lry), PropertyNames[InvertFgBgProperty])
 }
 
 func (s *property) Offers_style_attributes_if_monochrome(t *T) {
@@ -44,7 +44,7 @@ func (s *property) Offers_reset_properties_if_monochrome(t *T) {
 func (s *property) Of_monochrome_has_reverse_attrs_and_reset_only(t *T) {
 	fx := fx.New(t, &StyleProperty{Styles: &Styles{}})
 	lry := extractDropDownLayer(t, fx, fx.Root().(*StyleProperty))
-	t.SpaceMatched(fx.ScreenOf(lry), PropertyNames[ReverseFgBgProperty],
+	t.SpaceMatched(fx.ScreenOf(lry), PropertyNames[InvertFgBgProperty],
 		PropertyNames[StyleAttributeProperty],
 		PropertyNames[ResetProperties])
 	t.Not.Contains(fx.ScreenOf(lry), PropertyNames[ForegroundProperty])
@@ -84,6 +84,7 @@ func fxPPSty(t *T, cr ColorRange, timeout ...time.Duration) (
 	*lines.Fixture, *StyleProperty,
 ) {
 	cmp, pp, ss := &ppSty{}, &StyleProperty{}, &Styles{Colors: cr}
+	ss.MaxHeight = 8
 	pp.Styles = ss
 	cmp.CC = append(cmp.CC, pp, ss)
 	fx := fx.New(t, cmp, timeout...)
@@ -95,11 +96,11 @@ func (c *ppSty) OnInit(e *lines.Env) { c.Dim().SetHeight(1) }
 func (s *property) Mono_reverse_switches_fg_and_bg(t *T) {
 	fx, pp := fxPPSty(t, Monochrome)
 	stylesLabelStyle := fx.CellsOf(pp.Styles).Trimmed()[0][0].Style
-	selectProperty(t, PropertyNames[ReverseFgBgProperty], fx, pp)
+	selectProperty(t, PropertyNames[InvertFgBgProperty], fx, pp)
 	reversedLabelStyle := fx.CellsOf(pp.Styles).Trimmed()[0][0].Style
 	t.Eq(stylesLabelStyle.FG(), reversedLabelStyle.BG())
 	t.Eq(stylesLabelStyle.BG(), reversedLabelStyle.FG())
-	selectProperty(t, PropertyNames[ReverseFgBgProperty], fx, pp)
+	selectProperty(t, PropertyNames[InvertFgBgProperty], fx, pp)
 	reversedLabelStyle = fx.CellsOf(pp.Styles).Trimmed()[0][0].Style
 	t.Eq(stylesLabelStyle.FG(), reversedLabelStyle.FG())
 	t.Eq(stylesLabelStyle.BG(), reversedLabelStyle.BG())
@@ -107,14 +108,14 @@ func (s *property) Mono_reverse_switches_fg_and_bg(t *T) {
 
 func (s *property) Mono_reverse_switches_back_to_zero_label(t *T) {
 	fx, pp := fxPPSty(t, Monochrome)
-	selectProperty(t, PropertyNames[ReverseFgBgProperty], fx, pp)
+	selectProperty(t, PropertyNames[InvertFgBgProperty], fx, pp)
 	t.Contains(fx.ScreenOf(pp).Trimmed(), PropertyNames[Properties])
 }
 
 func (s *property) Mono_reset_sets_initial_style(t *T) {
 	fx, pp := fxPPSty(t, Monochrome)
 	initLabelStyle := fx.CellsOf(pp.Styles).Trimmed()[0][0].Style
-	selectProperty(t, PropertyNames[ReverseFgBgProperty], fx, pp)
+	selectProperty(t, PropertyNames[InvertFgBgProperty], fx, pp)
 	selectProperty(t, PropertyNames[ResetProperties], fx, pp)
 	resetLabelStyle := fx.CellsOf(pp.Styles).Trimmed()[0][0].Style
 	t.Eq(initLabelStyle.FG(), resetLabelStyle.FG())
@@ -123,7 +124,7 @@ func (s *property) Mono_reset_sets_initial_style(t *T) {
 
 func (s *property) Mono_reset_switches_back_to_zero_label(t *T) {
 	fx, pp := fxPPSty(t, Monochrome)
-	selectProperty(t, PropertyNames[ReverseFgBgProperty], fx, pp)
+	selectProperty(t, PropertyNames[InvertFgBgProperty], fx, pp)
 	selectProperty(t, PropertyNames[ResetProperties], fx, pp)
 	t.Contains(fx.ScreenOf(pp).Trimmed(), PropertyNames[Properties])
 }
@@ -197,11 +198,11 @@ func (s *property) Switches_styles_to_attribute_selection(t *T) {
 func (s *property) Colored_invert_switches_fg_and_bg(t *T) {
 	fx, pp := fxPPSty(t, System8)
 	stylesLabelStyle := fx.CellsOf(pp.Styles).Trimmed()[0][0].Style
-	selectProperty(t, PropertyNames[ReverseFgBgProperty], fx, pp)
+	selectProperty(t, PropertyNames[InvertFgBgProperty], fx, pp)
 	invertedLabelStyle := fx.CellsOf(pp.Styles).Trimmed()[0][0].Style
 	t.Eq(stylesLabelStyle.FG(), invertedLabelStyle.BG())
 	t.Eq(stylesLabelStyle.BG(), invertedLabelStyle.FG())
-	selectProperty(t, PropertyNames[ReverseFgBgProperty], fx, pp)
+	selectProperty(t, PropertyNames[InvertFgBgProperty], fx, pp)
 	invertedLabelStyle = fx.CellsOf(pp.Styles).Trimmed()[0][0].Style
 	t.Eq(stylesLabelStyle.FG(), invertedLabelStyle.FG())
 	t.Eq(stylesLabelStyle.BG(), invertedLabelStyle.BG())
@@ -210,7 +211,7 @@ func (s *property) Colored_invert_switches_fg_and_bg(t *T) {
 func (s *property) Colored_reset_sets_initial_style(t *T) {
 	fx, pp := fxPPSty(t, System8)
 	initLabelStyle := fx.CellsOf(pp.Styles).Trimmed()[0][0].Style
-	selectProperty(t, PropertyNames[ReverseFgBgProperty], fx, pp)
+	selectProperty(t, PropertyNames[InvertFgBgProperty], fx, pp)
 	selectProperty(t, PropertyNames[ResetProperties], fx, pp)
 	resetLabelStyle := fx.CellsOf(pp.Styles).Trimmed()[0][0].Style
 	t.Eq(initLabelStyle.FG(), resetLabelStyle.FG())
@@ -526,6 +527,96 @@ func (s *styles) Attr_selection_has_inverse_value_colors_as_style(t *T) {
 	for _, l := range lyrCll {
 		t.Eq(expSty, l[0].Style)
 	}
+}
+
+func (s *styles) Provides_bright_fg_colors_if_linux_color_range(t *T) {
+	fx, pp := fxPPSty(t, System8Linux)
+	lyr := extractDropDownLayer(t, fx, pp.Styles)
+	fx.FireKey(lines.PgDn)
+	lyrScr := fx.ScreenOf(lyr)
+	for _, c := range linuxFGColors[8:] {
+		t.FatalIfNot(t.Contains(lyrScr, lines.ColorNames[c]))
+	}
+}
+
+func (s *styles) Has_white_initial_fg_if_linux_color_range(t *T) {
+	_, pp := fxPPSty(t, System8Linux)
+	t.Eq(pp.Styles.Value().FG(), lines.Silver)
+	t.Eq(pp.Styles.Value().AA(), lines.Bold)
+}
+
+func (s *styles) Inverts_to_corresponding_bg_if_linux_range(t *T) {
+	fx, pp := fxPPSty(t, System8Linux)
+	selectProperty(t, PropertyNames[InvertFgBgProperty], fx, pp)
+	t.Eq(pp.Styles.Value().BG(), lines.Silver)
+	t.Eq(pp.Styles.Value().FG(), lines.Black)
+	t.Eq(pp.Styles.Value().AA(), lines.ZeroStyle)
+}
+
+func (s *styles) Marks_inverted_fg_if_linux_range(t *T) {
+	fx, pp := fxPPSty(t, System8Linux)
+	selectProperty(t, PropertyNames[InvertFgBgProperty], fx, pp)
+	lyr := extractDropDownLayer(t, fx, pp.Styles)
+	t.Contains(fx.ScreenOf(lyr)[0], SelectedMark)
+	t.Not.Contains(fx.ScreenOf(lyr)[1:], SelectedMark)
+	fx.FireKey(lines.PgDn)
+	t.Not.Contains(fx.ScreenOf(lyr), SelectedMark)
+}
+
+func (s *styles) Removes_bold_on_system8_fg_select_in_linux_range(t *T) {
+	fx, pp := fxPPSty(t, System8Linux)
+	t.True(pp.Styles.Value().AA()&lines.Bold != 0)
+	lyr := extractDropDownLayer(t, fx, pp.Styles)
+	fx.FireComponentClick(lyr, 0, 0)
+	t.Not.True(pp.Styles.Value().AA()&lines.Bold != 0)
+}
+
+func (s *styles) Move_fg_color_mark_in_linux_color_range(t *T) {
+	fx, pp := fxPPSty(t, System8Linux)
+	lyr := extractDropDownLayer(t, fx, pp.Styles)
+	fx.FireKey(lines.PgDn)
+	fx.FireComponentClick(lyr, 0, 1)
+	lyr = extractDropDownLayer(t, fx, pp.Styles)
+	t.Not.Contains(fx.ScreenOf(lyr), SelectedMark)
+	fx.FireKey(lines.PgDn)
+	t.Not.Contains(fx.ScreenOf(lyr)[0], SelectedMark)
+	t.Contains(fx.ScreenOf(lyr)[1], SelectedMark)
+	t.Not.Contains(fx.ScreenOf(lyr)[2:], SelectedMark)
+	fx.FireKey(lines.PgUp)
+	fx.FireComponentClick(lyr, 0, 0)
+	lyr = extractDropDownLayer(t, fx, pp.Styles)
+	t.Contains(fx.ScreenOf(lyr)[0], SelectedMark)
+	t.Not.Contains(fx.ScreenOf(lyr)[1:], SelectedMark)
+	fx.FireKey(lines.PgDn)
+	t.Not.Contains(fx.ScreenOf(lyr), SelectedMark)
+}
+
+func (s *styles) Move_bg_color_mark_in_linux_color_range(t *T) {
+	fx, pp := fxPPSty(t, System8Linux)
+	selectProperty(t, PropertyNames[BackgroundProperty], fx, pp)
+	lyr := extractDropDownLayer(t, fx, pp.Styles)
+	t.Contains(fx.ScreenOf(lyr)[0], SelectedMark)
+	t.Not.Contains(fx.ScreenOf(lyr)[1:], SelectedMark)
+	fx.FireComponentClick(lyr, 0, 1)
+	lyr = extractDropDownLayer(t, fx, pp.Styles)
+	t.Not.Contains(fx.ScreenOf(lyr)[0], SelectedMark)
+	t.Contains(fx.ScreenOf(lyr)[1], SelectedMark)
+	t.Not.Contains(fx.ScreenOf(lyr)[2:], SelectedMark)
+}
+
+func (s *styles) Mark_fg_bg_colors_on_reset_in_linux_range(t *T) {
+	fx, pp := fxPPSty(t, System8Linux)
+	selectProperty(t, PropertyNames[InvertFgBgProperty], fx, pp)
+	selectProperty(t, PropertyNames[ResetProperties], fx, pp)
+	lyr := extractDropDownLayer(t, fx, pp.Styles)
+	fx.FireKey(lines.PgDn)
+	t.Not.Contains(fx.ScreenOf(lyr)[:7], SelectedMark)
+	t.Contains(fx.ScreenOf(lyr)[7], SelectedMark)
+	fx.FireComponentClick(pp.Styles, 0, 0)
+	selectProperty(t, PropertyNames[BackgroundProperty], fx, pp)
+	lyr = extractDropDownLayer(t, fx, pp.Styles)
+	t.Contains(fx.ScreenOf(lyr)[0], SelectedMark)
+	t.Not.Contains(fx.ScreenOf(lyr)[1:8], SelectedMark)
 }
 
 func TestStyles(t *testing.T) {
