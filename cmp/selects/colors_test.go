@@ -87,16 +87,16 @@ func TestSystem8(t *testing.T) {
 type linux struct{ Suite }
 
 func (s *linux) Has_eight_background_colors(t *T) {
-	t.Eq(8, len(linuxBGs))
+	t.Eq(8, len(linuxBGColors))
 }
 
 func (s *linux) Has_sixteen_foreground_colors(t *T) {
-	t.Eq(16, len(linuxFGs))
+	t.Eq(16, len(linuxFGColors))
 }
 
 func (s *linux) Provides_seven_or_eight_backgrounds_to_given_fg(t *T) {
 	eight := 0
-	for _, fg := range linuxFGs {
+	for _, fg := range linuxFGColors {
 		bb := LinuxBackgrounds(fg)
 		t.True(len(bb) == 7 || len(bb) == 8)
 		if len(bb) == 7 {
@@ -118,7 +118,7 @@ func (s *linux) Provides_seven_or_eight_backgrounds_to_given_fg(t *T) {
 
 func (s *linux) Provides_fifteen_fg_colors_to_given_bg(t *T) {
 	fgBright := 0
-	for _, bg := range linuxBGs {
+	for _, bg := range linuxBGColors {
 		ff := LinuxForegrounds(bg)
 		t.Eq(15, len(ff))
 		for _, f := range ff {
@@ -144,22 +144,22 @@ func (s *system16) Has_sixteen_colors(t *T) {
 }
 
 func (s *system16) Provides_fifteen_foreground_combinations(t *T) {
-	t.Eq(15, len(System16Foregrounds(Black16)))
+	t.Eq(15, len(System16Foregrounds(lines.Black)))
 }
 
 func (s *system16) Background_is_not_in_provided_foregrounds(t *T) {
-	ff, bg := System16Foregrounds(Black16), lines.Color(Black16)
+	ff, bg := System16Foregrounds(lines.Black), lines.Black
 	for _, s := range ff {
 		t.FatalIfNot(t.True(s.FG() != bg))
 	}
 }
 
 func (s *system16) Provides_fifteen_background_combinations(t *T) {
-	t.Eq(15, len(System16Backgrounds(White16)))
+	t.Eq(15, len(System16Backgrounds(lines.White)))
 }
 
 func (s *system16) Foreground_is_not_in_provided_backgrounds(t *T) {
-	ff, fg := System16Backgrounds(White16), lines.Color(White16)
+	ff, fg := System16Backgrounds(lines.White), lines.White
 	for _, s := range ff {
 		t.FatalIfNot(t.True(s.BG() != fg))
 	}
@@ -179,15 +179,15 @@ func (s *ansi) Has_256_colors(t *T) {
 func (s *ansi) Provides_254_foreground_combinations_with_system_colors(
 	t *T,
 ) {
-	t.Eq(254, len(ANSIForegrounds(Black)))
+	t.Eq(254, len(ANSIForegrounds(lines.Black)))
 }
 
 func (s *ansi) Provides_255_foreground_combinations(t *T) {
-	t.Eq(255, len(ANSIForegrounds(Tan)))
+	t.Eq(255, len(ANSIForegrounds(lines.Tan)))
 }
 
 func (s *ansi) Background_is_not_in_provided_foregrounds(t *T) {
-	ff, bg := ANSIForegrounds(Black), lines.Color(Black)
+	ff, bg := ANSIForegrounds(lines.Black), lines.Black
 	for _, s := range ff {
 		t.FatalIfNot(t.True(s.FG() != bg))
 	}
@@ -196,15 +196,15 @@ func (s *ansi) Background_is_not_in_provided_foregrounds(t *T) {
 func (s *ansi) Provides_254_background_combinations_with_system_colors(
 	t *T,
 ) {
-	t.Eq(254, len(ANSIBackgrounds(White)))
+	t.Eq(254, len(ANSIBackgrounds(lines.White)))
 }
 
 func (s *ansi) Provides_255_background_combinations(t *T) {
-	t.Eq(255, len(ANSIForegrounds(LightCoral)))
+	t.Eq(255, len(ANSIForegrounds(lines.LightCoral)))
 }
 
 func (s *ansi) Foreground_is_not_in_provided_backgrounds(t *T) {
-	ff, fg := ANSIBackgrounds(White), lines.Color(White)
+	ff, fg := ANSIBackgrounds(lines.White), lines.White
 	for _, s := range ff {
 		t.FatalIfNot(t.True(s.BG() != fg))
 	}

@@ -311,6 +311,10 @@ func (ll *Lines) OnQuit(listener func()) *Lines {
 // not blocking.)
 func (ll *Lines) WaitForQuit() { ll.backend.WaitForQuit() }
 
+func (ll *Lines) Colors() int {
+	return ll.backend.(api.UIer).Colors()
+}
+
 // Update posts an update event into the event queue which is reported
 // either to given listener if not nil or to given componenter if given
 // listener is nil.  Given data will be provided by the reported Update

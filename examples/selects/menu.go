@@ -224,7 +224,7 @@ type styleSelections struct {
 }
 
 var colorRanges = []selects.ColorRange{
-	selects.Monochrome, selects.System8, // selects.System8LinuxColors,
+	selects.Monochrome, selects.System8, selects.System8Linux,
 	// selects.System16Colors, selects.ANSIColors,
 }
 

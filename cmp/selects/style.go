@@ -144,6 +144,22 @@ func (p *StyleProperty) invertMonochrome(e *lines.Env) {
 }
 
 func (p *StyleProperty) invertColored(e *lines.Env) {
+	if p.Styles.Colors == System8Linux {
+		if _, ok := linuxFGBold[p.Styles.Value().FG()]; !ok {
+			p.Styles.UpdateValue(e.Lines, p.Styles.Value().Invert())
+			p.items.OnUpdate(e, p.value)
+			return
+		}
+		fgBg := linuxFGBold[p.Styles.Value().FG()]
+		if fgBg == p.Styles.Value().BG() {
+			p.items.OnUpdate(e, p.value)
+			return
+		}
+		p.Styles.UpdateValue(e.Lines, p.Styles.Value().WithBG(fgBg).
+			WithFG(p.Styles.Value().BG()))
+		p.items.OnUpdate(e, p.value)
+		return
+	}
 	p.Styles.UpdateValue(e.Lines, p.Styles.Value().Invert())
 	p.items.OnUpdate(e, p.value)
 }
@@ -283,6 +299,10 @@ func (ss *Styles) UpdateValue(ll *lines.Lines, s lines.Style) {
 }
 
 func (ss *Styles) updateAttribute(e *lines.Env, idx int) {
+	aa := aa
+	if ss.Colors == System8Linux {
+		aa = aaLinux
+	}
 	ss.value = ss.value.Switch(aa[idx])
 	if !strings.HasSuffix(ss.Items[idx], SelectedMark) {
 		ss.Items[idx] = ss.Items[idx] + lines.Filler + SelectedMark
@@ -293,30 +313,22 @@ func (ss *Styles) updateAttribute(e *lines.Env, idx int) {
 }
 
 func (ss *Styles) updateFG(e *lines.Env, idx int) {
-	var currentIdx int
-	for i, s := range ss.ss {
-		if s.FG() != ss.value.FG() {
-			continue
-		}
-		currentIdx = i
-		break
-	}
+	currentIdx := ss.calculateCurrentStyleIndex()
 	ss.value = ss.value.WithFG(ss.ss[idx].FG())
-	ss.Items[currentIdx] = lines.ColorNames[ss.ss[currentIdx].FG()]
-	ss.Items[idx] = lines.ColorNames[ss.ss[idx].FG()] +
-		lines.Filler + SelectedMark
+	if ss.Colors == System8Linux {
+		if ss.ss[idx].AA()&lines.Bold != 0 {
+			ss.value = ss.value.WithAdded(lines.Bold)
+		} else {
+			ss.value = ss.value.WithRemoved(lines.Bold)
+		}
+	}
+	ss.Items[currentIdx] = ss.calculateFGName(currentIdx)
+	ss.Items[idx] = ss.calculateFGName(idx) + lines.Filler + SelectedMark
 	ss.items.OnUpdate(e, Value(NoDefault))
 }
 
 func (ss *Styles) updateBG(e *lines.Env, idx int) {
-	var currentIdx int
-	for i, s := range ss.ss {
-		if s.BG() != ss.value.BG() {
-			continue
-		}
-		currentIdx = i
-		break
-	}
+	currentIdx := ss.calculateCurrentStyleIndex()
 	ss.value = ss.value.WithBG(ss.ss[idx].BG())
 	ss.Items[currentIdx] = lines.ColorNames[ss.ss[currentIdx].BG()]
 	ss.Items[idx] = lines.ColorNames[ss.ss[idx].BG()] +
@@ -346,9 +358,32 @@ func (aa attributes) Labels() (ll []string) {
 	return ll
 }
 
+const SelectedMark = "✓"
+
+var aa = attributes{
+	lines.Bold,
+	lines.Italic,
+	lines.Underline,
+	lines.StrikeThrough,
+	lines.Dim,
+	lines.Reverse,
+	lines.Invalid,
+	lines.Blink,
+}
+
+var aaLinux = attributes{
+	lines.Dim,
+	lines.Reverse,
+	lines.Blink,
+}
+
 func (ss *Styles) setAttributeSelection() {
 	ss.attrSelection, ss.bgSelection, ss.fgSelection = true, false, false
-	ss.Items = aa.Labels()
+	if ss.Colors == System8Linux {
+		ss.Items = aaLinux.Labels()
+	} else {
+		ss.Items = aa.Labels()
+	}
 	ss.DefaultItem = NoDefault
 }
 
@@ -385,28 +420,63 @@ func (ss *Styles) calculateStyles() []lines.Style {
 			return System8Foregrounds(ss.value.BG())
 		}
 		return System8Backgrounds(ss.value.FG())
+	case System8Linux:
+		if ss.fgSelection {
+			return LinuxForegrounds(ss.value.BG())
+		}
+		return LinuxBackgrounds(ss.value.FG())
 	default:
 		return ss.calculateMonochromeStyles()
 	}
 }
 
 func (ss *Styles) calculateItems() (ii []string) {
-	switch ss.Colors {
-	case System8:
-		if ss.attrSelection {
-			return aa.Labels()
-		}
-		if ss.fgSelection {
-			return ss.calculateFGItems()
-		}
-		return ss.calculateBGItems()
-	default:
-		return []string{lines.ColorNames[ss.value.FG()]}
+	if ss.attrSelection {
+		return aa.Labels()
 	}
+	if ss.fgSelection {
+		return ss.calculateFGItems()
+	}
+	return ss.calculateBGItems()
+}
+
+func (ss *Styles) calculateFGName(styleIdx int) string {
+	sty := ss.ss[styleIdx]
+	if ss.Colors == System8Linux && sty.AA()&lines.Bold != 0 {
+		return lines.ColorNames[linuxBoldFG[sty.FG()]]
+	}
+	return lines.ColorNames[sty.FG()]
+}
+
+func (ss *Styles) calculateCurrentStyleIndex() int {
+	if ss.Colors != System8Linux || ss.value.AA()&lines.Bold == 0 {
+		for i, s := range ss.ss {
+			if s.FG() != ss.value.FG() {
+				continue
+			}
+			return i
+		}
+	}
+	for i, s := range ss.ss {
+		if s.FG() != ss.value.FG() || s.AA()&lines.Bold == 0 {
+			continue
+		}
+		return i
+	}
+	return 0
 }
 
 func (ss *Styles) calculateFGItems() (ii []string) {
 	for _, s := range ss.ss {
+		if ss.Colors == System8Linux && s.AA()&lines.Bold != 0 {
+			name := lines.ColorNames[linuxBoldFG[s.FG()]]
+			if s.FG() != ss.Value().FG() || ss.Value().AA()&lines.Bold == 0 {
+				ii = append(ii, name)
+				continue
+			}
+			ii = append(ii, name+lines.Filler+SelectedMark)
+			continue
+		}
 		if s.FG() != ss.Value().FG() {
 			ii = append(ii, lines.ColorNames[s.FG()])
 			continue
@@ -431,19 +501,6 @@ func (ss *Styles) calculateBGItems() (ii []string) {
 
 func (p *Styles) calculateMonochromeStyles() []lines.Style {
 	return []lines.Style{p.value}
-}
-
-const SelectedMark = "✓"
-
-var aa = attributes{
-	lines.Bold,
-	lines.Italic,
-	lines.Underline,
-	lines.StrikeThrough,
-	lines.Dim,
-	lines.Reverse,
-	lines.Invalid,
-	lines.Blink,
 }
 
 func (ss *Styles) calculateMinWidth() int {
