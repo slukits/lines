@@ -452,8 +452,15 @@ func (ss *Styles) calculateFGName(styleIdx int) string {
 }
 
 func (ss *Styles) calculateCurrentStyleIndex() int {
-	if ss.Colors != System8Linux || ss.value.AA()&lines.Bold == 0 {
+	if ss.Colors != System8Linux || ss.value.AA()&lines.Bold == 0 ||
+		ss.SelectingBackground() {
 		for i, s := range ss.ss {
+			if ss.SelectingBackground() {
+				if s.BG() != ss.value.BG() {
+					continue
+				}
+				return i
+			}
 			if s.FG() != ss.value.FG() {
 				continue
 			}
