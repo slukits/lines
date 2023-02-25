@@ -241,7 +241,7 @@ func colorRanges(ll *lines.Lines) []selects.ColorRange {
 }
 
 func (c *styleSelections) OnInit(e *lines.Env) {
-	c.Dim().SetHeight(8)
+	c.Dim().SetHeight(len(colorRanges(e.Lines)) * 2)
 	pp, ss := &column{}, &column{}
 	for _, r := range colorRanges(e.Lines) {
 		s := &selects.Styles{Colors: r}
