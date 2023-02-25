@@ -169,7 +169,7 @@ Gaps(index)-method
 
 ```go
 c.Gaps(0).AA(lines.Reverse)
-c.Gaps(0).Corners.AA(lines.Revers)
+c.Gaps(0).Corners.AA(lines.Reverse)
 ```
 
 above is as of now the simplest way to frame a component.  Gaps allow to
@@ -241,24 +241,33 @@ examples for features usage.
 lines comes with testing facilities:
 
 ```go
-import (
-    "testing"
+package main
 
-    "github.com/slukits/lines"
+import (
+	"fmt"
+	"testing"
+
+	"github.com/slukits/lines"
 )
 
-type CmpFixture struct { lines.Component }
+type CmpFixture struct{ lines.Component }
 
-func TestUpdateListenerIsCalled(t *T) {
-    tt := lines.TermFixture(t, 0, &CmpFixture{})
-    exp :=  "update listener called"
-    tt.Lines.Update(tt.Root(), nil, func(e *lines.Env) {
-        fmt.Fprint(e, exp)
-    })
-    if exp != tt.Screen().Trimmed().String() {
-        t.Errorf("expected: '%s'; got '%s'", exp,
-            tt.Screen().Trimmed().String())
-    }
+func TestUpdateListenerIsCalled(t *testing.T) {
+	tt := lines.TermFixture(t, 0, &CmpFixture{})
+	exp := "update listener called"
+	tt.Lines.Update(tt.Root(), nil, func(e *lines.Env) {
+		fmt.Fprint(e, exp)
+	})
+	if exp != tt.Screen().Trimmed().String() {
+		t.Errorf("expected: '%s'; got '%s'", exp,
+			tt.Screen().Trimmed().String())
+	}
+}
+
+func main() {
+	testing.Main(nil, []testing.InternalTest{
+        {"updateListener", TestUpdateListenerIsCalled},
+    }, nil, nil)
 }
 ```
 
