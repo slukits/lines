@@ -38,7 +38,7 @@ type items struct {
 
 // OnInit prints the list items to the printable area.
 func (ii *items) OnInit(e *lines.Env) {
-	ii.Dim().SetWidth(ii.width(true))
+	ii.Dim().SetWidth(ii.Width(true))
 	ii.resetItemsLabel(e)
 }
 
@@ -73,7 +73,11 @@ func (ii *items) hasDefault() bool {
 	return i >= 0 && i < len(ii.dd.dfltItems())
 }
 
-func (c *items) width(respectMax bool) int {
+// Width calculates given items component c's width taking a set maximum
+// width into account if respectMax is set to true.  The returned width
+// is the widest item plus the drop-down decoration including a
+// potential zero label.
+func (c *items) Width(respectMax bool) int {
 	maxWdth, decoration := 0, len([]rune(Drop))+1
 	for _, i := range c.dd.dfltItems() {
 		if maxWdth >= len(i)+decoration {
@@ -124,13 +128,13 @@ func (c *items) OnClick(e *lines.Env, x, y int) {
 	if c.dd.dfltOrientation() == Drop {
 		l.pos = lines.NewLayerPos(
 			px, py+1,
-			c.width(false), maxHeight,
+			c.Width(false), maxHeight,
 		)
 	}
 	if c.dd.dfltOrientation() == Up {
 		l.pos = lines.NewLayerPos(
 			px, py-maxHeight,
-			c.width(false), maxHeight,
+			c.Width(false), maxHeight,
 		)
 	}
 	if !c.hasDefault() {

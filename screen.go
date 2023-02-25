@@ -31,7 +31,9 @@ func (dd Dimensions) Width() int { return dd.dim.Width() }
 // Height of component without margins.
 func (dd Dimensions) Height() int { return dd.dim.Height() }
 
-// DD is a function which extracts layout information from a component.
+// DD is a function which extracts layout information from a component
+// without the need of being inside one of the components
+// event-callbacks.
 type DD func(Componenter) Dimensions
 
 // Layouter is implemented by components which want to be notified if
@@ -313,22 +315,6 @@ func (s *screen) hardSync(ll *Lines) {
 	s.ensureFocus(ll)
 }
 
-func (s *screen) syncAfterLayout(ll *Lines) {
-	cntx, reflow := &rprContext{ll: ll, scr: s}, false
-	s.lyt.ForDimer(nil, func(d lyt.Dimer) (stop bool) {
-		cmp := d.(layoutComponenter).userComponent()
-		if al, ok := cmp.(AfterLayouter); ok {
-			callback(cmp, cntx, func(e *Env) {
-				reflow = al.OnAfterLayout(e, dimensionsOf)
-			})
-		}
-		return
-	})
-	if reflow {
-		s.lyt.Reflow(nil)
-	}
-}
-
 func dimensionsOf(cmp Componenter) Dimensions {
 	return Dimensions{
 		dim: cmp.embedded().layoutCmp.wrapped().dim}
@@ -342,6 +328,16 @@ func (s *screen) softSync(ll *Lines) {
 	s.syncReflowLayout(ll, false, func(c Componenter) {
 		c.layoutComponent().wrapped().SetDirty()
 	})
+	update := s.backend.Update
+	s.syncAfterLayout(ll)
+	// if s.syncAfterLayout(ll) {
+	// 	s.lyt.Root.(layoutComponenter).wrapped().hardSync(s.backend)
+	// 	s.lyt.Layers.For(func(l *lyt.Layer) (stop bool) {
+	// 		l.Root.(layoutComponenter).wrapped().hardSync(s.backend)
+	// 		return false
+	// 	})
+	// 	update = s.backend.Redraw
+	// }
 	if !s.lyt.Root.(layoutComponenter).wrapped().IsDirty() &&
 		s.lyt.Layers == nil {
 		s.ensureFocus(ll)
@@ -354,8 +350,30 @@ func (s *screen) softSync(ll *Lines) {
 		l.Root.(layoutComponenter).wrapped().hardSync(s.backend)
 		return false
 	})
-	s.backend.Update()
+	update()
 	s.ensureFocus(ll)
+}
+
+func (s *screen) syncAfterLayout(ll *Lines) bool {
+	cntx, reflow := &rprContext{ll: ll, scr: s}, false
+	s.lyt.ForDimer(nil, func(d lyt.Dimer) (stop bool) {
+		cmp := d.(layoutComponenter).userComponent()
+		if al, ok := cmp.(AfterLayouter); ok {
+			callback(cmp, cntx, func(e *Env) {
+				if reflow {
+					al.OnAfterLayout(e, dimensionsOf)
+					return
+				}
+				reflow = al.OnAfterLayout(e, dimensionsOf)
+			})
+		}
+		return
+	})
+	if reflow {
+		s.lyt.Reflow(nil)
+		return true
+	}
+	return false
 }
 
 type components []*component

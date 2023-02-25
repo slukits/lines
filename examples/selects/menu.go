@@ -5,6 +5,9 @@
 package main
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/slukits/lines"
 	"github.com/slukits/lines/cmp/fx"
 	"github.com/slukits/lines/cmp/selects"
@@ -132,7 +135,7 @@ func (c *menu) OnUpdate(e *lines.Env, data interface{}) {
 			MaxHeight:   5,
 			DefaultItem: selects.NoDefault,
 		}
-		exp.expNotFilling = true
+		exp.msgNotFilling = true
 		e.Lines.Update(c.display, exp, nil)
 	case 5:
 		exp.explain = []string{
@@ -173,12 +176,13 @@ func (c *menu) OnUpdate(e *lines.Env, data interface{}) {
 			MaxWidth:  3,
 		}
 		e.Lines.Update(c.display, exp, nil)
-		exp.expNotFilling = true
+		exp.msgNotFilling = true
 	case 7:
 		exp.explain = []string{
 			"Two combined drop-downs letting a user",
 			"select a style.",
 		}
+		exp.msgNotFilling = true
 		exp.cmp = &styleSelections{}
 		e.Lines.Update(c.display, exp, nil)
 	default:
@@ -206,33 +210,104 @@ func (c *filler) OnInit(e *lines.Env) {
 	c.Globals().SetStyle(lines.Highlight, dflt)
 }
 
-type styleSelection struct {
+// styleSelections creates two columns whereas the first contains the
+// drop-down component controlling which style-aspect is offered to set
+// by the style-picker in the second column.
+type styleSelections struct {
 	lines.Component
 	lines.Chaining
-	Colors selects.ColorRange
 }
 
-func (c *styleSelection) OnInit(e *lines.Env) {
-	ss := &selects.Styles{Colors: c.Colors}
-	ss.MaxHeight = 8
-	c.CC = append(c.CC, &selects.StyleProperty{Styles: ss}, ss)
+// colorRanges calculates the color ranges supported by a given
+// environment.
+func colorRanges(ll *lines.Lines) []selects.ColorRange {
+	if os.Getenv("TERM") == "Linux" {
+		return []selects.ColorRange{
+			selects.Monochrome, selects.System8, selects.System8Linux}
+	}
+	switch cc := ll.Colors(); {
+	case cc == 0:
+		return []selects.ColorRange{selects.Monochrome}
+	case cc == 8:
+		return []selects.ColorRange{selects.Monochrome, selects.System8}
+	case cc == 16:
+		return []selects.ColorRange{selects.Monochrome, selects.System8,
+			selects.System16}
+	case cc >= 256:
+		return []selects.ColorRange{selects.Monochrome, selects.System8,
+			selects.System16, selects.ANSI}
+	}
+	return []selects.ColorRange{selects.Monochrome}
 }
 
-type styleSelections struct {
+func (c *styleSelections) OnInit(e *lines.Env) {
+	c.Dim().SetHeight(8)
+	pp, ss := &column{}, &column{}
+	for _, r := range colorRanges(e.Lines) {
+		s := &selects.Styles{Colors: r}
+		s.MaxHeight = 8
+		p := &styleProperty{}
+		p.Styles = s
+		pp.CC = append(pp.CC, p)
+		ss.CC = append(ss.CC, &stylePicker{styles: s})
+	}
+	c.CC = append(c.CC, pp, ss)
+}
+
+// styleProperty wraps a StyleProperty component to add a bottom gap in
+// order to have a blank line before the next style-property selector
+type styleProperty struct {
+	selects.StyleProperty
+}
+
+func (c *styleProperty) OnInit(e *lines.Env) {
+	c.StyleProperty.OnInit(e)
+	c.Dim().SetHeight(2)
+	fmt.Fprint(c.Gaps(0).Bottom, "")
+}
+
+type column struct {
 	lines.Component
 	lines.Stacking
 }
 
-var colorRanges = []selects.ColorRange{
-	selects.Monochrome, selects.System8, selects.System8Linux,
-	selects.System16, selects.ANSI,
+func (c *column) OnInit(e *lines.Env) {
+	fmt.Fprint(c.Gaps(0).Vertical, "")
 }
 
-func (c *styleSelections) OnInit(e *lines.Env) {
-	for _, r := range colorRanges {
-		c.CC = append(c.CC, &styleSelection{Colors: r})
+// OnAfterLayout reduces the style-property selectors column width to
+// the width of the first style-property selector plus the vertical gaps
+// to have a left aligned layout.
+func (c *column) OnAfterLayout(e *lines.Env, dd lines.DD) (reflow bool) {
+	p, ok := c.CC[0].(*styleProperty)
+	if !ok {
+		return false
 	}
+	w := p.Width(true) + 2
+	_, _, cw, _ := c.Dim().Printable()
+	if cw > w {
+		c.Dim().SetWidth(w)
+		return true
+	}
+	return false
 }
+
+// stylePicker wraps the set Styles-component inside a Chainer to chain
+// it with a hFiller to flush it to the left.  It also adds a bottom gap
+// to be aligned with the style property selector to its left.
+type stylePicker struct {
+	lines.Component
+	lines.Chaining
+	styles *selects.Styles
+}
+
+func (c *stylePicker) OnInit(e *lines.Env) {
+	c.Dim().SetHeight(2)
+	fmt.Fprint(c.Gaps(0).Bottom, "")
+	c.CC = append(c.CC, c.styles, &hFiller{})
+}
+
+type hFiller struct{ lines.Component }
 
 // quit provides the bottom list of our right hand menu-list which
 // contains only the quit-item

@@ -15,14 +15,14 @@ type example struct {
 	lines.Component
 	lines.Stacking
 	explain       []string
-	expNotFilling bool
+	msgNotFilling bool
 	cmp           lines.Componenter
 	dontFill      bool
 }
 
 func (c *example) OnInit(e *lines.Env) {
 	c.CC = append(c.CC, &msg{
-		txt: c.explain, notFilling: c.expNotFilling}, c.cmp)
+		txt: c.explain, notFilling: c.msgNotFilling}, c.cmp)
 	if !c.dontFill {
 		c.CC = append(c.CC, &expFiller{})
 	}

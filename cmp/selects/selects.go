@@ -104,7 +104,7 @@ func (c *DropDown) OnInit(e *lines.Env) {
 		c.Items = []string{NoItems}
 	}
 	c.listener = c
-	c.Dim().SetHeight(1).SetWidth(c.width(true))
+	c.Dim().SetHeight(1).SetWidth(c.Width(true))
 	c.fireUpdate = e.Lines.Update
 	c.items.OnInit(e)
 }
@@ -205,7 +205,7 @@ func (c *DropDownHrz) OnInit(e *lines.Env) {
 	}
 	c.CC = append(c.CC, c.newLabel(), c.newItems())
 	c.Dim().SetHeight(1).SetWidth(
-		c.CC[0].(*label).width() + c.CC[1].(*items).width(true))
+		c.CC[0].(*label).width() + c.CC[1].(*items).Width(true))
 	c.fireUpdate = e.Lines.Update
 }
 
@@ -315,7 +315,7 @@ func (c *DropDownVrt) OnInit(e *lines.Env) {
 	if c.MinWidth == 0 {
 		c.MinWidth = label.width()
 	}
-	width := items.width(true)
+	width := items.Width(true)
 	if c.MinWidth > width {
 		width = c.MinWidth
 	}
