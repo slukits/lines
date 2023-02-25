@@ -221,7 +221,7 @@ type styleSelections struct {
 // colorRanges calculates the color ranges supported by a given
 // environment.
 func colorRanges(ll *lines.Lines) []selects.ColorRange {
-	if os.Getenv("TERM") == "Linux" {
+	if os.Getenv("TERM") == "linux" {
 		return []selects.ColorRange{
 			selects.Monochrome, selects.System8, selects.System8Linux}
 	}
