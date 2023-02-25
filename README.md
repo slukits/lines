@@ -265,7 +265,7 @@ func TestUpdateListenerIsCalled(t *testing.T) {
 }
 
 func main() {
-	testing.Main(nil, []testing.InternalTest{
+    testing.Main(nil, []testing.InternalTest{
         {"updateListener", TestUpdateListenerIsCalled},
     }, nil, nil)
 }

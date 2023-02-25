@@ -147,25 +147,31 @@ func (s *Scroller) setScrollBar() {
 
 func (s Scroller) BarPosition() int {
 	c := s.c.layoutCmp.wrapped()
-	if c.ContentScreenLines() >= c.Len() {
+	ll := c.ContentScreenLines()
+	if ll >= c.Len() {
 		return -1
 	}
 	if c.First() == 0 {
 		return 0
 	}
-	if c.First()+c.ContentScreenLines() >= c.Len() {
-		return c.ContentScreenLines() - 1
+	if c.First()+ll >= c.Len() {
+		return ll - 1
 	}
-	height := c.ContentScreenLines()
-	shown := c.First() + c.ContentScreenLines()
-	screens := c.Len() / c.ContentScreenLines()
-	for i := 1; i <= screens; i++ {
-		if i*height < shown {
-			continue
-		}
-		return i - 1
+	normalizer := c.Len() / ll
+	var shown int
+	if ll > 2 {
+		shown = c.First() + ll/2
+	} else {
+		shown = c.First() + ll
 	}
-	return -1
+	pos := shown / normalizer
+	if pos+1 >= ll {
+		return ll - 2
+	}
+	if pos == 0 {
+		return 1
+	}
+	return pos
 }
 
 func (s Scroller) BarContains(x, y int) bool {
