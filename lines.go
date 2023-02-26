@@ -26,6 +26,7 @@ following event interfaces with their reported event are defined:
   - [FocusLooser]: OnFocusLost(*Env) see [Lines.Focus], [Env.Focused]
   - [Updater]: OnUpdate(*Env, interface{}): see [Lines.Update]
   - [Layouter]: OnLayout(*Env) bool: after layout change
+  - [AfterLayouter]: OnAfterLayout(*Env, DD) bool: after OnLayout
   - [Keyer]: OnKey(*Env, Key, ModifierMask): special key like Esc
   - [Runer]: OnRune(*Env, rune, ModifierMask)
   - [Enterer]: OnEnter(*Env): mouse-pointer entered component
@@ -155,7 +156,7 @@ type Lines struct {
 	// Globals are properties whose changing is propagated to all its
 	// clones in components who update iff the updated property is still
 	// in sync with the origin.
-	Globals *globals
+	Globals *Globals
 }
 
 func newTerm(cmp Componenter) *Lines {
@@ -248,7 +249,7 @@ type Componenter interface {
 	// initialize sets up the embedded *component instance and wraps it
 	// together with the client-instance in a layoutComponenter which is
 	// returned.
-	initialize(Componenter, api.UIer, *globals) layoutComponenter
+	initialize(Componenter, api.UIer, *Globals) layoutComponenter
 
 	// isInitialized returns true if embedded *component was wrapped
 	// into a layout component.
@@ -263,7 +264,7 @@ type Componenter interface {
 	backend() api.UIer
 
 	// globals returns a components global properties.
-	globals() *globals
+	globals() *Globals
 }
 
 // TermKiosk returns a Lines instance like [Term] but without registered
@@ -276,8 +277,41 @@ func TermKiosk(cmp Componenter) *Lines {
 }
 
 // SetRoot replaces currently used root component by given component.
-func (ll *Lines) SetRoot(c Componenter) {
-	ll.scr.setRoot(c, ll.Globals)
+func (ll *Lines) SetRoot(c Componenter) error {
+	if ll == nil || c == nil {
+		return nil
+	}
+	return ll.backend.Post(&rootEvent{
+		when:    time.Now(),
+		newRoot: c,
+	})
+}
+
+// moveFocusEvent is posted by calling MoveFocus for a programmatically
+// change of focus.  This event-instance is not provided to the user.
+type rootEvent struct {
+	when    time.Time
+	newRoot Componenter
+}
+
+func (e *rootEvent) When() time.Time { return e.when }
+
+func (e *rootEvent) Source() interface{} { return e }
+
+func (ll *Lines) Redraw() error {
+	if ll == nil {
+		return nil
+	}
+	return ll.backend.Post(&redrawEvent{when: time.Now()})
+}
+
+type redrawEvent struct{ when time.Time }
+
+func (e *redrawEvent) When() time.Time     { return e.when }
+func (e *redrawEvent) Source() interface{} { return e }
+
+func (ll *Lines) Root() Componenter {
+	return ll.scr.root().userCmp
 }
 
 func (ll *Lines) CurrentColors() api.CCC {
@@ -300,10 +334,22 @@ func (ll *Lines) OnQuit(listener func()) *Lines {
 // not blocking.)
 func (ll *Lines) WaitForQuit() { ll.backend.WaitForQuit() }
 
+func (ll *Lines) Colors() int {
+	return ll.backend.(api.UIer).Colors()
+}
+
 // Update posts an update event into the event queue which is reported
 // either to given listener if not nil or to given componenter if given
 // listener is nil.  Given data will be provided by the reported Update
 // event.  Update is a no-op if componenter and listener are nil.
+//
+// Note if Update is used in a test to retrieve component properties
+// which may be only retrieved in a listener callback then you can not
+// cancel the test-run inside the listener.  "FatalNow" and friends
+// must be only called in the go-routine of the test but the
+// Update-listener callback during testing is done from the go-routine
+// which is running the event-loop and which is different from the
+// go-routine running the test.
 func (ll *Lines) Update(
 	cmp Componenter, data interface{}, l Listener,
 ) error {
@@ -360,6 +406,12 @@ func (ll *Lines) listen(evt api.Eventer) {
 		}
 	}
 	switch evt := evt.(type) {
+	case *rootEvent:
+		ll.scr.setRoot(evt.newRoot, ll.Globals)
+		reportInit(ll, ll.scr)
+		ll.scr.hardSync(ll)
+	case *redrawEvent:
+		ll.scr.hardSync(ll)
 	case resizeEventer:
 		width, height := evt.Size()
 		postSync := ll.scr.setSize(width, height, ll)

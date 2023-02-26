@@ -82,7 +82,7 @@ func (s *_testing) Reports_cells_of_screen_area(t *T) {
 
 func (s *_testing) Reports_style_information_falsy_if_out_of_bound(t *T) {
 	ui, tt := s.fx(t)
-	sty := api.NewStyle(api.Italic, lines.Green, lines.BlanchedAlmond)
+	sty := api.NewStyle(api.Italic, lines.Green, lines.Silver)
 	tt.Display(fx, sty)
 	ui.Redraw()
 	scr := tt.Cells().Trimmed()
@@ -92,8 +92,8 @@ func (s *_testing) Reports_style_information_falsy_if_out_of_bound(t *T) {
 			scr.HasFG(0, len(scr), lines.Green) ||
 			scr.HasFG(-1, 0, lines.Green) ||
 			scr.HasFG(len(scr[0]), 0, lines.Green) ||
-			scr.HasBG(0, -1, lines.BlanchedAlmond) ||
-			scr.HasBG(-1, 0, lines.BlanchedAlmond) ||
+			scr.HasBG(0, -1, lines.Silver) ||
+			scr.HasBG(-1, 0, lines.Silver) ||
 			scr.HasAA(0, -1, api.Italic) ||
 			scr.HasAA(-1, 0, api.Italic),
 	)
@@ -101,14 +101,14 @@ func (s *_testing) Reports_style_information_falsy_if_out_of_bound(t *T) {
 
 func (s *_testing) Reports_style_information_of_screen_cells(t *T) {
 	ui, tt := s.fx(t)
-	sty := api.NewStyle(api.Italic, lines.Green, lines.BlanchedAlmond)
+	sty := api.NewStyle(api.Italic, lines.Green, lines.Silver)
 	tt.Display(fx, sty)
 	ui.Redraw()
 	scr := tt.Cells().Trimmed()
 
 	t.True(
 		scr.HasFG(0, 0, lines.Green) &&
-			scr.HasBG(0, 0, lines.BlanchedAlmond) &&
+			scr.HasBG(0, 0, lines.Silver) &&
 			scr.HasAA(0, 0, api.Italic),
 	)
 }

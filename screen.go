@@ -9,6 +9,33 @@ import (
 	"github.com/slukits/lines/internal/lyt"
 )
 
+type Dimensions struct {
+	dim *lyt.Dim
+}
+
+// Screen returns the screen area of a component i.e. its area without
+// clippings (including margins).
+func (dd Dimensions) Screen() (x, y, width, height int) {
+	return dd.dim.Screen()
+}
+
+// Printable returns the screen area of a component it can print to i.e.
+// its area without margins and without clippings.
+func (dd Dimensions) Printable() (x, y, width, height int) {
+	return dd.dim.Printable()
+}
+
+// Width of component without margins.
+func (dd Dimensions) Width() int { return dd.dim.Width() }
+
+// Height of component without margins.
+func (dd Dimensions) Height() int { return dd.dim.Height() }
+
+// DD is a function which extracts layout information from a component
+// without the need of being inside one of the components
+// event-callbacks.
+type DD func(Componenter) Dimensions
+
 // Layouter is implemented by components which want to be notified if
 // their layout has changed.
 type Layouter interface {
@@ -16,6 +43,22 @@ type Layouter interface {
 	// OnLayout is called after the layout manager has changed the
 	// screen area of a component.
 	OnLayout(*Env) (reflow bool)
+}
+
+// AfterLayouter is implemented by components who want to be notified
+// after all OnLayout-events have been reported and processed.
+// Typically these are components nesting other components, i.e. Stacker
+// and Chainer, who want to adjust their layout after their nested
+// components have finished their layout settings.
+type AfterLayouter interface {
+
+	// OnAfterLayout implementations are called after all OnLayout
+	// events have been reported and processed.  Since the typical
+	// use-case is to adjust the layout of stacker and chainer according
+	// to the layout of their nested components a "dimensions function"
+	// DD is passed along which allows to extract layout dimensions for
+	// an arbitrary component of the layout.
+	OnAfterLayout(*Env, DD) (reflow bool)
 }
 
 // Stacker is implemented by components which want to provide nested
@@ -91,7 +134,7 @@ type screen struct {
 	cursor  *cursor
 }
 
-func newScreen(backend api.UIer, cmp Componenter, gg *globals) *screen {
+func newScreen(backend api.UIer, cmp Componenter, gg *Globals) *screen {
 	scr := &screen{backend: backend}
 	if cmp == nil {
 		cmp = &Component{}
@@ -105,7 +148,7 @@ func newScreen(backend api.UIer, cmp Componenter, gg *globals) *screen {
 	return scr
 }
 
-func (s *screen) setRoot(c Componenter, gg *globals) {
+func (s *screen) setRoot(c Componenter, gg *Globals) {
 	if c == nil {
 		return
 	}
@@ -261,7 +304,8 @@ func (s *screen) forBubbling(
 
 // hardSync reflows the layout and hard-syncs every component.
 func (s *screen) hardSync(ll *Lines) {
-	s.syncReflowLayout(ll, nil)
+	s.syncReflowLayout(ll, true, nil)
+	s.syncAfterLayout(ll)
 	s.lyt.Root.(layoutComponenter).wrapped().hardSync(s.backend)
 	s.lyt.Layers.For(func(l *lyt.Layer) (stop bool) {
 		l.Root.(layoutComponenter).wrapped().hardSync(s.backend)
@@ -271,14 +315,29 @@ func (s *screen) hardSync(ll *Lines) {
 	s.ensureFocus(ll)
 }
 
+func dimensionsOf(cmp Componenter) Dimensions {
+	return Dimensions{
+		dim: cmp.embedded().layoutCmp.wrapped().dim}
+}
+
 // softSync reflows the layout and  hard-syncs every component whose
 // layout changed and soft-syncs all remaining dirty components.
 // NOTE reflowing the layout is always necessary because we don't know
 // if the user added/removed any components.
 func (s *screen) softSync(ll *Lines) {
-	s.syncReflowLayout(ll, func(c Componenter) {
+	s.syncReflowLayout(ll, false, func(c Componenter) {
 		c.layoutComponent().wrapped().SetDirty()
 	})
+	update := s.backend.Update
+	s.syncAfterLayout(ll)
+	// if s.syncAfterLayout(ll) {
+	// 	s.lyt.Root.(layoutComponenter).wrapped().hardSync(s.backend)
+	// 	s.lyt.Layers.For(func(l *lyt.Layer) (stop bool) {
+	// 		l.Root.(layoutComponenter).wrapped().hardSync(s.backend)
+	// 		return false
+	// 	})
+	// 	update = s.backend.Redraw
+	// }
 	if !s.lyt.Root.(layoutComponenter).wrapped().IsDirty() &&
 		s.lyt.Layers == nil {
 		s.ensureFocus(ll)
@@ -291,8 +350,30 @@ func (s *screen) softSync(ll *Lines) {
 		l.Root.(layoutComponenter).wrapped().hardSync(s.backend)
 		return false
 	})
-	s.backend.Update()
+	update()
 	s.ensureFocus(ll)
+}
+
+func (s *screen) syncAfterLayout(ll *Lines) bool {
+	cntx, reflow := &rprContext{ll: ll, scr: s}, false
+	s.lyt.ForDimer(nil, func(d lyt.Dimer) (stop bool) {
+		cmp := d.(layoutComponenter).userComponent()
+		if al, ok := cmp.(AfterLayouter); ok {
+			callback(cmp, cntx, func(e *Env) {
+				if reflow {
+					al.OnAfterLayout(e, dimensionsOf)
+					return
+				}
+				reflow = al.OnAfterLayout(e, dimensionsOf)
+			})
+		}
+		return
+	})
+	if reflow {
+		s.lyt.Reflow(nil)
+		return true
+	}
+	return false
 }
 
 type components []*component
@@ -333,9 +414,15 @@ func (s *screen) haveModal() (lc layoutComponenter) {
 // syncReflowLayout reflows the layout and reports to every component
 // with changed layout implementing Layouter.  It also calls back for
 // every component with changed layout if callback not nil.
-func (s *screen) syncReflowLayout(lines *Lines, cb func(Componenter)) {
-	cntx := &rprContext{ll: lines, scr: s}
-	for reflow := s.lyt.IsDirty(); reflow; {
+func (s *screen) syncReflowLayout(
+	lines *Lines, hard bool, cb func(Componenter),
+) {
+	cntx, count := &rprContext{ll: lines, scr: s}, 0
+	reflow := s.lyt.IsDirty()
+	if hard {
+		reflow = true
+	}
+	for reflow && count < 10 {
 		reflow = false
 		ll := s.lyt.Layers
 		s.lyt.Reflow(func(d lyt.Dimer) {
@@ -356,6 +443,7 @@ func (s *screen) syncReflowLayout(lines *Lines, cb func(Componenter)) {
 				})
 		}
 		if reflow {
+			count++
 			reportInit(lines, s)
 		}
 	}
@@ -405,7 +493,11 @@ func (s Stacking) ForStacked(cb func(Componenter) (stop bool)) {
 //			c.CC = append(c.CC, &chainedCmp{})
 //		}
 //	}
-type Chaining struct{ CC []Componenter }
+type Chaining struct {
+
+	// CC holds the chained components
+	CC []Componenter
+}
 
 // ForChained calls back for each component of this Chainer respectively
 // until the callback asks to stop.

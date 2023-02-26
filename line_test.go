@@ -16,7 +16,7 @@ type lineFX struct {
 	api.Displayer
 	Line
 	w, h int
-	gg   *globals
+	gg   *Globals
 }
 
 func (x *lineFX) width() int {
@@ -43,20 +43,7 @@ func (x *lineFX) redraw(tt *term.Fixture) api.CellsLine {
 }
 
 func (x *lineFX) highlighted(s Style) Style {
-	if x.gg.Style(Highlight).AA() != 0 {
-		if s.AA()&x.gg.Style(Highlight).AA() == 0 {
-			s = s.WithAdded(x.gg.Style(Highlight).AA())
-		} else {
-			s = s.WithRemoved(x.gg.Style(Highlight).AA())
-		}
-	}
-	if x.gg.Style(Highlight).FG() != DefaultColor {
-		s = s.WithFG(x.gg.Style(Highlight).FG())
-	}
-	if x.gg.Style(Highlight).BG() != DefaultColor {
-		s = s.WithBG(x.gg.Style(Highlight).BG())
-	}
-	return s
+	return x.gg.Style(Highlight)
 }
 
 // NOTE since the point here is to determine what a line provides for
@@ -83,7 +70,7 @@ func (s *ALine) Is_padded_with_spaces_if_zero(t *T) {
 	scrLine := fx.redraw(tt)
 	for _, c := range scrLine {
 		t.True(c.Rune == ' ')
-		t.True(c.Style.Equals(DefaultStyle))
+		t.Eq(c.Style, DefaultStyle)
 	}
 }
 
@@ -93,7 +80,7 @@ func (s *ALine) Uses_given_display_style_if_no_default_set(t *T) {
 	scrLine := fx.redraw(tt)
 	for _, c := range scrLine {
 		t.True(c.Rune == ' ')
-		t.True(c.Style.Equals(exp))
+		t.Eq(c.Style, exp)
 	}
 }
 
@@ -104,7 +91,7 @@ func (s *ALine) Has_set_default_style_if_empty(t *T) {
 	scrLine := fx.redraw(tt)
 	for _, c := range scrLine {
 		t.True(c.Rune == ' ')
-		t.True(c.Style.Equals(exp))
+		t.Eq(c.Style, exp)
 	}
 }
 
@@ -115,7 +102,7 @@ func (s *ALine) Has_updated_default_style_attributes(t *T) {
 	scrLine := fx.redraw(tt)
 	for _, c := range scrLine {
 		t.True(c.Rune == ' ')
-		t.True(c.Style.Equals(exp))
+		t.Eq(c.Style, exp)
 	}
 }
 
@@ -126,7 +113,7 @@ func (s *ALine) Has_updated_default_foreground_color(t *T) {
 	scrLine := fx.redraw(tt)
 	for _, c := range scrLine {
 		t.True(c.Rune == ' ')
-		t.True(c.Style.Equals(exp))
+		t.Eq(c.Style, exp)
 	}
 }
 
@@ -137,7 +124,7 @@ func (s *ALine) Has_updated_default_background_color(t *T) {
 	scrLine := fx.redraw(tt)
 	for _, c := range scrLine {
 		t.True(c.Rune == ' ')
-		t.True(c.Style.Equals(exp))
+		t.Eq(c.Style, exp)
 	}
 }
 
@@ -164,9 +151,9 @@ func (s *ALine) Displays_content_with_set_style(t *T) {
 	for _, c := range scrLine {
 		switch c.Rune {
 		case ' ':
-			t.True(c.Style.Equals(fx.gg.Style(Default)))
+			t.Eq(c.Style, fx.gg.Style(Default))
 		default:
-			t.True(c.Style.Equals(exp))
+			t.Eq(c.Style, exp)
 		}
 	}
 }
@@ -196,9 +183,9 @@ func (s *ALine) Styles_content_set_at_given_position(t *T) {
 	for _, c := range scrLine {
 		switch c.Rune {
 		case ' ':
-			t.True(c.Style.Equals(fx.gg.Style(Default)))
+			t.Eq(c.Style, fx.gg.Style(Default))
 		default:
-			t.True(c.Style.Equals(exp))
+			t.Eq(c.Style, exp)
 		}
 	}
 }
@@ -248,10 +235,10 @@ func (s *ALine) Expands_filler_style_preserving(t *T) {
 		switch r.End() {
 		case 10:
 			t.Eq(0, r.Start())
-			s.Equals(s1)
+			t.Eq(s, s1)
 		case 20:
 			t.Eq(10, r.Start())
-			s.Equals(fx.gg.Style(Default))
+			t.Eq(s, fx.gg.Style(Default))
 		}
 	}
 	fx.set("01234")
@@ -262,13 +249,13 @@ func (s *ALine) Expands_filler_style_preserving(t *T) {
 		switch r.End() {
 		case 5:
 			t.Eq(0, r.Start())
-			s.Equals(fx.gg.Style(Default))
+			t.Eq(s, fx.gg.Style(Default))
 		case 15:
 			t.Eq(5, r.Start())
-			s.Equals(s1)
+			t.Eq(s, (s1))
 		case 20:
 			t.Eq(15, r.Start())
-			s.Equals(s2)
+			t.Eq(s, s2)
 		}
 	}
 	fx.setAt(0, []rune("0123456789"))
@@ -278,10 +265,10 @@ func (s *ALine) Expands_filler_style_preserving(t *T) {
 		switch r.End() {
 		case 10:
 			t.Eq(0, r.Start())
-			s.Equals(fx.gg.Style(Default))
+			t.Eq(s, fx.gg.Style(Default))
 		case 20:
 			t.Eq(10, r.Start())
-			s.Equals(s1)
+			t.Eq(s, s1)
 		}
 	}
 }
@@ -299,9 +286,9 @@ func (s *ALine) Expands_leading_tabs_style_preserving(t *T) {
 	for _, c := range l {
 		switch c.Rune {
 		case ' ':
-			t.True(c.Style.Equals(s1))
+			t.Eq(c.Style, s1)
 		default:
-			t.True(c.Style.Equals(s2))
+			t.Eq(c.Style, s2)
 		}
 	}
 }
@@ -311,16 +298,16 @@ func (s *ALine) Is_highlighted_if_highlight_flag_set(t *T) {
 	fx.Switch(Highlighted)
 	fx.gg.SetStyle(Default, fx.gg.Style(Default).WithAA(Dim))
 	fx.gg.SetStyle(Highlight,
-		NewStyle(Dim, RebeccaPurple, DarkGoldenrod))
+		NewStyle(Dim, Purple, DarkGoldenrod))
 	l, hStyle := fx.redraw(tt), fx.highlighted(fx.gg.Style(Default))
-	t.Not.True(fx.gg.Style(Default).Equals(hStyle))
+	t.Not.Eq(fx.gg.Style(Default), hStyle)
 	for _, c := range l {
-		t.True(c.Style.Equals(hStyle))
+		t.Eq(c.Style, hStyle)
 	}
 	fx.Switch(Highlighted | TrimmedHighlighted)
 	l = fx.redraw(tt)
 	for _, c := range l {
-		t.True(c.Style.Equals(hStyle))
+		t.Eq(c.Style, hStyle)
 	}
 }
 
@@ -329,13 +316,13 @@ func (s *ALine) Is_highlighted_trimmed_if_corresponding_flag_set(t *T) {
 	fx.Switch(TrimmedHighlighted)
 	fx.setAt(4, []rune("0123456789"))
 	l, hStyle := fx.redraw(tt), fx.highlighted(fx.gg.Style(Default))
-	t.Not.True(fx.gg.Style(Default).Equals(hStyle))
+	t.Not.Eq(fx.gg.Style(Default), hStyle)
 	for _, c := range l {
 		switch c.Rune {
 		case ' ':
-			c.Style.Equals(fx.gg.Style(Default))
+			t.Eq(c.Style, fx.gg.Style(Default))
 		default:
-			c.Style.Equals(hStyle)
+			t.Eq(c.Style, hStyle)
 		}
 	}
 }
@@ -353,19 +340,19 @@ func (s *ALine) Adapts_styles_overlapping_trimmed_highlighted_range(t *T) {
 	for i, c := range l {
 		switch i {
 		case 0, 1:
-			t.True(c.Style.Equals(fx.gg.Style(Default)))
+			t.Eq(c.Style, fx.gg.Style(Default))
 		case 2, 3:
-			t.True(c.Style.Equals(s1))
+			t.Eq(c.Style, s1)
 		case 4, 5, 6:
-			t.True(c.Style.Equals(hs1))
+			t.Eq(c.Style, hs1)
 		case 7, 8, 9, 10:
-			t.True(c.Style.Equals(hs))
+			t.Eq(c.Style, hs)
 		case 11, 12, 13:
-			t.True(c.Style.Equals(hs2))
+			t.Eq(c.Style, hs2)
 		case 14, 15:
-			t.True(c.Style.Equals(s2))
+			t.Eq(c.Style, s2)
 		default:
-			t.True(c.Style.Equals(fx.gg.Style(Default)))
+			t.Eq(c.Style, fx.gg.Style(Default))
 		}
 	}
 }
@@ -385,19 +372,19 @@ func (s *ALine) Adapts_enclosed_styles_in_trimmed_highlighted(t *T) {
 	for i, c := range l {
 		switch i {
 		case 0, 1, 2, 3:
-			t.True(c.Style.Equals(fx.gg.Style(Default)))
+			t.Eq(c.Style, fx.gg.Style(Default))
 		case 4, 5:
-			t.True(c.Style.Equals(hs))
+			t.Eq(c.Style, hs)
 		case 6, 7:
-			t.True(c.Style.Equals(hs1))
+			t.Eq(c.Style, hs1)
 		case 8, 9, 10:
-			t.True(c.Style.Equals(hs))
+			t.Eq(c.Style, hs)
 		case 11, 12:
-			t.True(c.Style.Equals(hs2))
+			t.Eq(c.Style, hs2)
 		case 13:
-			t.True(c.Style.Equals(hs))
+			t.Eq(c.Style, hs)
 		default:
-			t.True(c.Style.Equals(fx.gg.Style(Default)))
+			t.Eq(c.Style, fx.gg.Style(Default))
 		}
 	}
 }
@@ -412,15 +399,15 @@ func (s *ALine) Adapts_enclosing_style_of_trimmed_highlighted(t *T) {
 	for i, c := range l {
 		switch i {
 		case 0, 1, 2:
-			t.True(c.Style.Equals(fx.gg.Style(Default)))
+			t.Eq(c.Style, fx.gg.Style(Default))
 		case 3:
-			t.True(c.Style.Equals(s1))
+			t.Eq(c.Style, s1)
 		case 4, 5, 6, 7, 8, 9, 10, 11, 12, 13:
-			t.True(c.Style.Equals(hs1))
+			t.Eq(c.Style, hs1)
 		case 14:
-			t.True(c.Style.Equals(s1))
+			t.Eq(c.Style, s1)
 		default:
-			t.True(c.Style.Equals(fx.gg.Style(Default)))
+			t.Eq(c.Style, fx.gg.Style(Default))
 		}
 	}
 }

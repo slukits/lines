@@ -188,3 +188,16 @@ func (ll lines) For(offset int, cb func(int, *Line) (stop bool)) {
 		}
 	}
 }
+
+// CoordinateToContentIndex maps a y screen-coordinate to its content
+// index whereas this may be an associated component's content line
+// index or the content index of associated component's source liner.
+func (s Scroller) CoordinateToContentIndex(y int) (line int) {
+	if s.c.First() == 0 {
+		return y
+	}
+	if s.c.First()+y >= s.c.Len() {
+		return s.c.Len() - 1
+	}
+	return s.c.First() + y
+}

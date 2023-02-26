@@ -53,10 +53,14 @@ instead of bytes.  Setting width and height is not necessary.  Left out
 in above example "hello world" is printed to the screen starting in the
 upper left corner.
 <p align="center">
-  <img width="480" src="layers.gif">
+  <img width="450" src="selects.gif">
 </p>
-Note lines doesn't come with menu, context-menu or tool-tip components
-but with the means to implement them as intricate and complex as needed.
+Note lines doesn't come for example with menu, context-menu or tool-tip
+components but with the means to implement them as intricate and complex 
+as needed.  In the cmp/selects-package you can find the List and DropDown
+components used to implement the components for above demonstration.
+I.e. lines has a sufficient feature set to build complex components and
+the code in cmp shows you by example how to do so.
 
 
 # Concurrency safety
@@ -131,6 +135,10 @@ Finally components can be layered by other components which makes it
 possible to implement tooltip, context menu, menu bar or modal dialogs.
 See [examples/layers](examples/layers) for how to work with layers.
 
+<p align="center">
+  <img width="450" src="layers.gif">
+</p>
+
 # Content and format handling
 
 The Env(ironment) instance passed to a event listener is associated with
@@ -161,7 +169,7 @@ Gaps(index)-method
 
 ```go
 c.Gaps(0).AA(lines.Reverse)
-c.Gaps(0).Corners.AA(lines.Revers)
+c.Gaps(0).Corners.AA(lines.Reverse)
 ```
 
 above is as of now the simplest way to frame a component.  Gaps allow to
@@ -203,22 +211,23 @@ FF-property of the embedded Component instance.
 type MyComponent { lines.Component }
 
 func (c *MyComponent) OnInit(_ *lines.Env) {
-    c.FF.Add(lines.Scrollable)
+    c.FF.Set(lines.Scrollable)
 }
 ```
 
 Now our component will react on page up/down key-presses if its content
-doesn't fit (vertically) into c's screen area.  But we don't need to set
-each feature for each component separately:
+doesn't fit (vertically) into c's screen area.  Since most features
+don't make sens for nesting components setting features at a stacker or
+chainer will set this feature to a all nested components.  E.g.:
 
 ```go
 func (ws *Workspace) OnInit(e *lines.Env) {
-    ws.FF.AddRecursively(lines.Focusable)
+    ws.FF.Set(lines.Focusable)
 }
 ```
 
-The above line makes all descendants of the workspace focusable, i.e.
-they receive the focus if clicked with the mouse on them.
+makes all descendants of the workspace focusable, i.e.  they receive the
+focus if clicked with the mouse on them.
 
 An other way to acquire features without fuss is to set a components
 content source which needs to have a Liner-implementation.  According to
@@ -232,24 +241,33 @@ examples for features usage.
 lines comes with testing facilities:
 
 ```go
-import (
-    "testing"
+package main
 
-    "github.com/slukits/lines"
+import (
+	"fmt"
+	"testing"
+
+	"github.com/slukits/lines"
 )
 
-type CmpFixture struct { lines.Component }
+type CmpFixture struct{ lines.Component }
 
-func TestUpdateListenerIsCalled(t *T) {
-    tt := lines.TermFixture(t, 0, &CmpFixture{})
-    exp :=  "update listener called"
-    tt.Lines.Update(tt.Root(), nil, func(e *lines.Env) {
-        fmt.Fprint(e, exp)
-    })
-    if exp != tt.Screen().Trimmed().String() {
-        t.Errorf("expected: '%s'; got '%s'", exp,
-            tt.Screen().Trimmed().String())
-    }
+func TestUpdateListenerIsCalled(t *testing.T) {
+	tt := lines.TermFixture(t, 0, &CmpFixture{})
+	exp := "update listener called"
+	tt.Lines.Update(tt.Root(), nil, func(e *lines.Env) {
+		fmt.Fprint(e, exp)
+	})
+	if exp != tt.Screen().Trimmed().String() {
+		t.Errorf("expected: '%s'; got '%s'", exp,
+			tt.Screen().Trimmed().String())
+	}
+}
+
+func main() {
+    testing.Main(nil, []testing.InternalTest{
+        {"updateListener", TestUpdateListenerIsCalled},
+    }, nil, nil)
 }
 ```
 

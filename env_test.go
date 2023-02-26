@@ -66,7 +66,7 @@ func (s *env) Defaults_printed_lines_colors_to_component_globals(t *T) {
 	fx.FireResize(3, 3)
 	for _, l := range fx.Cells() {
 		for _, c := range l {
-			c.Style.Equals(exp)
+			t.Eq(c.Style, exp)
 		}
 	}
 }
@@ -80,7 +80,7 @@ func (s *env) Defaults_printed_lines_styles_to_component_globals(t *T) {
 	fx.FireResize(3, 3)
 	for _, l := range fx.Cells() {
 		for _, c := range l {
-			c.Style.Equals(exp)
+			t.Eq(c.Style, exp)
 		}
 	}
 }
@@ -99,7 +99,7 @@ func (s *env) Sets_colors_for_printed_screen_lines(t *T) {
 			sty = ggSty
 		}
 		for _, c := range l {
-			t.True(c.Style.Equals(sty))
+			t.Eq(c.Style, sty)
 		}
 	}
 }
@@ -118,7 +118,7 @@ func (s *env) Sets_styles_for_printed_screen_lines(t *T) {
 			sty = ggSty
 		}
 		for _, c := range l {
-			t.True(c.Style.Equals(sty))
+			t.Eq(c.Style, sty)
 		}
 	}
 }
@@ -231,8 +231,8 @@ func (s *env) Prints_filling_to_component_line(t *T) {
 		Print(e.LL(0).At(2).FG(White).BG(Red), red)
 		Print(e.LL(0).At(2+len(red)).Filling(), '_')
 		Print(e.LL(0).At(2+len(red)+1).FG(Yellow).BG(Blue), blue)
-		Print(e.LL(0).At(2+len(red)+1+len(blue)).BG(Brown).FG(Salmon).
-			Filling(), '_')
+		Print(e.LL(0).At(2+len(red)+1+len(blue)).BG(RosyBrown).
+			FG(Salmon1).Filling(), '_')
 		Print(e.LL(0).At(2+len(red)+1+len(blue)+1).FG(Black).BG(Green),
 			green)
 	}})
@@ -244,21 +244,21 @@ func (s *env) Prints_filling_to_component_line(t *T) {
 	for i, c := range l {
 		switch i {
 		case 0, 1, 2, 3, 4, 5, 6, 7:
-			t.True(c.Style.Equals(fx.Lines.Globals.Style(Default)))
+			t.Eq(c.Style, fx.Lines.Globals.Style(Default))
 		case 8, 9, 10:
-			t.True(c.Style.Equals(fx.Lines.Globals.Style(Default).
-				WithFG(White).WithBG(Red)))
+			t.Eq(c.Style, fx.Lines.Globals.Style(Default).
+				WithFG(White).WithBG(Red))
 		case 11, 12, 13, 14, 15, 16, 17, 18, 19, 20:
-			t.True(c.Style.Equals(fx.Lines.Globals.Style(Default)))
+			t.Eq(c.Style, fx.Lines.Globals.Style(Default))
 		case 21, 22, 23, 24:
-			t.True(c.Style.Equals(fx.Lines.Globals.Style(Default).
-				WithFG(Yellow).WithBG(Blue)))
+			t.Eq(c.Style, fx.Lines.Globals.Style(Default).
+				WithFG(Yellow).WithBG(Blue))
 		case 25, 26, 27, 28, 29, 30, 31, 32, 33, 34:
-			t.True(c.Style.Equals(fx.Lines.Globals.Style(Default).
-				WithFG(Salmon).WithBG(Brown)))
+			t.Eq(c.Style, fx.Lines.Globals.Style(Default).
+				WithFG(Salmon1).WithBG(RosyBrown))
 		case 35, 36, 37, 38, 39:
-			t.True(c.Style.Equals(fx.Lines.Globals.Style(Default).
-				WithFG(Black).WithBG(Green)))
+			t.Eq(c.Style, fx.Lines.Globals.Style(Default).
+				WithFG(Black).WithBG(Green))
 		}
 	}
 }

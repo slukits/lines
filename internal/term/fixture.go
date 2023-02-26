@@ -22,6 +22,15 @@ type Fixture struct {
 	Height int
 }
 
+// TimeOut provides the duration given fixture waits for a polled event
+// and all its subordinately triggered events to be processed.
+func (fx *Fixture) TimeOut() time.Duration {
+	if fx.ui.transactional.Load() == nil {
+		return time.Duration(0)
+	}
+	return fx.ui.transactional.Load().(*transactional).timeout
+}
+
 // LstFixture instantiates a new UI with an simulation screen and an
 // testing instance reporting all events to provided listener.  The ui
 // is setup for transactional events, i.e. an event-post p returns not
@@ -38,7 +47,7 @@ func LstFixture(
 	if timeout == 0 {
 		timeout = 10 * time.Second
 	}
-	ui := initUI(tcell.NewSimulationScreen("UTF-8"), listener)
+	ui := initUI(tcell.NewSimulationScreen("UTF-8"), listener, false)
 	t.Cleanup(func() { ui.Quit() })
 	ui.EnableTransactionalEventPosts(timeout)
 	close(ui.waitForQuit)
@@ -62,7 +71,7 @@ func NewFixture(t *testing.T, timeout time.Duration) (*UI, *Fixture) {
 	if timeout == 0 {
 		timeout = 10 * time.Second
 	}
-	ui := initUI(tcell.NewSimulationScreen("UTF-8"), nil)
+	ui := initUI(tcell.NewSimulationScreen("UTF-8"), nil, false)
 	t.Cleanup(func() { ui.Quit() })
 	ui.EnableTransactionalEventPosts(timeout)
 	close(ui.waitForQuit)

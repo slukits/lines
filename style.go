@@ -27,11 +27,22 @@ const (
 	Reverse       StyleAttributeMask = api.Reverse
 	Underline     StyleAttributeMask = api.Underline
 	Dim           StyleAttributeMask = api.Dim
-	Italic        StyleAttributeMask = api.Invalid
+	Italic        StyleAttributeMask = api.Italic
 	StrikeThrough StyleAttributeMask = api.StrikeThrough
 	Invalid       StyleAttributeMask = api.Invalid
 	ZeroStyle     StyleAttributeMask = api.ZeroStyle
 )
+
+var StyleAttributeNames = map[StyleAttributeMask]string{
+	Bold:          "bold",
+	Blink:         "blink",
+	Reverse:       "reverse",
+	Underline:     "underline",
+	Dim:           "dim",
+	Italic:        "italic",
+	StrikeThrough: "strike through",
+	Invalid:       "invalid",
+}
 
 // Style represents what a print to the screen should look like.  A new
 // Style instance has fore- and background color set to black.  Use its

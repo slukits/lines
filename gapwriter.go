@@ -180,6 +180,12 @@ func (w *GapWriter) Write(bb []byte) (int, error) {
 	return len(bb), nil
 }
 
+func (w *GapWriter) Reset(sty Style) {
+	for _, g := range selectGaps(w.ggw.gg, w.gm) {
+		g.reset(w.level, &sty)
+	}
+}
+
 func selectGaps(gg *gaps, gm gapMask) []*gap {
 	switch gm & (top | right | bottom | left) {
 	case top:

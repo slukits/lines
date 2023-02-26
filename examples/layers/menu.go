@@ -46,7 +46,7 @@ const (
 	help = "help"
 )
 
-// OnInit sets up the menus.  To achive the effect that the last menu is
+// OnInit sets up the menus.  To achieve the effect that the last menu is
 // flushed right a empty component is used.  Component embedder are by
 // default filling, i.e. use up all remaining space.
 func (c *menuBar) OnInit(e *lines.Env) {
@@ -108,7 +108,7 @@ func (m *menu) OnInit(e *lines.Env) {
 	fmt.Fprint(e, m.label)
 }
 
-// OnClick creates the modal layer of menu itemes of given menu m.
+// OnClick creates the modal layer of menu items of given menu m.
 func (m *menu) OnClick(e *lines.Env, x, y int) {
 	ii := &items{
 		ii:       strings.Split(mnItems[m.label], "\n"),
@@ -144,7 +144,7 @@ type items struct {
 	// ii are the items-labels
 	ii []string
 
-	// reporter is updated with selcted items
+	// reporter is updated with selected items
 	reporter lines.Componenter
 
 	// focus keeps track of the menu-item which is currently hovered by
@@ -164,7 +164,7 @@ func (ii *items) OnInit(e *lines.Env) {
 	ii.focus = -1
 }
 
-// OnMove takes care of emphasizing the menu-item hoverd by the mouse
+// OnMove takes care of emphasizing the menu-item hovered by the mouse
 // cursor.
 func (ii *items) OnMove(e *lines.Env, x, y int) {
 	if ii.focus >= 0 && ii.focus != y {
@@ -173,7 +173,7 @@ func (ii *items) OnMove(e *lines.Env, x, y int) {
 	if y > len(ii.ii) || y < 0 || ii.ii[y] == separator || ii.focus == y {
 		return
 	}
-	fmt.Fprint(e.LL(y).BG(lines.Salmon).AA(lines.Reverse|lines.Bold),
+	fmt.Fprint(e.LL(y).BG(lines.Salmon1).AA(lines.Reverse|lines.Bold),
 		ii.ii[y])
 	ii.focus = y
 }

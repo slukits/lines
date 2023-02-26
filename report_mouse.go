@@ -86,7 +86,14 @@ func reportMouseMove(cntx *rprContext, evt *MouseMove) {
 	if err != nil || path == nil {
 		return
 	}
-	reportEnterExit(cntx, path[len(path)-1].(layoutComponenter), evt)
+	reported := reportEnterExit(
+		cntx, path[len(path)-1].(layoutComponenter), evt)
+	if reported && len(path) == 1 {
+		return
+	}
+	if reported {
+		path = path[:len(path)-1]
+	}
 
 	reportBubbling(
 		cntx, path, x, y, true,
@@ -100,47 +107,62 @@ func reportMouseMove(cntx *rprContext, evt *MouseMove) {
 	)
 }
 
-func reportEnterExit(cntx *rprContext, in layoutComponenter, evt *MouseMove) {
+func reportEnterExit(
+	cntx *rprContext, in layoutComponenter, evt *MouseMove,
+) (reported bool) {
 	x, y := evt.Pos()
 	if cntx.scr.mouseIn == nil {
-		if in.Dim().PrintableContains(x, y) {
+		if in.wrapped().InContentArea(x, y) {
 			cntx.scr.mouseIn = in
 			if e, ok := in.userComponent().(Enterer); ok {
-				callback(in.userComponent(), cntx, e.OnEnter)
+				rx, ry := relative(in.wrapped().ContentArea, x, y)
+				callback(in.userComponent(), cntx,
+					posCurry(e.OnEnter, rx, ry))
+				return true
 			}
 		}
-		return
+		return false
 	}
 
 	// NOTE we need compare user components because different
 	// layoutComponenter may wrap the same component if layered and
 	// un-layered.
 	if in.userComponent() == cntx.scr.mouseIn.userComponent() {
-		if !in.Dim().PrintableContains(x, y) {
+		if !in.wrapped().InContentArea(x, y) {
 			cntx.scr.mouseIn = nil
 			if e, ok := in.userComponent().(Exiter); ok {
 				callback(in.userComponent(), cntx, e.OnExit)
+				return true
 			}
 		}
-		return
+		return false
 	}
 
 	ox, oy := evt.Origin()
-	if cntx.scr.mouseIn.Dim().PrintableContains(ox, oy) {
+	if cntx.scr.mouseIn.wrapped().InContentArea(ox, oy) {
 		if e, ok := cntx.scr.mouseIn.userComponent().(Exiter); ok {
 			callback(cntx.scr.mouseIn.userComponent(), cntx, e.OnExit)
+			cntx.scr.mouseIn = nil
 		}
 	}
 
-	if !in.Dim().PrintableContains(x, y) {
+	if !in.wrapped().InContentArea(x, y) {
 		cntx.scr.mouseIn = nil
 		return
 	}
 
 	cntx.scr.mouseIn = in
 	if e, ok := in.userComponent().(Enterer); ok {
-		callback(in.userComponent(), cntx, e.OnEnter)
+		rx, ry := relative(in.wrapped().ContentArea, x, y)
+		callback(in.userComponent(), cntx, posCurry(e.OnEnter, rx, ry))
+		return true
 	}
+	return false
+}
+
+func relative(ar func() (x, y, w, h int), x, y int) (rx, ry int) {
+	ax, ay, _, _ := ar()
+	return x - ax, y - ay
 }
 
 func reportMouseClick(cntx *rprContext, evt *MouseClick) {
@@ -172,6 +194,9 @@ func reportMouseClick(cntx *rprContext, evt *MouseClick) {
 func reportPrimary(
 	cntx *rprContext, evt *MouseClick, path []lyt.Dimer, x, y int,
 ) {
+	if scroll(path[len(path)-1], true, x, y) {
+		return
+	}
 	reportBubbling(
 		cntx, path, x, y, true,
 		func(c Componenter) bool {
@@ -187,6 +212,9 @@ func reportPrimary(
 func reportSecondary(
 	cntx *rprContext, evt *MouseClick, path []lyt.Dimer, x, y int,
 ) {
+	if scroll(path[len(path)-1], false, x, y) {
+		return
+	}
 	reportBubbling(
 		cntx, path, x, y, true,
 		func(c Componenter) bool {
@@ -197,6 +225,22 @@ func reportSecondary(
 			return posCurry(c.(Contexter).OnContext, x, y)
 		},
 	)
+}
+
+func scroll(d lyt.Dimer, down bool, x, y int) bool {
+	cmp := d.(layoutComponenter).wrapped()
+	cmp.userCmp.embedded().enable()
+	defer cmp.userCmp.embedded().disable()
+	if cmp.Scroll.BarContains(x, y) {
+		if down {
+			cmp.Scroll.Down()
+		} else {
+			cmp.Scroll.Up()
+		}
+		// cmp.Scroll.updateBar()
+		return true
+	}
+	return false
 }
 
 func focusedPath(
@@ -314,11 +358,12 @@ func reportBubbling(
 	for i := len(path) - 1; i >= 0; i-- {
 
 		usrCmp := path[i].(layoutComponenter).userComponent()
-		if !implements(usrCmp) {
+		wrapped := usrCmp.layoutComponent().wrapped()
+		if !implements(usrCmp) || (relative && !wrapped.InContentArea(x, y)) {
 			continue
 		}
 
-		ax, ay, _, _ := usrCmp.layoutComponent().Dim().Printable()
+		ax, ay, _, _ := wrapped.ContentArea()
 		rx, ry := x, y
 		if relative {
 			rx, ry = rx-ax, ry-ay

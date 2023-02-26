@@ -387,13 +387,13 @@ func (s *lineFocus) Inverts_bg_fg_of_focused_if_highlighted(t *T) {
 	}
 }
 
-func (s *lineFocus) Moves_highlight_to_next_focused_line(t *T) {
+func (s *lineFocus) Moves_highlight_to_next_focusable_line(t *T) {
 	cmp := &cmpFX{
 		onInit: func(c *cmpFX, e *Env) {
 			c.FF.Set(LinesFocusable | HighlightEnabled)
 			fmt.Fprint(e.LL(0), "line 1")
-			fmt.Fprint(e.LL(1), "line 2")
 			c.LL.By(1).Flag(NotFocusable)
+			fmt.Fprint(e.LL(1), "line 2")
 			fmt.Fprint(e.LL(2), "line 3")
 		},
 		onLineFocus: func(c *cmpFX, e *Env, _, _ int) {
@@ -407,19 +407,20 @@ func (s *lineFocus) Moves_highlight_to_next_focused_line(t *T) {
 	}
 	tt := fx(t, cmp)
 	tt.FireResize(len("line n"), 2)
-	tt.FireKeys(Down, Down)
 
+	tt.FireKeys(Down, Down)
+	var hi, dflt Style
+	tt.Lines.Update(cmp, nil, func(e *Env) {
+		t.Eq(2, cmp.LL.Focus.Current())
+		t.Not.True(cmp.LL.By(1).ff&Highlighted == Highlighted)
+		t.True(cmp.LL.By(2).ff&Highlighted == Highlighted)
+		hi = cmp.Globals().Style(Highlight)
+		dflt = cmp.Globals().Style(Default)
+	})
 	t.Eq(2, cmp.cc[onLineFocus])
 	t.Eq("line 2\nline 3", tt.Screen())
-
-	l1 := tt.Cells()[0]
-	for x := range l1 {
-		t.FatalIfNot(t.Not.True(l1.HasAA(x, Reverse)))
-	}
-	l3 := tt.Cells()[1]
-	for x := range l3 {
-		t.FatalIfNot(t.True(l3.HasAA(x, Reverse)))
-	}
+	t.Eq(tt.Cells()[1][0].Style, hi)
+	t.Eq(tt.Cells()[0][0].Style, dflt)
 }
 
 func (s *lineFocus) Removes_highlight_if_unfocused(t *T) {
@@ -476,9 +477,9 @@ func (s *lineFocus) Trims_highlight_to_non_blanks(t *T) {
 	for i, x := range l1 {
 		switch i {
 		case 0, 10:
-			t.True(x.Style.Equals(dflSty))
+			t.Eq(x.Style, dflSty)
 		default:
-			t.True(x.Style.Equals(hiSty))
+			t.Eq(x.Style, hiSty)
 		}
 	}
 	fx.FireKey(Down)
@@ -488,7 +489,7 @@ func (s *lineFocus) Trims_highlight_to_non_blanks(t *T) {
 	fx.FireKey(Down)
 	l1 = fx.Cells()[0]
 	for _, x := range l1 {
-		t.True(x.Style.Equals(hiSty))
+		t.Eq(x.Style, hiSty)
 	}
 }
 

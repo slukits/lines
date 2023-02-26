@@ -62,7 +62,7 @@ type Env struct {
 }
 
 type cmpWriter interface {
-	globals() *globals
+	globals() *Globals
 	write(lines []byte, at, cell int, sty *Style) (int, error)
 	writeAt(rr []rune, at, cell int, sty *Style)
 	writeAtFilling(r rune, at, cell int, sty *Style)
@@ -75,52 +75,37 @@ type cmpWriter interface {
 // default style to these lines.  NOTE all previous content of the
 // component is removed.
 func (e *Env) Write(bb []byte) (int, error) {
-	return e.cmp.(cmpWriter).write(bb, -1, -1, nil)
+	return e.cmp.embedded().write(bb, -1, -1, nil)
 }
 
 // Sty sets the next lines write's style, i.e. its style attributes and
 // fore- and background color.
 func (e *Env) Sty(s Style) *EnvWriter {
-	return &EnvWriter{
-		cmp: e.cmp.(cmpWriter),
-		sty: &s,
-	}
+	return &EnvWriter{cmp: e.cmp, sty: &s}
 }
 
 // AA sets the next write's style attributes like [Bold].
 func (e *Env) AA(aa StyleAttributeMask) *EnvWriter {
 	sty := e.cmp.embedded().gg.Style(Default).WithAdded(aa)
-	return &EnvWriter{
-		cmp: e.cmp.(cmpWriter),
-		sty: &sty,
-	}
+	return &EnvWriter{cmp: e.cmp, sty: &sty}
 }
 
 // FG sets the next write's foreground color.
 func (e *Env) FG(color Color) *EnvWriter {
 	sty := e.cmp.embedded().gg.Style(Default).WithFG(color)
-	return &EnvWriter{
-		cmp: e.cmp.(cmpWriter),
-		sty: &sty,
-	}
+	return &EnvWriter{cmp: e.cmp, sty: &sty}
 }
 
 // BG sets the next write's background color.
 func (e *Env) BG(color Color) *EnvWriter {
 	sty := e.cmp.embedded().gg.Style(Default).WithBG(color)
-	return &EnvWriter{
-		cmp: e.cmp.(cmpWriter),
-		sty: &sty,
-	}
+	return &EnvWriter{cmp: e.cmp, sty: &sty}
 }
 
 // LL returns a writer which writes to the line and its following lines
 // at given index.
 func (e *Env) LL(idx int) *EnvLineWriter {
-	return &EnvLineWriter{
-		line: idx,
-		cmp:  e.cmp.(cmpWriter),
-	}
+	return &EnvLineWriter{line: idx, cmp: e.cmp}
 }
 
 // Focused returns the currently focused component.  Please remember to
