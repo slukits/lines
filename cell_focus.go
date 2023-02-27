@@ -45,7 +45,17 @@ func (f *LineFocus) isEol(line *Line, columnIdx int) bool {
 // the cursor position and a boolean value indicating if the cursor was
 // moved.
 func (s *LineFocus) NextCell() (slIdx, scIdx int, moved bool) {
+	if s.Screen() < 0 {
+		return -1, -1, false
+	}
 	slIdx, scIdx, haveCursorPos := s.c.CursorPosition()
+	if !haveCursorPos {
+		if s.isEol(s.Line(), 0) && !s.eolAfterLastRune {
+			return -1, -1, false
+		}
+		s.c.SetCursor(s.Screen(), 0)
+		return s.Screen(), 0, true
+	}
 	if s.current < 0 || !haveCursorPos {
 		return -1, -1, false
 	}

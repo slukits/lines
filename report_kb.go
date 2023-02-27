@@ -53,25 +53,30 @@ func reportKeyEdit(
 	if stopBbl := reportOnKey(lc, evt, cntx); stopBbl {
 		return
 	}
-	editor := lc.userComponent().embedded().Edit
+	usr := lc.userComponent()
+	editor := usr.embedded().Edit
 	if editor == nil {
 		panic("lines: report: on-edit: editor missing")
 	}
-	edt := editor.mapEvent(evt)
-	if edt == nil {
-		execKeyFeature(cntx, evt)
-		return
-	}
-	ec, ok := lc.userComponent().(Editer)
-	if ok {
-		suppressEdit := false
-		callback(lc.userComponent(), cntx, func(e *Env) {
-			suppressEdit = ec.OnEdit(e, edt)
-		})
-		if suppressEdit {
+	usr.enable()
+	defer usr.disable()
+	edt := editor.newKeyEdit(evt)
+	if usr.embedded().Src != nil {
+		if sourcedEdit(cntx, usr, editor, edt) {
 			return
 		}
 	}
+	ls, ok := usr.(Editer)
+	if ok {
+		suppress := false
+		callback(usr, cntx, func(e *Env) {
+			suppress = ls.OnEdit(e, edt)
+		})
+		if suppress {
+			return
+		}
+	}
+	editor.edit(edt)
 }
 
 func reportKeyListener(

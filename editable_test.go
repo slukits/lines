@@ -7,36 +7,16 @@ editable_test drives the implementation for a components editable
 feature.  A component that is editable must be focusable as well as its
 lines and cells must be focusable.  Since focusable line comes also in a
 highlighted variant editable must as well. Setting the editable feature
-lets a user modify a components content of the screen-area.  The cursor
-keys move the insert cursor as provided by the selectable cell feature.
-As usual a rune-key press triggers an OnRune event, i.e. if an editable
-component implements this listener it can stop the bubbling of the rune
-before it is processed by the editable feature.  The same holds true for
-key-events.  Is the component implementation not suppressing runes they
-are inserted at (before) the current cursor position unless the "insert"
-key was pressed.  In the later case insert and replace are toggled, i.e.
-the rune under the cursor is replaced.  Registered rune events are *not*
-triggered if a component is editable.  But once the editable feature was
-set deleting and resetting it becomes very cheap.  Backspace deletes the
-rune left from the cursor while delete removes the rune under the
-cursor.  The cursor can be moved one cell behind the last rune in order
-to append runes at the end of the line.  After a cell content was
-changed but not updated yet by lines (!) an OnEdit event is triggered.
-The OnEdit event provides all information about the requested cell
-change.  If OnEdit is not implemented lines just updates the cell as
-requested.  If OnEdit is implemented lines ony updates the cell as
-requested if the OnEdit implementation returns true otherwise it will do
-nothing.  Has a component a source set the OnEdit event is reported to
-its Liner implementation.  Note a component becomes automatically
-editable if a component source's Liner implementation implements the
-EditLiner interface.
+lets a user modify a components content of the screen-area.  Note a
+component becomes automatically editable if a component source's Liner
+implementation implements the EditLiner interface.
 */
 
 package lines
 
 import (
+	"fmt"
 	"testing"
-	"time"
 
 	. "github.com/slukits/gounit"
 )
@@ -64,20 +44,6 @@ func (s *_editable) Is_triggered_by_editable_source_liner(t *T) {
 		cmp.FF.Has(Editable)
 		cmp.FF.Has(LinesFocusable)
 		cmp.FF.Has(HighlightEnabled)
-	}))
-}
-
-func (s *_editable) Component_has_non_nil_edit_property(t *T) {
-	fx_, cmp := fxCmpFF(t, Editable)
-	t.FatalOn(fx_.Lines.Update(cmp, nil, func(e *Env) {
-		t.True(cmp.Edit != nil)
-	}))
-
-	src := &srcFX{liner: (&editableLinerFX{}).initLines(0)}
-	fx_ = fx(t, src)
-	t.FatalOn(fx_.Lines.Update(src, nil, func(e *Env) {
-		src.FF.Has(Editable)
-		t.True(src.Edit != nil)
 	}))
 }
 
@@ -109,6 +75,20 @@ func (s *_editable) Component_has_focusable_cells(t *T) {
 	}))
 }
 
+func (s *_editable) Component_has_non_nil_edit_property(t *T) {
+	fx_, cmp := fxCmpFF(t, Editable)
+	t.FatalOn(fx_.Lines.Update(cmp, nil, func(e *Env) {
+		t.True(cmp.Edit != nil)
+	}))
+
+	src := &srcFX{liner: (&editableLinerFX{}).initLines(0)}
+	fx_ = fx(t, src)
+	t.FatalOn(fx_.Lines.Update(src, nil, func(e *Env) {
+		src.FF.Has(Editable)
+		t.True(src.Edit != nil)
+	}))
+}
+
 func (s *_editable) Component_s_editor_is_inactive_by_default(t *T) {
 	fx_, cmp := fxCmpFF(t, Editable)
 	t.FatalOn(fx_.Lines.Update(cmp, nil, func(e *Env) {
@@ -124,14 +104,38 @@ func (s *_editable) Component_s_editor_is_inactive_by_default(t *T) {
 	}))
 }
 
-func (s *_editable) Component_s_editor_is_activated_on_insert_key(t *T) {
+func (s *_editable) Edit_gaps_are_negative_initially(t *T) {
 	fx, cmp := fxCmpFF(t, Editable)
 	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
-		t.Not.True(cmp.Edit.IsActive())
+		t.True(cmp.Edit.LeftGap < 0 && cmp.Edit.RightGap < 0)
 	}))
-	fx.FireKey(Insert)
+}
+
+func (s *_editable) Calculates_edit_gaps_on_first_activation(t *T) {
+	cmp := &cmpFX{onInit: func(c *cmpFX, e *Env) {
+		c.FF.Set(Editable)
+		fmt.Fprint(c.Gaps(0).Vertical, "")
+		fmt.Fprint(c.Gaps(1).Right, "")
+	}, onLayout: func(c *cmpFX, e *Env) { c.Edit.Resume() }}
+
+	fx := fx(t, cmp)
 	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
-		t.True(cmp.Edit.IsActive())
+		t.Eq(1, cmp.Edit.LeftGap)
+		t.Eq(2, cmp.Edit.RightGap)
+	}))
+}
+
+func (s *_editable) Activation_is_noop_if_to_small_for_edit_gaps(t *T) {
+	cmp := &cmpFX{onInit: func(c *cmpFX, e *Env) {
+		fmt.Fprint(c.Gaps(0).Vertical, "")
+		c.Dim().SetWidth(3)
+	}}
+	fx := fxFF(t, Editable, cmp)
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+		cmp.Edit.Resume()
+	}))
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+		t.Not.True(cmp.Edit.IsActive())
 	}))
 }
 
@@ -146,10 +150,21 @@ func (s *_editable) Component_s_editor_is_activated_on_resume(t *T) {
 	}))
 }
 
-func (s *_editable) Sourced_activates_edit_on_insert(t *T) {
+func (s *_editable) Component_s_editor_is_activated_on_insert_key(t *T) {
+	fx, cmp := fxCmpFF(t, Editable)
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+		t.Not.True(cmp.Edit.IsActive())
+	}))
+	fx.FireKey(Insert)
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+		t.True(cmp.Edit.IsActive())
+	}))
+}
+
+func (s *_editable) Sourced_component_activates_edit_on_insert(t *T) {
 	cmp := &srcFX{liner: &editableLinerFX{}}
-	cmp.liner.(*editableLinerFX).initLines(0)
-	fx := fx(t, cmp, 20*time.Minute)
+	cmp.liner.(*editableLinerFX).cc = []string{""}
+	fx := fx(t, cmp)
 	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
 		t.Not.True(cmp.Edit.IsActive())
 	}))
@@ -158,6 +173,113 @@ func (s *_editable) Sourced_activates_edit_on_insert(t *T) {
 		t.True(cmp.Edit.IsActive())
 	}))
 	t.Eq("", fx.Screen().Trimmed())
+}
+
+func (s *_editable) Component_s_editor_is_deactivated_on_esc(t *T) {
+	fx, cmp := fxCmpFF(t, Editable)
+	fx.FireKey(Insert)
+	fx.FireKey(Esc)
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+		t.Not.True(cmp.Edit.IsActive())
+	}))
+}
+
+func (s *_editable) Component_loses_line_focus_on_dbl_esc(t *T) {
+	fx, cmp := fxCmpFF(t, Editable)
+	fx.FireKey(Insert)
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+		t.True(cmp.LL.Focus.Current() != -1)
+	}))
+	fx.FireKey(Esc)
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+		t.Not.True(cmp.Edit.IsActive())
+		t.True(cmp.LL.Focus.Current() != -1)
+	}))
+	fx.FireKey(Esc)
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+		t.True(cmp.LL.Focus.Current() == -1)
+		_, _, hasCursor := cmp.CursorPosition()
+		t.Not.True(hasCursor)
+	}))
+}
+
+func (s *_editable) Reports_activation_to_component_listener(t *T) {
+	activated := false
+	cmp := &cmpFX{onEdit: func(c *cmpFX, e *Env, edt *Edit) bool {
+		if edt.Type == Resume {
+			activated = true
+		}
+		return false
+	}}
+	fx := fxFF(t, Editable, cmp)
+	fx.FireKey(Insert)
+	t.True(activated)
+}
+
+func (s *_editable) Suppresses_activation_on_listener_request(t *T) {
+	cmp := &cmpFX{onEdit: func(c *cmpFX, e *Env, edt *Edit) bool {
+		return edt.Type == Resume
+	}}
+	fx := fxFF(t, Editable, cmp)
+	fx.FireKey(Insert)
+	fx.Lines.Update(cmp, nil, func(e *Env) {
+		t.Not.True(cmp.Edit.IsActive())
+	})
+}
+
+func (s *_editable) Reports_activation_to_component_source(t *T) {
+	cmp := &srcFX{liner: &editableLinerFX{}}
+	cmp.liner.(*editableLinerFX).cc = []string{""}
+	fx := fx(t, cmp)
+	fx.FireKey(Insert)
+	fx.Lines.Update(cmp, nil, func(e *Env) {
+		t.True(cmp.Src.Liner.(*editableLinerFX).HasReported(Resume))
+	})
+}
+
+func (s *_editable) Reports_deactivation_to_component_listener(t *T) {
+	deactivated := false
+	cmp := &cmpFX{onEdit: func(c *cmpFX, e *Env, edt *Edit) bool {
+		if edt.Type == Suspend {
+			deactivated = true
+		}
+		return false
+	}}
+	fx := fxFF(t, Editable, cmp)
+	fx.FireKey(Insert)
+	fx.FireKey(Esc)
+	t.True(deactivated)
+}
+
+func (s *_editable) Reports_deactivation_to_component_source(t *T) {
+	cmp := &srcFX{liner: &editableLinerFX{}}
+	cmp.liner.(*editableLinerFX).cc = []string{""}
+	fx := fx(t, cmp)
+	fx.FireKey(Insert)
+	fx.FireKey(Esc)
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+		t.True(cmp.Src.Liner.(*editableLinerFX).HasReported(Suspend))
+	}))
+}
+
+func (s *_editable) Reports_to_source_and_to_component(t *T) {
+	cmpEdt := NoEdit
+	cmp := &srcFX{liner: &editableLinerFX{}}
+	cmp.onEdit = func(c *cmpFX, e *Env, edt *Edit) bool {
+		cmpEdt = edt.Type
+		return false
+	}
+	fx := fx(t, cmp)
+	fx.FireKey(Insert)
+	t.Eq(Resume, cmpEdt)
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+		t.True(cmp.Src.Liner.(*editableLinerFX).HasReported(Resume))
+	}))
+	fx.FireKey(Esc)
+	t.Eq(Suspend, cmpEdt)
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+		t.True(cmp.Src.Liner.(*editableLinerFX).HasReported(Suspend))
+	}))
 }
 
 // func (s *_editable) Suppresses_rune_events_having_active_editor(t *T) {

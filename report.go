@@ -313,9 +313,14 @@ func callback(
 	}
 	env := cbEnv(cntx, cmp)
 
-	cmp.enable()
+	hasBeenEnabled := cmp.isEnabled()
+	if !hasBeenEnabled {
+		cmp.enable()
+	}
 	cb(env)
-	cmp.disable()
+	if !hasBeenEnabled {
+		cmp.disable()
+	}
 	env.reset()
 
 	return env.flags

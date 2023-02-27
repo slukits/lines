@@ -44,12 +44,12 @@ func (tt *Titled) Styled(e *lines.Env, sty lines.Style) *Titled {
 	return tt
 }
 
-func (f *Titled) Default(g Gapper, e *lines.Env) {
-	lines.Print(g.Gaps(0).Vertical.At(0).Filling(), '│')
-	lines.Print(g.Gaps(0).Horizontal.At(0).Filling(), '─')
-	fmt.Fprintf(g.Gaps(0).Corners, "┌┐┘└")
-	lines.Print(g.Gaps(0).Top.At(1), f.Title)
-	lines.Print(g.Gaps(0).Top.At(1+len(f.Title)).Filling(), '─')
+func (tt *Titled) Default(e *lines.Env) {
+	lines.Print(tt.Gaps(0).Vertical.At(0).Filling(), '│')
+	lines.Print(tt.Gaps(0).Horizontal.At(0).Filling(), '─')
+	fmt.Fprintf(tt.Gaps(0).Corners, "┌┐┘└")
+	lines.Print(tt.Gaps(0).Top.At(1), tt.Title)
+	lines.Print(tt.Gaps(0).Top.At(1+len(tt.Title)).Filling(), '─')
 }
 
 func (f *Titled) Focused(g Gapper, e *lines.Env) {

@@ -4,11 +4,16 @@
 
 package lines
 
+import "fmt"
+
 type EditType int
 
 const (
-	Ins EditType = iota
-	Rpl
+	NoEdit EditType = iota
+	Resume
+	Suspend
+	Ins
+	Replace
 	Del
 	JoinNext
 	JoinPrev
@@ -27,10 +32,10 @@ type Editer interface {
 
 	// OnEdit is called right before a user requested edit of a
 	// component's cell content is applied.  In case OnEdit returns
-	// false the following application of the edit request is omitted.
+	// true the following application of the edit request is omitted.
 	// Provided Edit instance holds the information about the requested
 	// edit.
-	OnEdit(*Env, *Edit) bool
+	OnEdit(*Env, *Edit) (suppressEdit bool)
 }
 
 // An Editor provides the client API to control a components editing
@@ -44,6 +49,14 @@ type Editor struct {
 	c         *Component
 	suspended bool
 	mode      EditType
+
+	// LeftGap is calculated by Resume on its first call using the first
+	// left gap-index which is not used yet.
+	LeftGap int
+
+	// RightGap is calculated by Resume on its first call using the first
+	// right gap-index which is not used yet.
+	RightGap int
 }
 
 // IsActive returns false if given Editor e is nil or suspended or if no
@@ -52,8 +65,7 @@ func (e *Editor) IsActive() bool {
 	if e == nil || e.suspended {
 		return false
 	}
-	_, _, haveCursor := e.c.layoutCmp.wrapped().cursorPosition()
-	return haveCursor
+	return true
 }
 
 // Suspend deactivates a components (non nil) Editor e.
@@ -64,39 +76,65 @@ func (e *Editor) Suspend() {
 	e.suspended = true
 }
 
-// Resume reactivates a components (non nil) Editor e.
+// Resume (re)activates a components (non nil) Editor e.
+// NOTE the first Resume call takes no effect if the component has no
+// layout; i.e. OnLayout or OnFocus are good places to call Resume.
+// NOTE call Resume for the first time after needed gaps have been
+// initialized to have Resume skip this gaps for its edit-gaps
+// initialization.
 func (e *Editor) Resume() {
 	if e == nil {
+		return
+	}
+	if e.LeftGap < 0 {
+		_, e.RightGap, _, e.LeftGap = e.c.GapsLen()
+		fmt.Fprint(e.c.Gaps(e.RightGap).Right, "")
+		fmt.Fprint(e.c.Gaps(e.LeftGap).Left, "")
+		e.c.LL.Focus.EolAfterLastRune()
+	}
+	if e.RightGap+e.LeftGap+2 > e.c.dim.Width() {
 		return
 	}
 	e.suspended = false
 	_, _, hasCursor := e.c.cursorPosition()
 	if !hasCursor {
-		e.c.ensureAsManyLineInstancesAsScreenLines()
-		e.c.LL.Focus.EolAfterLastRune()
-		if (*e.c.ll)[0].isZero() {
-			e.c.setCursor(0, 0)
-		} else {
-			e.c.LL.Focus.Next()
+		(*e.c.ll).padded(0) // ensure at least one line
+		ln, cl := e.c.LL.Focus.Next()
+		if ln != 0 || cl != 0 {
+			panic("lines: editor: cell at (0,0) must be focusable")
 		}
-		return
 	}
 }
 
 func (e *Editor) Replacing() {
-	e.mode = Rpl
+	e.mode = Replace
 }
 
 func (e *Editor) IsReplacing() bool {
-	return e.mode == Rpl
+	return e.mode == Replace
 }
 
-func (e *Editor) mapEvent(evt KeyEventer) *Edit {
+func (e *Editor) newKeyEdit(evt KeyEventer) *Edit {
+	ln, cl, _ := e.c.cursorPosition()
+	edt := &Edit{Line: ln, Cell: cl}
 	switch evt.Key() {
-	case Backspace, Delete:
-		return e.delEdit(evt)
+	case Insert:
+		edt.Type = Resume
+	case Esc:
+		edt.Type = Suspend
+	default:
+		return nil
 	}
-	return nil
+	return edt
+}
+
+func (e *Editor) edit(edt *Edit) {
+	switch edt.Type {
+	case Resume:
+		e.Resume()
+	case Suspend:
+		e.Suspend()
+	}
 }
 
 // delEdit translates a Backspace or Delete key press into a Del-Edit.

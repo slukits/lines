@@ -123,6 +123,13 @@ func (u *UI) Quit() {
 	u.Post(&quitEvent{when: time.Now()})
 }
 
+// NewKeyEvent returns a key event for given key and modifier mask which
+// is handy to run keyboard macros or re-emit key events which have been
+// suppressed waiting for a corresponding second key...
+func (u *UI) NewKeyEvent(k api.Key, mm api.ModifierMask) api.KeyEventer {
+	return newKeyEvent(k, mm)
+}
+
 func (u *UI) quit() {
 	u.Lock()
 	defer u.Unlock()
@@ -135,27 +142,6 @@ func (u *UI) quit() {
 		// non-blocking i.e. must be closed already
 	default:
 		close(u.waitForQuit)
-	}
-}
-
-func (u *UI) CurrentColors() api.CCC {
-	return api.CCC{
-		C1st:  api.Color(tcell.ColorBlack.Hex()),
-		C2nd:  api.Color(tcell.ColorMaroon.Hex()),
-		C3rd:  api.Color(tcell.ColorGreen.Hex()),
-		C4th:  api.Color(tcell.ColorOlive.Hex()),
-		C5th:  api.Color(tcell.ColorNavy.Hex()),
-		C6th:  api.Color(tcell.ColorPurple.Hex()),
-		C7th:  api.Color(tcell.ColorTeal.Hex()),
-		C8th:  api.Color(tcell.ColorSilver.Hex()),
-		C9th:  api.Color(tcell.ColorGray.Hex()),
-		C10th: api.Color(tcell.ColorRed.Hex()),
-		C11th: api.Color(tcell.ColorLime.Hex()),
-		C12th: api.Color(tcell.ColorYellow.Hex()),
-		C13th: api.Color(tcell.ColorBlue.Hex()),
-		C14th: api.Color(tcell.ColorFuchsia.Hex()),
-		C15th: api.Color(tcell.ColorAqua.Hex()),
-		C16th: api.Color(tcell.ColorWhite.Hex()),
 	}
 }
 

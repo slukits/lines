@@ -222,7 +222,7 @@ func (c *cmpFX) OnCursor(e *Env, absOnly bool) {
 func (c *cmpFX) OnEdit(e *Env, edt *Edit) bool {
 	c.increment(onEdit)
 	if c.onEdit == nil {
-		return true
+		return false
 	}
 	return c.onEdit(c, e, edt)
 }
@@ -367,6 +367,7 @@ func (l *focusableLinerFX) IsFocusable(idx int) bool {
 
 type editableLinerFX struct {
 	focusableLinerFX
+	ee []*Edit
 }
 
 func (l *editableLinerFX) initLines(n int) *editableLinerFX {
@@ -374,8 +375,19 @@ func (l *editableLinerFX) initLines(n int) *editableLinerFX {
 	return l
 }
 
-func (l *editableLinerFX) OnEdit(w *EnvLineWriter, e *Edit) bool {
-	return true
+func (l *editableLinerFX) OnEdit(e *Edit) bool {
+	l.ee = append(l.ee, e)
+	return false
+}
+
+func (l *editableLinerFX) HasReported(t EditType) bool {
+	for _, e := range l.ee {
+		if e.Type != t {
+			continue
+		}
+		return true
+	}
+	return false
 }
 
 type srcFX struct {

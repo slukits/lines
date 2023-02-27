@@ -24,8 +24,8 @@ type app struct {
 
 func (c *app) OnInit(e *lines.Env) {
 	c.Dim().SetWidth(64).SetHeight(24)
-	c.Title = []rune("mouse-observer")
-	c.Default(c, e)
+	c.Title, c.Gapper = []rune("mouse-observer"), c
+	c.Default(e)
 	c.CC = append(c.CC, &eventsAggregates{}, &report{})
 }
 
@@ -53,8 +53,8 @@ type events struct {
 }
 
 func (c *events) OnInit(e *lines.Env) {
-	c.Title = []rune(" create events ")
-	c.Default(c, e)
+	c.Title, c.Gapper = []rune(" create events "), c
+	c.Default(e)
 }
 
 func (c *events) OnMouse(e *lines.Env, b lines.ButtonMask, x, y int) {
@@ -111,8 +111,8 @@ type aggregates struct {
 }
 
 func (c *aggregates) OnInit(e *lines.Env) {
-	c.Title = []rune(" aggregates ")
-	c.Default(c, e)
+	c.Title, c.Gapper = []rune(" aggregates "), c
+	c.Default(e)
 }
 
 func (c *aggregates) OnUpdate(e *lines.Env, event interface{}) {
@@ -133,8 +133,8 @@ type report struct {
 }
 
 func (c *report) OnInit(e *lines.Env) {
-	c.Title = []rune(" report events ")
-	c.Default(c, e)
+	c.Title, c.Gapper = []rune(" report events "), c
+	c.Default(e)
 }
 
 func (c *report) OnUpdate(e *lines.Env, event interface{}) {

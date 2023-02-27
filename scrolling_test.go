@@ -7,7 +7,6 @@ package lines
 import (
 	"fmt"
 	"testing"
-	"time"
 
 	. "github.com/slukits/gounit"
 )
@@ -105,29 +104,6 @@ func (s *AScrollBar) Is_at_zero_position_if_at_top(t *T) {
 		}
 	}
 }
-
-type dbg struct{ Suite }
-
-func (s *dbg) Dbg(t *T) {
-	cmp := &cmpFX{
-		onInit: func(c *cmpFX, e *Env) {
-			c.Scroll.Bar = true
-			fmt.Fprint(e, "12\n3456\n789")
-		}}
-	fx := fx(t, cmp, 20*time.Minute).FireResize(5, 2)
-	t.FatalIfNot(t.Eq("12   \n3456 ", fx.Screen()))
-	sbd := fx.Scroll.BarDef(cmp)
-	for i, c := range fx.Cells().Column(4) {
-		switch i {
-		case 0:
-			t.FatalIfNot(t.Eq(c.Style, sbd.Position))
-		default:
-			t.FatalIfNot(t.Eq(c.Style, sbd.Style))
-		}
-	}
-}
-
-func TestDBG(t *testing.T) { Run(&dbg{}, t) }
 
 func (s *AScrollBar) Is_at_max_position_if_at_bottom(t *T) {
 	cmp := &cmpFX{

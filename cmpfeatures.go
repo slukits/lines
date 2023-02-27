@@ -183,7 +183,8 @@ func (ff *Features) Set(f FeatureMask) {
 	ff.c.ensureFeatures()
 	if f&editable == editable && !ff.c.isNesting() && ff.c.Edit == nil {
 		_, _, hasCursor := ff.c.CursorPosition()
-		ff.c.Edit = &Editor{c: ff.c, suspended: !hasCursor}
+		ff.c.Edit = &Editor{
+			c: ff.c, suspended: true, LeftGap: -1, RightGap: -1}
 		if hasCursor {
 			ff.c.LL.Focus.EolAfterLastRune()
 		}

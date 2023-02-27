@@ -39,7 +39,8 @@ func (d *Demo) InitDemo(dg dimGapper, e *lines.Env, title []rune) {
 	}
 	d.dg = dg
 	d.Title = title
-	d.Default(dg, e)
+	d.Gapper = dg
+	d.Default(e)
 	dg.Dim().SetWidth(d.width()).SetHeight(d.height())
 }
 
@@ -79,7 +80,7 @@ func (d *Demo) OnFocus(e *lines.Env) { d.Focused(d.dg, e) }
 
 // OnFocusLost reverts to single-framing.
 func (d *Demo) OnFocusLost(e *lines.Env) {
-	d.Default(d.dg, e)
+	d.Default(e)
 	if lt, _, _, _ := d.dg.GapsLen(); lt > 1 {
 		fmt.Fprint(d.dg.Gaps(1).TopLeft, "")
 		fmt.Fprint(d.dg.Gaps(1).TopRight, "")

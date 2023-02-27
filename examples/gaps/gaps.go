@@ -33,8 +33,8 @@ type app struct {
 var appTitle []rune = []rune("gaps demo")
 
 func (c *app) OnInit(e *lines.Env) {
-	c.Title = appTitle
-	c.Default(c, e)
+	c.Title, c.Gapper = appTitle, c
+	c.Default(e)
 	r1 := &row{}
 	r1.CC = []lines.Componenter{&simpleGap{}, &ttlTopCentered{},
 		&ttlTopLeft{}, &ttlTopRight{}}
@@ -74,8 +74,8 @@ type ttlTopCentered struct {
 }
 
 func (c *ttlTopCentered) OnInit(e *lines.Env) {
-	c.Title = []rune("centered")
-	c.Default(c, e)
+	c.Title, c.Gapper = []rune("centered"), c
+	c.Default(e)
 	c.CC = []lines.Componenter{&titled{label: "top-title"}}
 	c.Dim().SetWidth(18).SetHeight(7)
 }

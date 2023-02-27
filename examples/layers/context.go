@@ -89,8 +89,8 @@ var cntxItems = []string{
 // OnInit prints the menu items to the context menu layer's lines.
 func (c *contextMenu) OnInit(e *lines.Env) {
 	c.AA(lines.Reverse)
-	c.Title = []rune("context-menu")
-	c.Default(c, e)
+	c.Title, c.Gapper = []rune("context-menu"), c
+	c.Default(e)
 	for i, mi := range cntxItems {
 		fmt.Fprint(e.LL(i), mi)
 	}

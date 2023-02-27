@@ -47,11 +47,9 @@ type EditLiner interface {
 	FocusableLiner
 
 	// OnEdit implementation gets edit requests of a component's screen
-	// cell reported and returns true iff the edit request should be
-	// carried out.  Given line writer allows to print to edited line
-	// while given Edit-instance provides the information about the
-	// edit.
-	OnEdit(w *EnvLineWriter, e *Edit) bool
+	// cell reported and returns true iff given edit request e should be
+	// carried out.
+	OnEdit(e *Edit) bool
 }
 
 // Highlighter provides a highlighter which may be set to a components

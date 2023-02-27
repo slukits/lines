@@ -314,10 +314,6 @@ func (ll *Lines) Root() Componenter {
 	return ll.scr.root().userCmp
 }
 
-func (ll *Lines) CurrentColors() api.CCC {
-	return ll.scr.backend.CurrentColors()
-}
-
 // Quit posts a quit event which consequently closes given Lines
 // instance's backend and unblocks WaitForQuit.
 func (ll *Lines) Quit() { ll.backend.Quit() }
@@ -327,6 +323,10 @@ func (ll *Lines) Quit() { ll.backend.Quit() }
 func (ll *Lines) OnQuit(listener func()) *Lines {
 	ll.backend.OnQuit(listener)
 	return ll
+}
+
+func (ll *Lines) newKeyEvent(k Key, mm ModifierMask) KeyEventer {
+	return ll.backend.NewKeyEvent(k, mm)
 }
 
 // WaitForQuit blocks until given Lines-instance is quit.  (Except a

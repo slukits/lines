@@ -539,6 +539,10 @@ func (s *lineFocus) Resets_line_start_on_line_focus_change(t *T) {
 	t.Eq("123\n123", tt.ScreenOf(cmp))
 }
 
+func (s *lineFocus) Focuses_nth_line(t *T) {
+
+}
+
 func TestLineFocus(t *testing.T) {
 	t.Parallel()
 	Run(&lineFocus{}, t)

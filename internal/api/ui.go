@@ -170,6 +170,11 @@ type EventProcessor interface {
 	// Post posts given event to the event loop.
 	Post(Eventer) error
 
+	// NewKeyEvent returns a key event for given key and modifier mask
+	// which is handy to run keyboard macros or re-emit key events which
+	// have been suppressed waiting for a corresponding second key...
+	NewKeyEvent(Key, ModifierMask) KeyEventer
+
 	// Quit event polling.
 	Quit()
 

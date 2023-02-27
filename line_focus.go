@@ -61,7 +61,7 @@ func (s *LineFocus) AtCoordinate(y int) {
 		s.Line().resetLineFocus()
 	}
 	top, _, _, _ := s.c.GapsLen()
-	lineIdx := y - top
+	lineIdx := y + top
 	if s.c.ContentScreenLines() <= lineIdx {
 		return
 	}
@@ -75,7 +75,9 @@ func (s *LineFocus) AtCoordinate(y int) {
 	if ln.ff&NotFocusable != 0 {
 		return
 	}
-	ln.Flag(Highlighted)
+	if hl := s.hlLineFlag(); hl != ZeroLineFlag {
+		ln.Flag(hl)
+	}
 	s.current = s.c.First() + lineIdx
 }
 

@@ -118,12 +118,10 @@ func executeResetLineFocus(cntx *rprContext, usr Componenter) {
 	_, _, haveCursor := usr.embedded().CursorPosition()
 	usr.embedded().LL.Focus.Reset()
 	if haveCursor {
+		usr.embedded().cursorMoved = true
 		reportCursorChange(cntx, usr)
 	}
 	reportLineFocus(cntx, usr, cIdx, sIdx)
-	if usr.embedded().Edit != nil {
-		usr.embedded().Edit.Suspend()
-	}
 }
 
 func executeCellFocus(
@@ -211,12 +209,38 @@ func reportSelectedLine(cntx *rprContext, usr Componenter) {
 
 func editorInsert(cntx *rprContext, usr Componenter) {
 	if !usr.embedded().Edit.IsActive() {
-		usr.embedded().Edit.Resume()
-		return
+		editor := usr.embedded().Edit
+		edt := editor.newKeyEdit(
+			cntx.ll.newKeyEvent(Insert, ZeroModifier))
+		if usr.layoutComponent().wrapped().Src != nil {
+			if sourcedEdit(cntx, usr, editor, edt) {
+				return
+			}
+		}
+		ls, ok := usr.(Editer)
+		if ok {
+			suppress := false
+			callback(usr, cntx, func(e *Env) {
+				suppress = ls.OnEdit(e, edt)
+			})
+			if suppress {
+				return
+			}
+		}
+		editor.edit(edt)
 	}
-	if usr.embedded().Edit.IsReplacing() {
-		usr.embedded().LL.Focus.EolAtLastRune()
-		return
+}
+
+func sourcedEdit(
+	cntx *rprContext, usr Componenter, editor *Editor, edt *Edit,
+) (reported bool) {
+	ls, ok := usr.layoutComponent().wrapped().Src.Liner.(EditLiner)
+	if !ok {
+		return false
 	}
-	usr.embedded().LL.Focus.EolAfterLastRune()
+	suppress := false
+	callback(usr, cntx, func(e *Env) {
+		suppress = ls.OnEdit(edt)
+	})
+	return suppress
 }
