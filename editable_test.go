@@ -390,6 +390,24 @@ func (s *_editable) Editor_indicates_line_overflow(t *T) {
 	fx.FireRune('a')
 	fx.FireKey(Home)
 	t.Eq(" aaa"+string(OverflowRight), fx.ScreenOf(cmp)[0])
+	fx.FireKey(Up)
+	t.Eq(" aaa ", fx.ScreenOf(cmp)[0])
+	fx.FireKey(Down)
+	t.Eq(" aaa"+string(OverflowRight), fx.ScreenOf(cmp)[0])
+}
+
+func (s *_editable) Doesnt_quit_if_active(t *T) {
+	fx, _ := fxCmpFF(t, Editable)
+	hasQuit := false
+	fx.Lines.OnQuit(func() { hasQuit = true })
+	fx.FireRune('q')
+	t.FatalIfNot(t.True(hasQuit))
+	fx, _ = fxCmpFF(t, Editable)
+	hasQuit = false
+	fx.Lines.OnQuit(func() { hasQuit = true })
+	fx.FireKey(Insert)
+	fx.FireRune('q')
+	t.Not.True(hasQuit)
 }
 
 // func (s *_editable) Suppresses_rune_events_having_active_editor(t *T) {

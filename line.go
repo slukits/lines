@@ -172,11 +172,17 @@ func (l *Line) moveStartToEnd(width int) {
 	l.setDirty()
 }
 
-func (l *Line) resetLineStart() {
+func (l *Line) resetStart() {
 	if l.start == 0 {
 		return
 	}
 	l.start = 0
+	l.setDirty()
+}
+
+func (l *Line) resetOverflow() {
+	l.resetStart()
+	l.ofLeft, l.ofRight = false, false
 	l.setDirty()
 }
 

@@ -61,7 +61,7 @@ func (s *LineFocus) Content() int {
 // AtCoordinate tries to focus the screen line with given coordinate y.
 func (s *LineFocus) AtCoordinate(y int) {
 	if s.Screen() >= 0 {
-		s.Line().resetLineStart()
+		s.Line().resetStart()
 	}
 	top, _, _, _ := s.c.GapsLen()
 	lineIdx := y + top
@@ -90,9 +90,6 @@ func (s *LineFocus) AtCoordinate(y int) {
 // If highlighted is true the highlight of the current line is removed
 // while the next is highlighted.
 func (s *LineFocus) Next() (ln int, cl int) {
-	if s.Screen() >= 0 {
-		s.Line().resetLineStart()
-	}
 	ln = s.findNextLine()
 	if ln == s.current {
 		s.Reset()
@@ -147,9 +144,6 @@ func (s *LineFocus) nextFromSource(fl FocusableLiner) int {
 // true the highlight of the current line is removed while the previous
 // line is highlighted.
 func (s *LineFocus) Previous() (slIdx int, cl int) {
-	if s.Screen() >= 0 {
-		s.Line().resetLineStart()
-	}
 	slIdx = s.findPrevious()
 	if slIdx == s.current {
 		s.Reset()

@@ -12,9 +12,8 @@ import (
 // component has an active Editor otherwise the key event triggers first
 // potential listener calls followed by OnKey-implementations of all
 // nested focused components.  Finally if bubbling wasn't stopped
-// registered key-features are executed.  reportKey returns true if
-// given key is registered as quit-key.
-func reportKey(cntx *rprContext, evt api.KeyEventer) (quit bool) {
+// registered key-features are executed.
+func reportKey(cntx *rprContext, evt api.KeyEventer) {
 	sb := false
 	stopBubbling := func() bool {
 		sb = true
@@ -22,7 +21,7 @@ func reportKey(cntx *rprContext, evt api.KeyEventer) (quit bool) {
 	}
 	if cntx.scr.focus.userComponent().embedded().Edit.IsActive() {
 		if !reportKeyEdit(cntx.scr.focus, evt, cntx) {
-			return false
+			return
 		}
 	}
 	cntx.scr.forFocused(func(c layoutComponenter) (stop bool) {
@@ -32,13 +31,12 @@ func reportKey(cntx *rprContext, evt api.KeyEventer) (quit bool) {
 		if sb := reportOnKey(c, evt, cntx); sb {
 			return stopBubbling()
 		}
-		return false
+		return
 	})
 	if sb {
-		return false
+		return
 	}
 	execKeyFeature(cntx, evt)
-	return false
 }
 
 // reportKeyEdit reports first to OnKey implementations then the event
@@ -114,7 +112,7 @@ func reportOnKey(
 	return env&envStopBubbling == envStopBubbling
 }
 
-func reportRune(cntx *rprContext, evt RuneEventer) (quit bool) {
+func reportRune(cntx *rprContext, evt RuneEventer) {
 	sb := false
 	stopBubbling := func() bool {
 		sb = true
@@ -122,7 +120,7 @@ func reportRune(cntx *rprContext, evt RuneEventer) (quit bool) {
 	}
 	if cntx.scr.focus.userComponent().embedded().Edit.IsActive() {
 		reportRuneEdit(cntx.scr.focus, evt, cntx)
-		return false
+		return
 	}
 	cntx.scr.forFocused(func(c layoutComponenter) (stop bool) {
 		if sb := reportRuneListener(c, evt, cntx); sb {
@@ -134,10 +132,9 @@ func reportRune(cntx *rprContext, evt RuneEventer) (quit bool) {
 		return false
 	})
 	if sb {
-		return false
+		return
 	}
 	execRuneFeature(cntx, evt)
-	return false
 }
 
 func reportRuneEdit(

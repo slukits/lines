@@ -106,6 +106,7 @@ func executeLineFocus(
 	}
 	if clIdx == ln {
 		if cl != column {
+			reportLineOverflow(cntx, usr, clIdx)
 			reportCursorChange(cntx, usr)
 		}
 		return
@@ -133,10 +134,12 @@ func executeCellFocus(
 	cntx *rprContext, usr Componenter, f func() (int, int, bool),
 ) {
 	_, _, movedCursor := f()
-	if movedCursor {
-		reportCursorChange(cntx, usr)
-	}
+	// cursor doesn't need to change to change the line-overflow
 	reportLineOverflow(cntx, usr, usr.embedded().LL.Focus.Screen())
+	if !movedCursor {
+		return
+	}
+	reportCursorChange(cntx, usr)
 }
 
 func reportCursorChange(cntx *rprContext, usr Componenter) bool {
@@ -162,19 +165,21 @@ func reportLineFocus(cntx *rprContext, usr Componenter, cIdx, sIdx int) {
 	fl, ok := usr.(LineFocusLooser)
 	if cIdx >= 0 && ok {
 		callback(usr, cntx, lfCurry(fl.OnLineFocusLost, cIdx, sIdx))
-		usr.enable()
 	}
 	cmp := usr.embedded()
-	sIdx = cmp.LL.Focus.Screen()
+	if cIdx >= 0 {
+		cmp.LL.By(cIdx).resetOverflow()
+	}
+	sIdx_ := cmp.LL.Focus.Screen()
 	cIdx = cmp.LL.Focus.Current()
 	if cIdx < 0 {
 		return
 	}
 	lf, ok := usr.(LineFocuser)
 	if ok {
-		callback(usr, cntx, lfCurry(lf.OnLineFocus, cIdx, sIdx))
+		callback(usr, cntx, lfCurry(lf.OnLineFocus, cIdx, sIdx_))
 	}
-	reportLineOverflow(cntx, usr, sIdx)
+	reportLineOverflow(cntx, usr, sIdx_)
 }
 
 func reportLineOverflow(cntx *rprContext, usr Componenter, sIdx int) {

@@ -148,6 +148,10 @@ func (e *Editor) exec(edt *Edit) {
 		e.Resume()
 	case Suspend:
 		e.Suspend()
+		if edt.Line >= 0 && !e.c.LL.Focus.IsActive() {
+			Print(e.c.Gaps(e.LeftGap).Left.At(edt.Line), ' ')
+			Print(e.c.Gaps(e.RightGap).Right.At(edt.Line), ' ')
+		}
 	case Ins:
 		if e.c.LL.Focus.Eol() {
 			e.c.LL.Focus.Line().appendRune(edt.Rune)

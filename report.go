@@ -138,7 +138,7 @@ func reportInit(ll *Lines, scr *screen) {
 
 func report(
 	evt Eventer, ee *Lines, scr *screen,
-) (quit bool) {
+) {
 
 	cntx := &rprContext{evt: evt, ll: ee, scr: scr}
 
@@ -148,9 +148,9 @@ func report(
 	case *moveFocusEvent:
 		reportMoveFocus(cntx, evt)
 	case RuneEventer:
-		return reportRune(cntx, evt)
+		reportRune(cntx, evt)
 	case KeyEventer:
-		return reportKey(cntx, evt)
+		reportKey(cntx, evt)
 	case *MouseMove:
 		reportMouseMove(cntx, evt)
 	case *MouseClick:
@@ -162,7 +162,6 @@ func report(
 	case MouseEventer:
 		reportMouse(cntx, evt)
 	}
-	return false
 }
 
 func updateCurry(

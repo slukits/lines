@@ -393,17 +393,9 @@ func (u *UpdateEvent) When() time.Time { return u.when }
 func (u *UpdateEvent) Source() interface{} { return u }
 
 func (ll *Lines) listen(evt api.Eventer) {
-	if evt, ok := evt.(RuneEventer); ok {
-		if ll.Quitting.Rune(evt.Rune()) {
-			ll.backend.Quit()
-			return
-		}
-	}
-	if evt, ok := evt.(KeyEventer); ok {
-		if ll.Quitting.Key(evt.Key()) {
-			ll.backend.Quit()
-			return
-		}
+	if ll.isQuitting(evt) {
+		ll.backend.Quit()
+		return
 	}
 	switch evt := evt.(type) {
 	case *rootEvent:
@@ -425,6 +417,19 @@ func (ll *Lines) listen(evt api.Eventer) {
 		reportInit(ll, ll.scr)
 		ll.scr.softSync(ll)
 	}
+}
+
+func (ll *Lines) isQuitting(evt api.Eventer) bool {
+	if ll.scr.focus.wrapped().userCmp.embedded().Edit.IsActive() {
+		return false
+	}
+	if evt, ok := evt.(RuneEventer); ok {
+		return ll.Quitting.Rune(evt.Rune())
+	}
+	if evt, ok := evt.(KeyEventer); ok {
+		return ll.Quitting.Key(evt.Key())
+	}
+	return false
 }
 
 // MoveFocus posts a new MoveFocus event into the event loop which once
