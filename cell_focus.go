@@ -150,7 +150,7 @@ func (s *LineFocus) FirstCell() (slIdx, cl int, moved bool) {
 		moved = true
 	}
 	slIdx, cl, _ = s.c.SetCursor(s.Screen(), 0).CursorPosition()
-	s.Line().resetLineFocus()
+	s.Line().resetLineStart()
 	return slIdx, cl, moved
 }
 

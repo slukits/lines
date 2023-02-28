@@ -21,8 +21,9 @@ func reportKey(cntx *rprContext, evt api.KeyEventer) (quit bool) {
 		return true
 	}
 	if cntx.scr.focus.userComponent().embedded().Edit.IsActive() {
-		reportKeyEdit(cntx.scr.focus, evt, cntx)
-		return false
+		if !reportKeyEdit(cntx.scr.focus, evt, cntx) {
+			return false
+		}
 	}
 	cntx.scr.forFocused(func(c layoutComponenter) (stop bool) {
 		if sb := reportKeyListener(c, evt, cntx); sb {
@@ -49,7 +50,7 @@ func reportKey(cntx *rprContext, evt api.KeyEventer) (quit bool) {
 // component's content is performed.
 func reportKeyEdit(
 	lc layoutComponenter, evt KeyEventer, cntx *rprContext,
-) {
+) (proceed bool) {
 	if stopBbl := reportOnKey(lc, evt, cntx); stopBbl {
 		return
 	}
@@ -61,22 +62,11 @@ func reportKeyEdit(
 	usr.enable()
 	defer usr.disable()
 	edt := editor.newKeyEdit(evt)
-	if usr.embedded().Src != nil {
-		if sourcedEdit(cntx, usr, editor, edt) {
-			return
-		}
+	if edt == nil {
+		return true
 	}
-	ls, ok := usr.(Editer)
-	if ok {
-		suppress := false
-		callback(usr, cntx, func(e *Env) {
-			suppress = ls.OnEdit(e, edt)
-		})
-		if suppress {
-			return
-		}
-	}
-	editor.edit(edt)
+	reportEdit(cntx, usr, edt)
+	return false
 }
 
 func reportKeyListener(
@@ -131,12 +121,7 @@ func reportRune(cntx *rprContext, evt RuneEventer) (quit bool) {
 		return true
 	}
 	if cntx.scr.focus.userComponent().embedded().Edit.IsActive() {
-		if sb := reportOnRune(cntx.scr.focus, evt, cntx); sb {
-			return false
-		}
-		if suppress := reportEdit(cntx.scr.focus, evt, cntx); suppress {
-			return false
-		}
+		reportRuneEdit(cntx.scr.focus, evt, cntx)
 		return false
 	}
 	cntx.scr.forFocused(func(c layoutComponenter) (stop bool) {
@@ -155,31 +140,21 @@ func reportRune(cntx *rprContext, evt RuneEventer) (quit bool) {
 	return false
 }
 
-func reportEdit(
+func reportRuneEdit(
 	lc layoutComponenter, evt RuneEventer, cntx *rprContext,
-) (suppressEdit bool) {
-	ec, ok := lc.userComponent().(Editer)
-	if !ok {
-		return false
-	}
-	editor := lc.userComponent().embedded().Edit
+) {
+	usr := lc.userComponent()
+	editor := usr.embedded().Edit
 	if editor == nil {
 		panic("lines: report: on-edit: editor missing")
 	}
-	ln, cl, haveCursor := lc.wrapped().cursorPosition()
-	if !haveCursor {
-		panic("lines: report: on-edit: cursor position missing")
+	usr.enable()
+	defer usr.disable()
+	edt := editor.newRuneEdit(evt)
+	if edt == nil {
+		return
 	}
-	edt := &Edit{
-		Line: ln,
-		Cell: cl,
-		Type: editor.mode,
-		Rune: evt.Rune(),
-	}
-	callback(lc.userComponent(), cntx, func(e *Env) {
-		suppressEdit = ec.OnEdit(e, edt)
-	})
-	return suppressEdit
+	reportEdit(cntx, usr, edt)
 }
 
 func reportRuneListener(

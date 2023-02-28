@@ -18,6 +18,7 @@ type counter int
 const (
 	onInit counter = iota
 	onLayout
+	onAfterLayout
 	onUpdate
 	onFocus
 	onFocusLost
@@ -40,6 +41,7 @@ type cmpFX struct {
 	Component
 	onInit            func(*cmpFX, *Env)
 	onLayout          func(*cmpFX, *Env)
+	onAfterLayout     func(*cmpFX, *Env, DD) bool
 	onUpdate          func(*cmpFX, *Env, interface{})
 	onFocus           func(*cmpFX, *Env)
 	onFocusLost       func(*cmpFX, *Env)
@@ -138,13 +140,21 @@ func (c *cmpFX) OnInit(e *Env) {
 	c.onInit(c, e)
 }
 
-func (c *cmpFX) OnLayout(e *Env) bool {
+func (c *cmpFX) OnLayout(e *Env) (reflow bool) {
 	c.increment(onLayout)
 	if c.onLayout == nil {
 		return false
 	}
 	c.onLayout(c, e)
 	return false
+}
+
+func (c *cmpFX) OnAfterLayout(e *Env, dd DD) (reflow bool) {
+	c.increment(onAfterLayout)
+	if c.onAfterLayout == nil {
+		return false
+	}
+	return c.onAfterLayout(c, e, dd)
 }
 
 func (c *cmpFX) OnUpdate(e *Env, data interface{}) {
@@ -383,6 +393,16 @@ func (l *editableLinerFX) OnEdit(e *Edit) bool {
 func (l *editableLinerFX) HasReported(t EditType) bool {
 	for _, e := range l.ee {
 		if e.Type != t {
+			continue
+		}
+		return true
+	}
+	return false
+}
+
+func (l *editableLinerFX) HasReportedRune(r rune) bool {
+	for _, e := range l.ee {
+		if e.Rune != r {
 			continue
 		}
 		return true

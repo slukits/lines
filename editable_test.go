@@ -16,7 +16,9 @@ package lines
 
 import (
 	"fmt"
+	"strings"
 	"testing"
+	"time"
 
 	. "github.com/slukits/gounit"
 )
@@ -104,14 +106,14 @@ func (s *_editable) Component_s_editor_is_inactive_by_default(t *T) {
 	}))
 }
 
-func (s *_editable) Edit_gaps_are_negative_initially(t *T) {
+func (s *_editable) Edit_gaps_are_initially_negative(t *T) {
 	fx, cmp := fxCmpFF(t, Editable)
 	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
 		t.True(cmp.Edit.LeftGap < 0 && cmp.Edit.RightGap < 0)
 	}))
 }
 
-func (s *_editable) Calculates_edit_gaps_on_first_activation(t *T) {
+func (s *_editable) Editor_calculates_gaps_on_first_activation(t *T) {
 	cmp := &cmpFX{onInit: func(c *cmpFX, e *Env) {
 		c.FF.Set(Editable)
 		fmt.Fprint(c.Gaps(0).Vertical, "")
@@ -175,6 +177,16 @@ func (s *_editable) Sourced_component_activates_edit_on_insert(t *T) {
 	t.Eq("", fx.Screen().Trimmed())
 }
 
+func (s *_editable) Has_cursor_set_on_editor_activation(t *T) {
+	fx, cmp := fxCmpFF(t, Editable)
+	fx.FireKey(Insert)
+	hasCursor := false
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+		_, _, hasCursor = cmp.CursorPosition()
+	}))
+	t.True(hasCursor)
+}
+
 func (s *_editable) Component_s_editor_is_deactivated_on_esc(t *T) {
 	fx, cmp := fxCmpFF(t, Editable)
 	fx.FireKey(Insert)
@@ -200,6 +212,20 @@ func (s *_editable) Component_loses_line_focus_on_dbl_esc(t *T) {
 		t.True(cmp.LL.Focus.Current() == -1)
 		_, _, hasCursor := cmp.CursorPosition()
 		t.Not.True(hasCursor)
+	}))
+}
+
+func (s *_editable) Editor_is_deactivated_on_loosing_line_focus(t *T) {
+	fx, cmp := fxCmpFF(t, Editable)
+	fx.FireKey(Insert)
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+		t.True(cmp.Edit.IsActive())
+		t.True(cmp.LL.Focus.IsActive())
+	}))
+	fx.FireKey(Up)
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+		t.Not.True(cmp.Edit.IsActive())
+		t.Not.True(cmp.LL.Focus.IsActive())
 	}))
 }
 
@@ -262,7 +288,7 @@ func (s *_editable) Reports_deactivation_to_component_source(t *T) {
 	}))
 }
 
-func (s *_editable) Reports_to_source_and_to_component(t *T) {
+func (s *_editable) Reports_key_to_source_and_to_component(t *T) {
 	cmpEdt := NoEdit
 	cmp := &srcFX{liner: &editableLinerFX{}}
 	cmp.onEdit = func(c *cmpFX, e *Env, edt *Edit) bool {
@@ -280,6 +306,90 @@ func (s *_editable) Reports_to_source_and_to_component(t *T) {
 	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
 		t.True(cmp.Src.Liner.(*editableLinerFX).HasReported(Suspend))
 	}))
+}
+
+func (s *_editable) Reports_rune_insert_to_component(t *T) {
+	ins, exp := false, 'a'
+	cmp := &cmpFX{onEdit: func(c *cmpFX, e *Env, edt *Edit) bool {
+		if edt.Type == Ins {
+			ins = true
+			t.Eq(exp, edt.Rune)
+		}
+		return false
+	}}
+	fx := fxFF(t, Editable, cmp)
+	fx.FireKey(Insert)
+	fx.FireRune(exp)
+	t.True(ins)
+}
+
+func (s *_editable) Reports_rune_insert_to_component_source(t *T) {
+	exp := 'a'
+	cmp := &srcFX{liner: &editableLinerFX{}}
+	cmp.liner.(*editableLinerFX).cc = []string{""}
+	fx := fx(t, cmp)
+	fx.FireKey(Insert)
+	fx.FireRune(exp)
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+		t.True(cmp.Src.Liner.(*editableLinerFX).HasReported(Ins))
+		t.True(cmp.Src.Liner.(*editableLinerFX).HasReportedRune(exp))
+	}))
+}
+
+func (s *_editable) Appends_rune_on_eol_cursor_position(t *T) {
+	fx, cmp := fxCmpFF(t, Editable, 20*time.Minute)
+	exp := 'a'
+	fx.FireKey(Insert)
+	ln, cl, leftGap := -1, -1, -1
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+		t.True(cmp.LL.Focus.Eol())
+		ln, cl, _ = cmp.CursorPosition()
+		_, _, _, leftGap = cmp.GapsLen()
+	}))
+	fx.FireRune(exp)
+	t.Eq([]rune(fx.Screen()[ln])[cl+leftGap], exp)
+}
+
+func (s *_editable) Advances_cursor_position_on_rune_append(t *T) {
+	fx, cmp := fxCmpFF(t, Editable)
+	exp := 'a'
+	fx.FireKey(Insert)
+	ln, cl := -1, -1
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+		t.True(cmp.LL.Focus.Eol())
+		ln, cl, _ = cmp.CursorPosition()
+	}))
+	fx.FireRune(exp)
+	afterLn, afterCl := -1, -1
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+		t.True(cmp.LL.Focus.Eol())
+		afterLn, afterCl, _ = cmp.CursorPosition()
+	}))
+	t.Eq(ln, afterLn)
+	t.Eq(cl+1, afterCl)
+}
+
+func (s *_editable) Editor_indicates_line_overflow(t *T) {
+	cmp := &cmpFX{onInit: func(c *cmpFX, e *Env) {
+		c.Dim().SetWidth(5).SetHeight(1)
+		fmt.Fprint(e, "aa")
+	}}
+	fx := fxFF(t, Editable, cmp)
+	fx.FireKey(Insert) // activate editor
+	t.FatalOn(fx.Lines.Update(cmp, nil, func(e *Env) {
+		cmp.LL.Focus.LastCell()
+	}))
+	fx.FireRune('a')
+	t.True(strings.HasPrefix(
+		fx.ScreenOf(cmp)[0], string(OverflowLeft)+"aa "))
+	fx.FireKey(Home)
+	t.Eq(" aaa ", fx.ScreenOf(cmp)[0])
+	fx.FireKey(End)
+	t.True(strings.HasPrefix(
+		fx.ScreenOf(cmp)[0], string(OverflowLeft)+"aa "))
+	fx.FireRune('a')
+	fx.FireKey(Home)
+	t.Eq(" aaa"+string(OverflowRight), fx.ScreenOf(cmp)[0])
 }
 
 // func (s *_editable) Suppresses_rune_events_having_active_editor(t *T) {

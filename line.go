@@ -62,6 +62,11 @@ func (l *Line) Len() int {
 	return len(l.rr)
 }
 
+func (l *Line) appendRune(r rune) {
+	l.rr = append(l.rr, r)
+	l.setDirty()
+}
+
 func (l *Line) isOverflowing(width int) (left, right, changed bool) {
 	left = l.start > 0
 	right = len(l.rr)-l.start > width
@@ -167,8 +172,7 @@ func (l *Line) moveStartToEnd(width int) {
 	l.setDirty()
 }
 
-func (l *Line) resetLineFocus() {
-	l.ofLeft, l.ofRight = false, false
+func (l *Line) resetLineStart() {
 	if l.start == 0 {
 		return
 	}

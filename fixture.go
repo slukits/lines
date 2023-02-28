@@ -313,6 +313,20 @@ func (fx *Fixture) ScreenOf(c Componenter) api.StringScreen {
 	return fx.ScreenArea(dim.Printable())
 }
 
+// ContentOf provides a string representation of given component's
+// printable area without gaps.  The returned StringScreen is nil if
+// given componenter is not part of the layout or off-screen.
+func (fx *Fixture) ContentOf(c Componenter) api.StringScreen {
+	if !c.hasLayoutWrapper() {
+		return nil
+	}
+	cmp := c.layoutComponent().wrapped()
+	if cmp.Dim().IsOffScreen() {
+		return nil
+	}
+	return fx.ScreenArea(cmp.ContentArea())
+}
+
 // CellsOf provides a lines of cells representation of given component's
 // printable screen-portion, i.e.  without margins and clippings.  A
 // CellsScreen provides next to a string representation also style

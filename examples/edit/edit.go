@@ -149,9 +149,11 @@ func (edt *edit) String() string {
 	evt := ""
 	switch edt.Type {
 	case lines.Resume:
-		evt = "Resume"
+		evt = "resume"
 	case lines.Suspend:
-		evt = "Suspend"
+		evt = "suspend"
+	case lines.Ins:
+		evt = "insert"
 	default:
 		evt = "unknown event"
 	}

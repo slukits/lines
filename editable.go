@@ -19,6 +19,9 @@ const (
 	JoinPrev
 )
 
+var OverflowLeft = '…'
+var OverflowRight = '…'
+
 type Edit struct {
 	Line int
 	Cell int
@@ -114,6 +117,10 @@ func (e *Editor) IsReplacing() bool {
 	return e.mode == Replace
 }
 
+func (e *Editor) newEdit(t EditType, ln, cl int, r rune) *Edit {
+	return &Edit{Line: ln, Cell: cl, Type: t, Rune: r}
+}
+
 func (e *Editor) newKeyEdit(evt KeyEventer) *Edit {
 	ln, cl, _ := e.c.cursorPosition()
 	edt := &Edit{Line: ln, Cell: cl}
@@ -122,19 +129,44 @@ func (e *Editor) newKeyEdit(evt KeyEventer) *Edit {
 		edt.Type = Resume
 	case Esc:
 		edt.Type = Suspend
+	case Left, Right, Up, Down, Home, End: // handled by key-features
+		return nil
 	default:
 		return nil
 	}
 	return edt
 }
 
-func (e *Editor) edit(edt *Edit) {
+func (e *Editor) newRuneEdit(evt RuneEventer) *Edit {
+	ln, cl, _ := e.c.cursorPosition()
+	return &Edit{Line: ln, Cell: cl, Type: Ins, Rune: evt.Rune()}
+}
+
+func (e *Editor) exec(edt *Edit) {
 	switch edt.Type {
 	case Resume:
 		e.Resume()
 	case Suspend:
 		e.Suspend()
+	case Ins:
+		if e.c.LL.Focus.Eol() {
+			e.c.LL.Focus.Line().appendRune(edt.Rune)
+			e.c.LL.Focus.NextCell()
+		}
 	}
+}
+
+func (e *Editor) lineOverflow(left, right bool) {
+	ol, or := ' ', ' '
+	if left {
+		ol = OverflowLeft
+	}
+	if right {
+		or = OverflowRight
+	}
+	ln, _, _ := e.c.cursorPosition()
+	Print(e.c.Gaps(e.LeftGap).Left.At(ln), ol)
+	Print(e.c.Gaps(e.RightGap).Right.At(ln), or)
 }
 
 // delEdit translates a Backspace or Delete key press into a Del-Edit.
@@ -143,7 +175,7 @@ func (e *Editor) edit(edt *Edit) {
 // the following "line-break" is considered removed, i.e. respective
 // line joining Edit-instances are returned.  Is the cursor at the first
 // content cell and received key is Backspace respectively at the last
-// content cell and teh received key is Delete nil is returned.
+// content cell and the received key is Delete nil is returned.
 func (e *Editor) delEdit(evt KeyEventer) *Edit {
 	cmp := e.c.layoutCmp.wrapped()
 	ln, cl, haveCursor := cmp.cursorPosition()

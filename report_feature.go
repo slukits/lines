@@ -95,10 +95,15 @@ func execute(cntx *rprContext, usr Componenter, f FeatureMask) {
 func executeLineFocus(
 	cntx *rprContext, usr Componenter, f func() (int, int),
 ) {
-	clIdx, slIdx := usr.embedded().LL.Focus.Current(),
-		usr.embedded().LL.Focus.Screen()
-	_, column, _ := usr.embedded().CursorPosition()
+	cmp := usr.embedded()
+	clIdx, slIdx := cmp.LL.Focus.Current(),
+		cmp.LL.Focus.Screen()
+	row, column, _ := cmp.CursorPosition()
 	ln, cl := f()
+	if !cmp.LL.Focus.IsActive() && cmp.Edit != nil {
+		edt := cmp.Edit.newEdit(Suspend, row, column, 0)
+		reportEdit(cntx, usr, edt)
+	}
 	if clIdx == ln {
 		if cl != column {
 			reportCursorChange(cntx, usr)
@@ -128,8 +133,8 @@ func executeCellFocus(
 	cntx *rprContext, usr Componenter, f func() (int, int, bool),
 ) {
 	_, _, movedCursor := f()
-	if movedCursor && reportCursorChange(cntx, usr) {
-		usr.enable()
+	if movedCursor {
+		reportCursorChange(cntx, usr)
 	}
 	reportLineOverflow(cntx, usr, usr.embedded().LL.Focus.Screen())
 }
@@ -168,7 +173,6 @@ func reportLineFocus(cntx *rprContext, usr Componenter, cIdx, sIdx int) {
 	lf, ok := usr.(LineFocuser)
 	if ok {
 		callback(usr, cntx, lfCurry(lf.OnLineFocus, cIdx, sIdx))
-		usr.enable()
 	}
 	reportLineOverflow(cntx, usr, sIdx)
 }
@@ -177,17 +181,22 @@ func reportLineOverflow(cntx *rprContext, usr Componenter, sIdx int) {
 	if sIdx < 0 {
 		return
 	}
+	cmp := usr.embedded()
 	of, ok := usr.(LineOverflower)
-	if !ok {
+	if !ok && cmp.Edit == nil {
 		return
 	}
-	cmp := usr.embedded()
 	_, _, width, _ := cmp.ContentArea()
 	l, r, changed := cmp.LL.By(sIdx).isOverflowing(width)
-	if !l && !r || !changed {
+	if !changed {
 		return
 	}
-	callback(usr, cntx, ofCurry(of, l, r))
+	if cmp.Edit != nil {
+		cmp.Edit.lineOverflow(l, r)
+	}
+	if ok {
+		callback(usr, cntx, ofCurry(of, l, r))
+	}
 }
 
 func lsCurry(ls LineSelecter, cIdx, sIdx int) func(*Env) {
@@ -208,31 +217,55 @@ func reportSelectedLine(cntx *rprContext, usr Componenter) {
 }
 
 func editorInsert(cntx *rprContext, usr Componenter) {
-	if !usr.embedded().Edit.IsActive() {
-		editor := usr.embedded().Edit
-		edt := editor.newKeyEdit(
-			cntx.ll.newKeyEvent(Insert, ZeroModifier))
-		if usr.layoutComponent().wrapped().Src != nil {
-			if sourcedEdit(cntx, usr, editor, edt) {
-				return
-			}
-		}
-		ls, ok := usr.(Editer)
-		if ok {
-			suppress := false
-			callback(usr, cntx, func(e *Env) {
-				suppress = ls.OnEdit(e, edt)
-			})
-			if suppress {
-				return
-			}
-		}
-		editor.edit(edt)
+	if usr.embedded().Edit.IsActive() {
+		return
 	}
+	editor := usr.embedded().Edit
+	edt := editor.newKeyEdit(
+		cntx.ll.newKeyEvent(Insert, ZeroModifier))
+	if usr.layoutComponent().wrapped().Src != nil {
+		if sourcedEdit(cntx, usr, edt) {
+			return
+		}
+	}
+	ls, ok := usr.(Editer)
+	if ok {
+		suppress := false
+		callback(usr, cntx, func(e *Env) {
+			suppress = ls.OnEdit(e, edt)
+		})
+		if suppress {
+			return
+		}
+	}
+	editor.exec(edt)
+}
+
+func reportEdit(
+	cntx *rprContext, usr Componenter, edt *Edit,
+) {
+	if usr.embedded().Src != nil {
+		if sourcedEdit(cntx, usr, edt) {
+			return
+		}
+	}
+	ls, ok := usr.(Editer)
+	if ok {
+		suppress := false
+		callback(usr, cntx, func(e *Env) {
+			suppress = ls.OnEdit(e, edt)
+		})
+		if suppress {
+			return
+		}
+	}
+	usr.embedded().Edit.exec(edt)
+	reportLineOverflow(
+		cntx, usr, usr.embedded().LL.Focus.Current())
 }
 
 func sourcedEdit(
-	cntx *rprContext, usr Componenter, editor *Editor, edt *Edit,
+	cntx *rprContext, usr Componenter, edt *Edit,
 ) (reported bool) {
 	ls, ok := usr.layoutComponent().wrapped().Src.Liner.(EditLiner)
 	if !ok {

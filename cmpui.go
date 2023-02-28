@@ -257,6 +257,8 @@ func (c *component) forNested(cb func(n *component) (stop bool)) {
 	})
 }
 
+// ContentArea returns given component c's printable area without its
+// gaps.
 func (c *component) ContentArea() (x, y, w, h int) {
 	x, y, w, h = c.dim.Printable()
 	if c.gaps == nil {

@@ -42,6 +42,9 @@ func (s *LineFocus) Screen() int {
 	return s.current - s.c.First()
 }
 
+// IsActive returns true iff there is currently a line focused.
+func (s *LineFocus) IsActive() bool { return s.current != -1 }
+
 // Content returns the component's content line index in which the
 // currently focused content is stored or -1 if no line is
 // focused.  (Note this line may not be on the screen if there is no
@@ -58,7 +61,7 @@ func (s *LineFocus) Content() int {
 // AtCoordinate tries to focus the screen line with given coordinate y.
 func (s *LineFocus) AtCoordinate(y int) {
 	if s.Screen() >= 0 {
-		s.Line().resetLineFocus()
+		s.Line().resetLineStart()
 	}
 	top, _, _, _ := s.c.GapsLen()
 	lineIdx := y + top
@@ -88,7 +91,7 @@ func (s *LineFocus) AtCoordinate(y int) {
 // while the next is highlighted.
 func (s *LineFocus) Next() (ln int, cl int) {
 	if s.Screen() >= 0 {
-		s.Line().resetLineFocus()
+		s.Line().resetLineStart()
 	}
 	ln = s.findNextLine()
 	if ln == s.current {
@@ -145,7 +148,7 @@ func (s *LineFocus) nextFromSource(fl FocusableLiner) int {
 // line is highlighted.
 func (s *LineFocus) Previous() (slIdx int, cl int) {
 	if s.Screen() >= 0 {
-		s.Line().resetLineFocus()
+		s.Line().resetLineStart()
 	}
 	slIdx = s.findPrevious()
 	if slIdx == s.current {
